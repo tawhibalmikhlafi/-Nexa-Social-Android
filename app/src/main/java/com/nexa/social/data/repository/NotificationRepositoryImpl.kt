@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -46,11 +47,24 @@ class NotificationRepositoryImpl(
                             _remote.value = rows
                         }
                     }
-                    _remote.collect { send(it) }
+                    combine(
+                        _remote,
+                        prefs.notificationTypeEnabled,
+                        prefs.notificationsEnabled
+                    ) { list, categories, enabled ->
+                        if (!enabled) emptyList()
+                        else list.filter { categories[it.type] != false }
+                    }.collect { send(it) }
                 }
             } else {
-                _notifications.asStateFlow().map { list ->
-                    sanitize(list).sortedByDescending { it.timestamp }
+                combine(
+                    _notifications.asStateFlow(),
+                    prefs.notificationTypeEnabled,
+                    prefs.notificationsEnabled
+                ) { list, categories, enabled ->
+                    if (!enabled) emptyList()
+                    else sanitize(list).filter { categories[it.type] != false }
+                        .sortedByDescending { it.timestamp }
                 }
             }
         }
