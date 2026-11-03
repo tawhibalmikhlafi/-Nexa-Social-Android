@@ -49,7 +49,7 @@ interface UserRemoteDataSource {
     fun observeFollowers(uid: String): Flow<List<User>>
     suspend fun isFollowing(uid: String, targetId: String): Boolean
     suspend fun setFollowing(uid: String, targetId: String, following: Boolean): Boolean
-    suspend fun hasPendingFollowRequest(uid: String, targetId: String): Boolean = false
+    suspend fun hasPendingFollowRequest(uid: String, targetId: String): Boolean? = null
 
     /** Builds a unique username for a new account (Google or email sign-up). */
     suspend fun uniqueUsername(preferred: String): String
