@@ -3,6 +3,9 @@ package com.nexa.social.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -26,15 +29,33 @@ fun NexaCard(
     padding: Int = 16,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val shape = MaterialTheme.shapes.medium
+    val darkSurface = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+    val cardBackground = if (darkSurface) {
+        Brush.linearGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f),
+                MaterialTheme.colorScheme.surface,
+                Color(0xFF24103D).copy(alpha = 0.42f)
+            )
+        )
+    } else {
+        Brush.linearGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.surface,
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+            )
+        )
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(MaterialTheme.colorScheme.surface)
+            .background(cardBackground, shape)
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                color = if (darkSurface) MaterialTheme.colorScheme.primary.copy(alpha = 0.48f)
+                else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
                 shape = shape
             )
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
