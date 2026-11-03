@@ -10,6 +10,8 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -59,6 +61,7 @@ private fun lightScheme(accent: Color, secondary: Color, bg: BackgroundTokens) =
 @Composable
 fun NexaTheme(
     config: ThemeConfig = ThemeConfig(),
+    fontScale: Float = 1.0f,
     content: @Composable () -> Unit
 ) {
     val dark = when (config.mode) {
@@ -81,7 +84,16 @@ fun NexaTheme(
         }
     }
 
-    androidx.compose.runtime.CompositionLocalProvider(LocalNexaThemeConfig provides config) {
+    val currentDensity = LocalDensity.current
+    val accessibleDensity = Density(
+        density = currentDensity.density,
+        fontScale = currentDensity.fontScale * fontScale.coerceIn(0.85f, 1.30f)
+    )
+
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalNexaThemeConfig provides config,
+        LocalDensity provides accessibleDensity
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = NexaTypography,
