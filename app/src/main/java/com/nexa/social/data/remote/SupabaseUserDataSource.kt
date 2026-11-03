@@ -323,14 +323,13 @@ class SupabaseUserDataSource(
     override suspend fun setFollowing(uid: String, targetId: String, following: Boolean): Boolean {
         if (uid == targetId) return false
         val token = accessToken() ?: return false
-        val body = JsonObject().apply {
-            addProperty("follower_id", uid)
-            addProperty("following_id", targetId)
-        }
         val response = if (following) {
+            // Public accounts are followed immediately by the RPC; private accounts create
+            // a pending request. The database decides which path is valid under RLS.
+            val body = JsonObject().apply { addProperty("target_id", targetId) }
             execute(
-                http.authenticatedRequest("$restUrl/follows", token)
-                    .header("Prefer", "return=minimal")
+                http.authenticatedRequest("$restUrl/rpc/nexa_request_follow", token)
+                    .header("Prefer", "return=representation")
                     .post(http.jsonBody(body))
                     .build()
             )
@@ -343,7 +342,12 @@ class SupabaseUserDataSource(
                 ).delete().build()
             )
         } ?: return false
-        return response.successful || (following && response.code == 409)
+        if (!response.successful) {
+            Log.w(TAG, "setFollowing($following) failed with HTTP ${response.code}")
+            return false
+        }
+        refresh()
+        return true
     }
 
     override suspend fun uniqueUsername(preferred: String): String {
