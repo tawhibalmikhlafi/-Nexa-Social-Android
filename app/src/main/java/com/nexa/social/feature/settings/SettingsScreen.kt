@@ -58,6 +58,7 @@ import com.nexa.social.R
 import com.nexa.social.core.common.LocaleManager
 import com.nexa.social.core.ui.rememberRemoteMode
 import com.nexa.social.domain.model.SessionState
+import com.nexa.social.domain.model.NotificationType
 import com.nexa.social.domain.model.isAccount
 import com.nexa.social.ui.components.AccountRequiredBanner
 import com.nexa.social.ui.components.LocalDataBanner
@@ -85,6 +86,7 @@ fun SettingsScreen(
 ) {
     val language by viewModel.language.collectAsStateWithLifecycle()
     val notifications by viewModel.notificationsEnabled.collectAsStateWithLifecycle()
+    val notificationCategories by viewModel.notificationCategories.collectAsStateWithLifecycle()
     val session by viewModel.session.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val remoteMode = rememberRemoteMode()
@@ -132,6 +134,61 @@ fun SettingsScreen(
                     Switch(checked = notifications, onCheckedChange = viewModel::setNotificationsEnabled)
                 }
             )
+
+            if (notifications) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = NexaSpacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)
+                ) {
+                    NotificationCategoryRow(
+                        title = stringResource(R.string.settings_notif_likes),
+                        checked = notificationCategories[NotificationType.LIKE] != false,
+                        onCheckedChange = { viewModel.setNotificationCategory(NotificationType.LIKE, it) }
+                    )
+                    NotificationCategoryRow(
+                        title = stringResource(R.string.settings_notif_comments),
+                        checked = notificationCategories[NotificationType.COMMENT] != false,
+                        onCheckedChange = { viewModel.setNotificationCategory(NotificationType.COMMENT, it) }
+                    )
+                    NotificationCategoryRow(
+                        title = stringResource(R.string.settings_notif_replies),
+                        checked = notificationCategories[NotificationType.REPLY] != false,
+                        onCheckedChange = { viewModel.setNotificationCategory(NotificationType.REPLY, it) }
+                    )
+                    NotificationCategoryRow(
+                        title = stringResource(R.string.settings_notif_follows),
+                        checked = notificationCategories[NotificationType.FOLLOW] != false,
+                        onCheckedChange = { viewModel.setNotificationCategory(NotificationType.FOLLOW, it) }
+                    )
+                    NotificationCategoryRow(
+                        title = stringResource(R.string.settings_notif_messages),
+                        checked = notificationCategories[NotificationType.MESSAGE] != false,
+                        onCheckedChange = { viewModel.setNotificationCategory(NotificationType.MESSAGE, it) }
+                    )
+                    NotificationCategoryRow(
+                        title = stringResource(R.string.settings_notif_groups),
+                        checked = notificationCategories[NotificationType.GROUP_JOIN_REQUEST] != false,
+                        onCheckedChange = { viewModel.setNotificationCategory(NotificationType.GROUP_JOIN_REQUEST, it) }
+                    )
+                    NotificationCategoryRow(
+                        title = stringResource(R.string.settings_notif_stories),
+                        checked = notificationCategories[NotificationType.STORY_REPLY] != false,
+                        onCheckedChange = { viewModel.setNotificationCategory(NotificationType.STORY_REPLY, it) }
+                    )
+                    NotificationCategoryRow(
+                        title = stringResource(R.string.settings_notif_mentions),
+                        checked = notificationCategories[NotificationType.MENTION] != false,
+                        onCheckedChange = { viewModel.setNotificationCategory(NotificationType.MENTION, it) }
+                    )
+                    NotificationCategoryRow(
+                        title = stringResource(R.string.settings_notif_system),
+                        checked = notificationCategories[NotificationType.SYSTEM] != false,
+                        onCheckedChange = { viewModel.setNotificationCategory(NotificationType.SYSTEM, it) }
+                    )
+                }
+            }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.xs))
             SettingsSectionHeader(stringResource(R.string.settings_section_privacy))
@@ -321,6 +378,28 @@ fun SettingsScreen(
                 onDismiss = { dialog = null }
             )
         }
+    }
+}
+
+
+@Composable
+private fun NotificationCategoryRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = NexaSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
