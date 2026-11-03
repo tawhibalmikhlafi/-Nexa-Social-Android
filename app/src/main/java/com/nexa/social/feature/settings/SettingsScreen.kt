@@ -335,6 +335,27 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_about),
                 onClick = { dialog = "about" }
             )
+
+            SettingsRow(
+                icon = Icons.Filled.Info,
+                title = stringResource(R.string.settings_feedback),
+                subtitle = stringResource(R.string.settings_feedback_summary),
+                onClick = {
+                    val details = getString(
+                        R.string.settings_feedback_template,
+                        BuildConfig.VERSION_NAME,
+                        android.os.Build.VERSION.RELEASE.orEmpty(),
+                        android.os.Build.MANUFACTURER.orEmpty(),
+                        android.os.Build.MODEL.orEmpty()
+                    )
+                    val share = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.settings_feedback_subject))
+                        putExtra(Intent.EXTRA_TEXT, details)
+                    }
+                    context.startActivity(Intent.createChooser(share, context.getString(R.string.settings_feedback)))
+                }
+            )
             SettingsRow(
                 icon = Icons.Filled.Policy,
                 title = stringResource(R.string.settings_privacy_policy),
