@@ -344,6 +344,10 @@
     <string name="settings_os_notifications">Android notification controls</string>
     <string name="settings_os_notifications_summary">Configure system permission, sound and vibration</string>
     <string name="settings_notifications_enabled">Enable local notifications</string>
+    <string name="settings_feedback">Report a problem or suggestion</string>
+    <string name="settings_feedback_summary">Share feedback with your preferred app</string>
+    <string name="settings_feedback_subject">Nexa Social feedback</string>
+    <string name="settings_feedback_template">Nexa Social feedback\n\nDescribe the problem or suggestion here:\n\n--- Diagnostics ---\nApp version: %1$s\nAndroid: %2$s\nDevice: %3$s %4$s</string>
     <string name="settings_about">About Nexa</string>
     <string name="settings_about_body">Nexa Social uses Supabase for supported account and social data when you are signed in. Appearance and language choices are stored on this device; some optional modules may also keep device-local data.</string>
     <string name="settings_privacy_policy">Privacy policy</string>
