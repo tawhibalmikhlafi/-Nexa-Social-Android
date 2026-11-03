@@ -337,14 +337,18 @@ class SupabaseUserDataSource(
             // Unfollowing also cancels an outstanding private-account request. The
             // request table intentionally has no client UPDATE permission; cancellation
             // must go through its SECURITY DEFINER RPC.
-            val pendingRows = execute(
+            val pendingResponse = execute(
                 http.authenticatedRequest(
                     "$restUrl/follow_requests?select=id&requester_id=eq.${encode(uid)}" +
                         "&target_id=eq.${encode(targetId)}&status=eq.pending&limit=1",
                     token
                 ).get().build()
-            )?.takeIf { it.successful }?.let { parseArray(it.body) }.orEmpty()
-            val pendingId = pendingRows.firstOrNull()?.string("id")
+            ) ?: return false
+            if (!pendingResponse.successful) {
+                Log.w(TAG, "load pending follow request failed with HTTP ${pendingResponse.code}")
+                return false
+            }
+            val pendingId = parseArray(pendingResponse.body)?.firstOrNull()?.string("id")
             if (pendingId != null) {
                 val cancelBody = JsonObject().apply { addProperty("request_id", pendingId) }
                 val cancelled = execute(
