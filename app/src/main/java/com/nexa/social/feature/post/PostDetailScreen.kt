@@ -1504,7 +1504,7 @@ private fun CommentRow(
                             },
                             onClick = {
                                 showActions = false
-                                onToggleLike()
+                                onToggleLike(comment.myReaction ?: "❤️")
                             }
                         )
                         DropdownMenuItem(
