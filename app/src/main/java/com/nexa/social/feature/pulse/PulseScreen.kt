@@ -1,0 +1,258 @@
+package com.nexa.social.feature.pulse
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nexa.social.R
+import com.nexa.social.domain.model.Community
+import com.nexa.social.domain.model.UserSummary
+import com.nexa.social.feature.worlds.categoryLabel
+import com.nexa.social.ui.components.LocalDataBanner
+import com.nexa.social.ui.components.NexaAvatar
+import com.nexa.social.ui.components.NexaCard
+import com.nexa.social.ui.components.NexaEmptyState
+import com.nexa.social.ui.components.NexaTopBar
+import com.nexa.social.ui.components.SectionHeader
+import com.nexa.social.ui.theme.NexaSpacing
+
+@Composable
+fun PulseScreen(
+    onBack: () -> Unit,
+    onOpenProfile: (String) -> Unit,
+    onOpenWorld: (String) -> Unit,
+    viewModel: PulseViewModel = viewModel(factory = PulseViewModel.Factory)
+) {
+    val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        NexaTopBar(title = stringResource(R.string.pulse_title), onBack = onBack)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = NexaSpacing.xxxl),
+            verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)
+        ) {
+            item {
+                Text(
+                    text = stringResource(R.string.pulse_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = NexaSpacing.lg)
+                )
+            }
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = NexaSpacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(NexaSpacing.md)
+                ) {
+                    PulseStat(
+                        value = snapshot.totalPosts.toString(),
+                        label = stringResource(R.string.pulse_stat_posts),
+                        modifier = Modifier.weight(1f)
+                    )
+                    PulseStat(
+                        value = snapshot.activeToday.toString(),
+                        label = stringResource(R.string.pulse_stat_active),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            if (snapshot.tags.isEmpty() && snapshot.creators.isEmpty()) {
+                item {
+                    NexaEmptyState(
+                        icon = Icons.Filled.Bolt,
+                        title = stringResource(R.string.pulse_empty),
+                        body = stringResource(R.string.pulse_empty_body)
+                    )
+                }
+            } else {
+                if (snapshot.tags.isNotEmpty()) {
+                    item {
+                        SectionHeader(
+                            title = stringResource(R.string.pulse_trending_tags),
+                            modifier = Modifier.padding(horizontal = NexaSpacing.lg)
+                        )
+                    }
+                    item {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = NexaSpacing.lg),
+                            horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+                        ) {
+                            items(snapshot.tags, key = { it.name }) { tag ->
+                                Column(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f))
+                                        .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.sm)
+                                ) {
+                                    Text(
+                                        text = "#${tag.name}",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = stringResource(
+                                            R.string.pulse_tag_posts,
+                                            tag.posts,
+                                            tag.engagement
+                                        ),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (snapshot.creators.isNotEmpty()) {
+                    item {
+                        SectionHeader(
+                            title = stringResource(R.string.pulse_trending_creators),
+                            modifier = Modifier.padding(horizontal = NexaSpacing.lg)
+                        )
+                    }
+                    items(snapshot.creators, key = { it.user.id }) { creator ->
+                        CreatorRow(
+                            creator = creator,
+                            onClick = { onOpenProfile(creator.user.id) },
+                            modifier = Modifier.padding(horizontal = NexaSpacing.lg)
+                        )
+                    }
+                }
+
+                if (snapshot.worlds.isNotEmpty()) {
+                    item {
+                        SectionHeader(
+                            title = stringResource(R.string.pulse_worlds),
+                            modifier = Modifier.padding(horizontal = NexaSpacing.lg)
+                        )
+                    }
+                    items(snapshot.worlds, key = { it.community.id }) { world ->
+                        WorldRow(
+                            world = world,
+                            onClick = { onOpenWorld(world.community.id) },
+                            modifier = Modifier.padding(horizontal = NexaSpacing.lg)
+                        )
+                    }
+                }
+            }
+
+            item {
+                LocalDataBanner(
+                    text = stringResource(R.string.pulse_local_note),
+                    modifier = Modifier.padding(horizontal = NexaSpacing.lg)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PulseStat(value: String, label: String, modifier: Modifier = Modifier) {
+    NexaCard(modifier = modifier) {
+        Text(text = value, style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun CreatorRow(
+    creator: PulseCreator,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    NexaCard(modifier = modifier, onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            NexaAvatar(
+                displayName = creator.user.displayName,
+                avatarUri = creator.user.avatarUri,
+                size = 44.dp
+            )
+            Spacer(Modifier.size(NexaSpacing.md))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = creator.user.displayName, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = "@${creator.user.username}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = stringResource(
+                    R.string.pulse_creator_meta,
+                    creator.posts,
+                    creator.engagement
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun WorldRow(
+    world: PulseWorld,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val community: Community = world.community
+    NexaCard(modifier = modifier, onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = community.name, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = categoryLabel(community.category),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(
+                        R.string.pulse_world_meta,
+                        community.sampleMemberCount,
+                        world.posts
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = stringResource(R.string.pulse_world_open),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}

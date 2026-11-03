@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="nexa_background">#FF070912</color>
+    <color name="nexa_surface">#FF0E1220</color>
+    <color name="nexa_primary">#FF7C4DFF</color>
+    <color name="nexa_secondary">#FF00D0E0</color>
+    <color name="nexa_on_primary">#FFFFFFFF</color>
+    <color name="ic_launcher_background">#FF0A0E1A</color>
+</resources>
