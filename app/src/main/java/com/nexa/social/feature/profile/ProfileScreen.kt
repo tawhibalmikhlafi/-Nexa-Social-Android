@@ -134,6 +134,7 @@ fun ProfileScreen(
     val isGuest by viewModel.isGuest.collectAsStateWithLifecycle()
     val isOwnProfile by viewModel.isOwnProfile.collectAsStateWithLifecycle()
     val isFollowing by viewModel.isFollowing.collectAsStateWithLifecycle()
+    val followRequestPending by viewModel.isFollowRequestPending.collectAsStateWithLifecycle()
     val followersCount by viewModel.followersCount.collectAsStateWithLifecycle()
     val followingCount by viewModel.followingCount.collectAsStateWithLifecycle()
     val followBusy by viewModel.followBusy.collectAsStateWithLifecycle()
@@ -533,7 +534,9 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
-                        if (isFollowing) {
+                        if (followRequestPending) {
+                            NexaSecondaryButton(text = stringResource(R.string.action_follow_requested), onClick = viewModel::toggleFollow, enabled = !followBusy)
+                        } else if (isFollowing) {
                             NexaSecondaryButton(text = stringResource(R.string.action_unfollow), onClick = viewModel::toggleFollow, enabled = !followBusy)
                         } else {
                             NexaPrimaryButton(text = stringResource(R.string.action_follow), onClick = viewModel::toggleFollow, enabled = !followBusy, loading = followBusy)
