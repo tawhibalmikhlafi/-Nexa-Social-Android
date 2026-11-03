@@ -196,6 +196,35 @@ class SupabaseUserDataSource(
         return Resource.Success(profile)
     }
 
+    override suspend fun changeUsername(uid: String, username: String): Resource<User> {
+        if (currentUid() != uid) return Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val canonical = Validators.canonicalUsername(username)
+        if (!Validators.isValidUsername(canonical)) return Resource.Failure(FailureReason.USERNAME_INVALID)
+        if (Validators.isReservedUsername(canonical)) return Resource.Failure(FailureReason.USERNAME_RESERVED)
+        val token = accessToken() ?: return Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val body = JsonObject().apply { addProperty("p_username", canonical) }
+        val response = execute(
+            http.authenticatedRequest("${restUrl}/rpc/nexa_change_username", token)
+                .header("Prefer", "return=representation")
+                .post(http.jsonBody(body)).build()
+        ) ?: return Resource.Failure(FailureReason.NETWORK)
+        if (!response.successful) {
+            val reason = when {
+                response.code == 409 || response.body?.contains("23505") == true -> FailureReason.USERNAME_TAKEN
+                response.code == 401 || response.code == 403 -> FailureReason.PERMISSION_DENIED
+                response.body?.contains("reserved", ignoreCase = true) == true -> FailureReason.USERNAME_RESERVED
+                response.body?.contains("format", ignoreCase = true) == true -> FailureReason.USERNAME_INVALID
+                else -> http.failureReason(response)
+            }
+            Log.w(TAG, "changeUsername failed with HTTP ${response.code}")
+            return Resource.Failure(reason)
+        }
+        val profile = getProfile(uid, includePrivate = true)
+            ?: return Resource.Failure(FailureReason.GENERIC)
+        refresh()
+        return Resource.Success(profile)
+    }
+
     override suspend fun updateBasicProfile(
         uid: String,
         displayName: String,
