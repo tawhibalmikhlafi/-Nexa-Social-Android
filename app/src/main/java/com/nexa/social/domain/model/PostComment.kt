@@ -15,6 +15,7 @@ data class PostComment(
     val parentId: String? = null,
     val likeCount: Int = 0,
     val likedByMe: Boolean = false,
+    val myReaction: String? = null,
     val isMine: Boolean = false,
     val canDelete: Boolean = false,
     val isLocal: Boolean = true
