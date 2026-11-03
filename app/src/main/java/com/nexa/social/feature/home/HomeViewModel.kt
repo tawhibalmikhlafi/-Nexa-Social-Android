@@ -92,11 +92,11 @@ class HomeViewModel(
     }
 
     fun toggleLike(postId: String, reaction: String? = null) {
-        viewModelScope.launch { postRepository.toggleLike(postId, reaction) }
+        viewModelScope.launch { runCatching { postRepository.toggleLike(postId, reaction) } }
     }
 
     fun toggleSave(postId: String) {
-        viewModelScope.launch { postRepository.toggleSave(postId) }
+        viewModelScope.launch { runCatching { postRepository.toggleSave(postId) } }
     }
 
     fun recordShare(postId: String) {
