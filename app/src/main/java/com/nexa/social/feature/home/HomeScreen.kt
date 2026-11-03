@@ -250,11 +250,6 @@ private fun HomeHeader(
     ) {
         NexaWordmark(modifier = Modifier.weight(1f), markSize = 32.dp, showYear = false)
         CompactIconButton(
-            onClick = onOpenGroups,
-            icon = Icons.Filled.Groups,
-            contentDescription = stringResource(R.string.groups_title)
-        )
-        CompactIconButton(
             onClick = onCreatePost,
             icon = Icons.Filled.Add,
             contentDescription = stringResource(R.string.home_create_hint)
