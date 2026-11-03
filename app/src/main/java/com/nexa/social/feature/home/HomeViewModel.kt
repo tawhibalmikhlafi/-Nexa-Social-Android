@@ -10,12 +10,9 @@ import com.nexa.social.domain.repository.StoryRepository
 import com.nexa.social.domain.model.accountUserId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -53,10 +50,10 @@ class HomeViewModel(
         .map { it.accountUserId }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    private val _feedType = MutableStateFlow(FeedType.LATEST)
-    val feedType: StateFlow<FeedType> = _feedType.asStateFlow()
+    val feedType: StateFlow<FeedType> = preferenceStorage.feedType
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeedType.LATEST)
 
-    val feed: StateFlow<List<Post>> = _feedType
+    val feed: StateFlow<List<Post>> = feedType
         .flatMapLatest { feedRepository.observeFeed(it) }
         .catch {
             Log.e("HomeViewModel", "Feed flow failed; showing an empty feed", it)
@@ -74,12 +71,7 @@ class HomeViewModel(
         .map { it.firstOrNull() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    init {
-        viewModelScope.launch { _feedType.value = preferenceStorage.feedType.first() }
-    }
-
     fun setFeedType(type: FeedType) {
-        _feedType.value = type
         viewModelScope.launch { preferenceStorage.setFeedType(type) }
     }
 
