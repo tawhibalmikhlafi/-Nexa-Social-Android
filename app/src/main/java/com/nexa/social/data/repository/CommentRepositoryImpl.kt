@@ -60,6 +60,16 @@ class CommentRepositoryImpl(
         }
     }
 
+    override suspend fun getCommentPreview(postId: String): List<PostComment> {
+        val session = sessionFlow.first()
+        return if (session is SessionState.RemoteAccount && remote != null) {
+            remote.getCommentPreview(postId)
+        } else {
+            _comments.value.filter { it.postId == postId }
+                .sortedByDescending { it.createdAt }.take(2).reversed()
+        }
+    }
+
     override fun observeCommentCount(postId: String): Flow<Int> =
         observeComments(postId).map { it.size }
 
