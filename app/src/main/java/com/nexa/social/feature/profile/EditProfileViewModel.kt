@@ -50,6 +50,7 @@ class EditProfileViewModel(
 
     fun save(
         displayName: String,
+        username: String,
         bio: String,
         avatarUri: String?,
         coverUri: String?
@@ -66,6 +67,15 @@ class EditProfileViewModel(
             _error.value = R.string.edit_profile_error_display_name
             return
         }
+        val canonicalUsername = com.nexa.social.core.common.Validators.canonicalUsername(username)
+        if (!com.nexa.social.core.common.Validators.isValidUsername(canonicalUsername)) {
+            _error.value = R.string.error_username_invalid
+            return
+        }
+        if (com.nexa.social.core.common.Validators.isReservedUsername(canonicalUsername)) {
+            _error.value = R.string.error_username_reserved
+            return
+        }
 
         viewModelScope.launch {
             _saving.value = true
@@ -80,7 +90,8 @@ class EditProfileViewModel(
                     avatarUri = avatarUri,
                     coverUri = coverUri,
                     city = current.city,
-                    website = current.website
+                    website = current.website,
+                    username = canonicalUsername
                 )) {
                     is Resource.Success -> {
                         // The profile row and media are already saved at this point; show the
