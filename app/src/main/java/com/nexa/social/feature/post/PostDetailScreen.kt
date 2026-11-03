@@ -608,6 +608,38 @@ fun PostDetailScreen(
                 showMenu = false
                 showReport = true
             })
+            if (!canManage && current != null) {
+                NexaOptionRow(
+                    icon = Icons.Filled.VisibilityOff,
+                    label = stringResource(R.string.post_unfollow_author),
+                    onClick = {
+                        showMenu = false
+                        viewModel.unfollowAuthor(current.author.id) { success ->
+                            scope.launch {
+                                snackbarHost?.showSnackbar(
+                                    context.getString(if (success) R.string.post_unfollow_done else R.string.comment_action_failed)
+                                )
+                            }
+                        }
+                    }
+                )
+                NexaOptionRow(
+                    icon = Icons.Filled.Flag,
+                    label = stringResource(R.string.post_block_author),
+                    destructive = true,
+                    onClick = {
+                        showMenu = false
+                        viewModel.blockAuthor(current.author) { success ->
+                            scope.launch {
+                                snackbarHost?.showSnackbar(
+                                    context.getString(if (success) R.string.post_block_done else R.string.comment_action_failed)
+                                )
+                                if (success) onBack()
+                            }
+                        }
+                    }
+                )
+            }
             NexaOptionRow(icon = Icons.Filled.VisibilityOff, label = stringResource(R.string.post_hide), onClick = {
                 showMenu = false
                 viewModel.hide {
