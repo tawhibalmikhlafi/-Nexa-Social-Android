@@ -303,6 +303,16 @@
     <string name="settings_section_activity">نشاطك ومحتواك</string>
     <string name="settings_section_privacy">الجمهور والسلامة</string>
     <string name="settings_notifications_device_summary">إظهار إشعارات نيكسا أو إخفاؤها على هذا الجهاز</string>
+    <string name="settings_section_media">الوسائط والبيانات وإمكانية الوصول</string>
+    <string name="settings_video_autoplay">التشغيل التلقائي للفيديو</string>
+    <string name="settings_video_autoplay_summary">تشغيل المقاطع تلقائيًا عند فتحها</string>
+    <string name="settings_data_saver">توفير البيانات</string>
+    <string name="settings_data_saver_summary">منع التشغيل التلقائي للفيديو لتقليل استهلاك البيانات</string>
+    <string name="settings_reduce_motion">تقليل الحركة</string>
+    <string name="settings_reduce_motion_summary">تقليل الحركة حيثما كان ذلك مدعومًا</string>
+    <string name="settings_clear_cache">مسح الملفات المؤقتة</string>
+    <string name="settings_cache_size">حجم الملفات المؤقتة: %1$s</string>
+    <string name="settings_clear_cache_confirm">هل تريد حذف %1$s من الملفات المؤقتة؟ لن تُحذف المنشورات أو الرسائل أو بيانات الحساب.</string>
     <string name="settings_section_preferences">تفضيلاتك</string>
     <string name="settings_edit_profile_summary">تحديث معلومات ملفك وصورك</string>
     <string name="settings_edit_profile">تعديل الملف الشخصي</string>
