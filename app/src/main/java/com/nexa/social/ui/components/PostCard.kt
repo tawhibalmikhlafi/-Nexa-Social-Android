@@ -249,7 +249,7 @@ fun PostCard(
                 modifier = Modifier.weight(1f)
             )
         }
-        if (commentPreview.isNotEmpty()) {
+        if (commentPreview.isNotEmpty() || post.commentCount > 0) {
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.xs),
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
