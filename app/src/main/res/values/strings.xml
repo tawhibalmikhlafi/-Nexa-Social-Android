@@ -292,6 +292,21 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_section_information">Support and information</string>
+    <string name="settings_section_tools">Nexa features</string>
+    <string name="settings_friends">Friends</string>
+    <string name="settings_groups_summary">Your groups and memberships</string>
+    <string name="settings_groups">Groups</string>
+    <string name="settings_messages_summary">Open your conversations</string>
+    <string name="settings_messages">Messages</string>
+    <string name="settings_section_connections">Messages and connections</string>
+    <string name="settings_section_activity">Your activity</string>
+    <string name="settings_section_privacy">Audience and safety</string>
+    <string name="settings_notifications_device_summary">Controls notifications on this device</string>
+    <string name="settings_section_preferences">Your preferences</string>
+    <string name="settings_edit_profile_summary">Update your profile information and photos</string>
+    <string name="settings_edit_profile">Edit profile</string>
+    <string name="settings_section_account">Account</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_appearance_summary">Theme, colors and background</string>
     <string name="settings_language">Language</string>
@@ -303,11 +318,11 @@
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_enabled">Enable local notifications</string>
     <string name="settings_about">About Nexa</string>
-    <string name="settings_about_body">Nexa 2030 is a social platform centered on interactive worlds and communities. This build runs fully on your device; online features are prepared for a future server.</string>
+    <string name="settings_about_body">Nexa Social uses Supabase for supported account and social data when you are signed in. Appearance and language choices are stored on this device; some optional modules may also keep device-local data.</string>
     <string name="settings_privacy_policy">Privacy policy</string>
-    <string name="settings_privacy_policy_body">Your local data is stored on your device only. No personal data leaves the device in this build, and there is no analytics or tracking.</string>
+    <string name="settings_privacy_policy_body">Nexa processes account and social data through its configured backend services to provide the features you use. Some preferences and optional modules are stored locally on your device. Avoid sharing sensitive information publicly, and contact support if you need details about a specific data category.</string>
     <string name="settings_terms">Terms of use</string>
-    <string name="settings_terms_body">Use Nexa respectfully. Local sample content is for development and does not represent real users or verified accounts.</string>
+    <string name="settings_terms_body">Use Nexa respectfully and do not publish content that violates others' rights or applicable law. Feature availability and data handling depend on the active account, service configuration, and the feature you use.</string>
     <string name="settings_sign_out">Sign out</string>
     <string name="settings_sign_out_confirm">Sign out from this local session?</string>
     <string name="settings_sign_out_guest">Exit guest mode</string>
