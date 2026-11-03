@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -76,6 +77,7 @@ class PreferenceStorage(private val context: Context) {
         val feedType = stringPreferencesKey("feed_type")
         val videoAutoplay = booleanPreferencesKey("video_autoplay")
         val reduceMotion = booleanPreferencesKey("reduce_motion")
+        val fontScale = floatPreferencesKey("font_scale")
         val dataSaver = booleanPreferencesKey("data_saver")
         val notifLike = booleanPreferencesKey("notif_like")
         val notifComment = booleanPreferencesKey("notif_comment")
@@ -184,6 +186,8 @@ class PreferenceStorage(private val context: Context) {
     val videoAutoplay: Flow<Boolean> = preferences.map { it[Keys.videoAutoplay] ?: true }
 
     val reduceMotion: Flow<Boolean> = preferences.map { it[Keys.reduceMotion] ?: false }
+
+    val fontScale: Flow<Float> = preferences.map { (it[Keys.fontScale] ?: 1.0f).coerceIn(0.85f, 1.30f) }
 
     val dataSaver: Flow<Boolean> = preferences.map { it[Keys.dataSaver] ?: false }
 
@@ -321,6 +325,10 @@ class PreferenceStorage(private val context: Context) {
 
     suspend fun setReduceMotion(enabled: Boolean) {
         context.nexaDataStore.edit { it[Keys.reduceMotion] = enabled }
+    }
+
+    suspend fun setFontScale(scale: Float) {
+        context.nexaDataStore.edit { it[Keys.fontScale] = scale.coerceIn(0.85f, 1.30f) }
     }
 
     suspend fun setDataSaver(enabled: Boolean) {
