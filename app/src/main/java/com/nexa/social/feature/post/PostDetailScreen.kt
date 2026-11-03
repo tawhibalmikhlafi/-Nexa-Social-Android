@@ -288,6 +288,16 @@ fun PostDetailScreen(
         suggestedUsers
     }
     val commentThread = remember(comments) { comments.toCommentThread() }
+    var showAllComments by rememberSaveable(postId) { mutableStateOf(false) }
+    val visibleCommentThread = remember(commentThread, showAllComments) {
+        if (showAllComments) commentThread else {
+            var rootsSeen = 0
+            commentThread.takeWhile { node ->
+                if (node.depth == 0) rootsSeen++
+                rootsSeen <= 2
+            }
+        }
+    }
     var replyingToComment by remember { mutableStateOf<PostComment?>(null) }
     var editingComment by remember { mutableStateOf<PostComment?>(null) }
     var deletingComment by remember { mutableStateOf<PostComment?>(null) }
@@ -433,7 +443,7 @@ fun PostDetailScreen(
                         )
                     }
                 } else {
-                    items(commentThread, key = { it.comment.id }) { node ->
+                    items(visibleCommentThread, key = { it.comment.id }) { node ->
                         CommentRow(
                             comment = node.comment,
                             depth = node.depth,
@@ -444,6 +454,21 @@ fun PostDetailScreen(
                             onEdit = { editingComment = node.comment },
                             onDelete = { deletingComment = node.comment },
                             onOpenImage = { fullscreenImageUrl = it }
+                        )
+                    }
+                }
+                if (!showAllComments && visibleCommentThread.size < commentThread.size) {
+                    item {
+                        NexaTextButton(
+                            text = stringResource(R.string.comment_show_all, commentThread.size),
+                            onClick = { showAllComments = true }
+                        )
+                    }
+                } else if (showAllComments && commentThread.count { it.depth == 0 } > 2) {
+                    item {
+                        NexaTextButton(
+                            text = stringResource(R.string.comment_show_less),
+                            onClick = { showAllComments = false }
                         )
                     }
                 }
@@ -561,11 +586,23 @@ fun PostDetailScreen(
     if (showMenu) {
         NexaBottomSheet(onDismiss = { showMenu = false }) {
             SheetTitle(stringResource(R.string.post_menu))
+            NexaOptionRow(
+                icon = if (current?.savedByMe == true) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                label = stringResource(if (current?.savedByMe == true) R.string.post_unsave else R.string.post_save),
+                onClick = {
+                    showMenu = false
+                    viewModel.toggleSave()
+                }
+            )
             NexaOptionRow(icon = Icons.Filled.ContentCopy, label = stringResource(R.string.post_copy_link), onClick = {
                 showMenu = false
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Nexa Post", "nexa://post/$postId"))
                 snackbarHost?.let { host -> scope.launch { host.showSnackbar(linkCopiedMessage) } }
+            })
+            NexaOptionRow(icon = Icons.Filled.Share, label = stringResource(R.string.post_share), onClick = {
+                showMenu = false
+                current?.let { sharePost(context, postId, it.text) }
             })
             NexaOptionRow(icon = Icons.Filled.Flag, label = stringResource(R.string.post_report), onClick = {
                 showMenu = false
