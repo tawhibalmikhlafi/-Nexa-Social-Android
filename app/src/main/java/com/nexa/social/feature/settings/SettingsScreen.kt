@@ -341,7 +341,7 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_feedback),
                 subtitle = stringResource(R.string.settings_feedback_summary),
                 onClick = {
-                    val details = getString(
+                    val details = context.getString(
                         R.string.settings_feedback_template,
                         BuildConfig.VERSION_NAME,
                         android.os.Build.VERSION.RELEASE.orEmpty(),
