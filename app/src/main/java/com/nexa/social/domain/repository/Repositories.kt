@@ -356,6 +356,12 @@ interface NotificationRepository {
     fun observeTypeEnabled(): Flow<Map<NotificationType, Boolean>>
     suspend fun setTypeEnabled(type: NotificationType, enabled: Boolean)
 
+    /** Pulls the signed-in account's notification preferences onto this device. */
+    suspend fun syncPreferences(): Boolean = false
+
+    /** Persists this device's notification preferences to the signed-in account. */
+    suspend fun persistPreferences(): Boolean = false
+
     /** True while notifications come from Supabase instead of the local cache. */
     fun observeIsRemote(): Flow<Boolean> = flowOf(false)
 
