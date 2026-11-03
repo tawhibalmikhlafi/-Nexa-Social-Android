@@ -83,6 +83,11 @@ class PreferenceStorage(private val context: Context) {
         val notifFollow = booleanPreferencesKey("notif_follow")
         val notifCommunity = booleanPreferencesKey("notif_community")
         val notifSpace = booleanPreferencesKey("notif_space")
+        val notifMessages = booleanPreferencesKey("notif_messages")
+        val notifGroups = booleanPreferencesKey("notif_groups")
+        val notifStories = booleanPreferencesKey("notif_stories")
+        val notifMentions = booleanPreferencesKey("notif_mentions")
+        val notifSystem = booleanPreferencesKey("notif_system")
     }
 
     val onboardingCompleted: Flow<Boolean> =
@@ -190,7 +195,15 @@ class PreferenceStorage(private val context: Context) {
                 NotificationType.REPLY to (prefs[Keys.notifReply] ?: true),
                 NotificationType.FOLLOW to (prefs[Keys.notifFollow] ?: true),
                 NotificationType.COMMUNITY to (prefs[Keys.notifCommunity] ?: true),
-                NotificationType.SPACE to (prefs[Keys.notifSpace] ?: true)
+                NotificationType.SPACE to (prefs[Keys.notifSpace] ?: true),
+                NotificationType.MESSAGE to (prefs[Keys.notifMessages] ?: true),
+                NotificationType.GROUP_JOIN_REQUEST to (prefs[Keys.notifGroups] ?: true),
+                NotificationType.GROUP_JOIN_APPROVED to (prefs[Keys.notifGroups] ?: true),
+                NotificationType.GROUP_JOIN_REJECTED to (prefs[Keys.notifGroups] ?: true),
+                NotificationType.STORY_REPLY to (prefs[Keys.notifStories] ?: true),
+                NotificationType.MENTION to (prefs[Keys.notifMentions] ?: true),
+                NotificationType.WELCOME to (prefs[Keys.notifSystem] ?: true),
+                NotificationType.SYSTEM to (prefs[Keys.notifSystem] ?: true)
             )
         }
 
@@ -329,14 +342,15 @@ class PreferenceStorage(private val context: Context) {
             NotificationType.FOLLOW -> Keys.notifFollow
             NotificationType.COMMUNITY -> Keys.notifCommunity
             NotificationType.SPACE -> Keys.notifSpace
-            NotificationType.WELCOME,
-            NotificationType.SYSTEM,
-            NotificationType.MENTION,
-            NotificationType.STORY_REPLY,
-            NotificationType.MESSAGE,
+            NotificationType.MESSAGE -> Keys.notifMessages
             NotificationType.GROUP_JOIN_REQUEST,
             NotificationType.GROUP_JOIN_APPROVED,
-            NotificationType.GROUP_JOIN_REJECTED -> null
+            NotificationType.GROUP_JOIN_REJECTED -> Keys.notifGroups
+            NotificationType.STORY_REPLY -> Keys.notifStories
+            NotificationType.MENTION -> Keys.notifMentions
+            NotificationType.WELCOME,
+            NotificationType.SYSTEM -> Keys.notifSystem
+
         } ?: return
         context.nexaDataStore.edit { it[key] = enabled }
     }
