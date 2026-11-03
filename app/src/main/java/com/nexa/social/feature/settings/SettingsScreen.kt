@@ -87,6 +87,10 @@ fun SettingsScreen(
     val language by viewModel.language.collectAsStateWithLifecycle()
     val notifications by viewModel.notificationsEnabled.collectAsStateWithLifecycle()
     val notificationCategories by viewModel.notificationCategories.collectAsStateWithLifecycle()
+    val videoAutoplay by viewModel.videoAutoplay.collectAsStateWithLifecycle()
+    val dataSaver by viewModel.dataSaver.collectAsStateWithLifecycle()
+    val reduceMotion by viewModel.reduceMotion.collectAsStateWithLifecycle()
+    val cacheSizeBytes by viewModel.cacheSizeBytes.collectAsStateWithLifecycle()
     val session by viewModel.session.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val remoteMode = rememberRemoteMode()
@@ -94,6 +98,7 @@ fun SettingsScreen(
     var dialog by remember { mutableStateOf<String?>(null) }
     var showLanguage by remember { mutableStateOf(false) }
     var showSignOut by remember { mutableStateOf(false) }
+    var showClearCache by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         NexaTopBar(title = stringResource(R.string.settings_title), onBack = onBack)
@@ -189,6 +194,33 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.xs))
+            SettingsSectionHeader(stringResource(R.string.settings_section_media))
+            SettingsRow(
+                icon = Icons.Filled.Videocam,
+                title = stringResource(R.string.settings_video_autoplay),
+                subtitle = stringResource(R.string.settings_video_autoplay_summary),
+                trailing = { Switch(checked = videoAutoplay, onCheckedChange = viewModel::setVideoAutoplay) }
+            )
+            SettingsRow(
+                icon = Icons.Filled.Security,
+                title = stringResource(R.string.settings_data_saver),
+                subtitle = stringResource(R.string.settings_data_saver_summary),
+                trailing = { Switch(checked = dataSaver, onCheckedChange = viewModel::setDataSaver) }
+            )
+            SettingsRow(
+                icon = Icons.Filled.Security,
+                title = stringResource(R.string.settings_reduce_motion),
+                subtitle = stringResource(R.string.settings_reduce_motion_summary),
+                trailing = { Switch(checked = reduceMotion, onCheckedChange = viewModel::setReduceMotion) }
+            )
+            SettingsRow(
+                icon = Icons.Filled.Security,
+                title = stringResource(R.string.settings_clear_cache),
+                subtitle = stringResource(R.string.settings_cache_size, formatBytes(cacheSizeBytes)),
+                onClick = { showClearCache = true }
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.xs))
             SettingsSectionHeader(stringResource(R.string.settings_section_privacy))
@@ -342,6 +374,23 @@ fun SettingsScreen(
         )
     }
 
+    if (showClearCache) {
+        AlertDialog(
+            onDismissRequest = { showClearCache = false },
+            title = { Text(stringResource(R.string.settings_clear_cache)) },
+            text = { Text(stringResource(R.string.settings_clear_cache_confirm, formatBytes(cacheSizeBytes))) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showClearCache = false
+                    viewModel.clearCache { }
+                }) { Text(stringResource(R.string.action_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCache = false }) { Text(stringResource(R.string.action_cancel)) }
+            }
+        )
+    }
+
     if (showSignOut) {
         AlertDialog(
             onDismissRequest = { showSignOut = false },
@@ -381,6 +430,12 @@ fun SettingsScreen(
     }
 }
 
+
+private fun formatBytes(bytes: Long): String = when {
+    bytes < 1024L -> "${bytes} B"
+    bytes < 1024L * 1024L -> "%.1f KB".format(bytes / 1024.0)
+    else -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+}
 
 @Composable
 private fun NotificationCategoryRow(
