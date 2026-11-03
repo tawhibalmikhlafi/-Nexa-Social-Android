@@ -68,7 +68,6 @@ fun audienceLabel(audience: Audience): String = when (audience) {
 @Composable
 fun PostCard(
     post: Post,
-    commentPreview: List<PostComment> = emptyList(),
     onLike: () -> Unit,
     onReaction: (String) -> Unit = { onLike() },
     onComment: () -> Unit,
@@ -77,7 +76,8 @@ fun PostCard(
     onDelete: (() -> Unit)? = null,
     onOpenProfile: (String) -> Unit = {},
     onOpenPost: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    commentPreview: List<PostComment> = emptyList()
 ) {
     var expanded by remember(post.id) { mutableStateOf(false) }
     var textOverflowing by remember(post.id) { mutableStateOf(false) }
