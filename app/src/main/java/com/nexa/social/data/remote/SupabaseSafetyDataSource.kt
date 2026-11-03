@@ -6,6 +6,8 @@ import com.nexa.social.core.supabase.SupabaseConfig
 import com.nexa.social.core.supabase.SupabaseHttp
 import com.nexa.social.core.supabase.string
 import com.nexa.social.domain.model.BlockedUser
+import com.nexa.social.domain.model.ReportReason
+import com.nexa.social.domain.model.ReportTargetType
 import java.net.URLEncoder
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -60,6 +62,50 @@ class SupabaseSafetyDataSource(
                 .build()
         ).getOrNull()
         return response?.successful == true
+    }
+
+    suspend fun submitReport(
+        targetType: ReportTargetType,
+        targetId: String,
+        reason: ReportReason,
+        note: String
+    ): Boolean {
+        val uid = currentUid() ?: return false
+        val token = accessToken() ?: return false
+        val body = JsonObject().apply {
+            addProperty("reporter_id", uid)
+            addProperty("target_type", targetType.toApiValue())
+            addProperty("target_id", targetId)
+            addProperty("reason", reason.toApiValue())
+            addProperty("note", note.trim().take(1000))
+        }
+        val response = http.execute(
+            http.authenticatedRequest("$restUrl/content_reports", token)
+                .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+                .post(http.jsonBody(body))
+                .build()
+        ).getOrNull()
+        return response?.successful == true
+    }
+
+    private fun ReportTargetType.toApiValue(): String = when (this) {
+        ReportTargetType.POST -> "post"
+        ReportTargetType.COMMENT -> "comment"
+        ReportTargetType.USER -> "user"
+        ReportTargetType.CLIP -> "clip"
+        ReportTargetType.COMMUNITY -> "community"
+    }
+
+    private fun ReportReason.toApiValue(): String = when (this) {
+        ReportReason.SPAM -> "spam"
+        ReportReason.HARASSMENT -> "harassment"
+        ReportReason.HATE_SPEECH -> "hate_speech"
+        ReportReason.MISINFORMATION -> "misinformation"
+        ReportReason.SEXUAL_CONTENT -> "sexual_content"
+        ReportReason.VIOLENCE -> "violence"
+        ReportReason.SELF_HARM -> "self_harm"
+        ReportReason.IMPERSONATION -> "impersonation"
+        ReportReason.OTHER -> "other"
     }
 
     suspend fun unblock(blockedId: String): Boolean {
