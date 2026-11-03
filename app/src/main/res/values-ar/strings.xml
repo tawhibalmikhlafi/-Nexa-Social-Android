@@ -759,6 +759,8 @@
     <string name="comment_delete_confirm_title">حذف التعليق؟</string>
     <string name="comment_delete_confirm_body">لا يمكن التراجع عن هذا الإجراء.</string>
     <string name="comment_too_long">يمكن أن يصل التعليق إلى 1000 حرف.</string>
+    <string name="comment_sort_newest">الأحدث</string>
+    <string name="comment_sort_popular">الأكثر تفاعلاً</string>
     <string name="comment_load_more">تحميل المزيد من التعليقات</string>
     <string name="comment_show_all">عرض كل التعليقات (%1$d)</string>
     <string name="comment_show_less">عرض تعليقين فقط</string>
