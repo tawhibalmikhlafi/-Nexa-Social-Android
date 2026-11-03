@@ -284,7 +284,7 @@ class UserRepositoryImpl(
         return true
     }
 
-    override suspend fun hasPendingFollowRequest(userId: String): Boolean {
+    override suspend fun hasPendingFollowRequest(userId: String): Boolean? {
         val session = prefs.session.first()
         val remoteStore = remote
         if (session !is SessionState.RemoteAccount || remoteStore == null || isLocalTarget(userId)) {
@@ -292,7 +292,7 @@ class UserRepositoryImpl(
         }
         return runCatching {
             remoteStore.hasPendingFollowRequest(session.userId, userId)
-        }.getOrDefault(false)
+        }.getOrNull()
     }
 
     override suspend fun isFollowing(userId: String): Boolean {
