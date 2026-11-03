@@ -389,6 +389,7 @@ interface SafetyRepository {
     suspend fun unmute(userId: String): Resource<Unit>
     suspend fun hide(contentId: String, kind: ContentKind)
     suspend fun unhide(contentId: String)
+    /** Sends a moderation report to the remote backend for authenticated accounts. */
     suspend fun submitReport(
         targetType: ReportTargetType,
         targetId: String,
