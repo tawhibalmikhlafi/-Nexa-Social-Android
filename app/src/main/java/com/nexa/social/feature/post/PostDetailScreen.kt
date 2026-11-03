@@ -326,7 +326,6 @@ fun PostDetailScreen(
     }
 
     val hiddenMessage = stringResource(R.string.post_hide_done)
-    val reportMessage = stringResource(R.string.post_report_sent)
     val shareFailedMessage = stringResource(R.string.post_share_failed)
     val actionFailedMessage = stringResource(R.string.comment_action_failed)
     val linkCopiedMessage = stringResource(R.string.post_link_copied)
