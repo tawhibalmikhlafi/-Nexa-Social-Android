@@ -145,7 +145,7 @@ interface UserRepository {
 
     suspend fun setFollowing(userId: String, following: Boolean): Boolean
     suspend fun isFollowing(userId: String): Boolean
-    suspend fun hasPendingFollowRequest(userId: String): Boolean = false
+    suspend fun hasPendingFollowRequest(userId: String): Boolean? = null
 
     suspend fun refresh() {}
 }
