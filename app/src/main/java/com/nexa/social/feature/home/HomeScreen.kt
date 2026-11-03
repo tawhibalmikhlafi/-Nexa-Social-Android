@@ -121,7 +121,7 @@ fun HomeScreen(
         state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = NexaSpacing.xxxl),
-        verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)
+        verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)
     ) {
         item {
             HomeHeader(
@@ -245,7 +245,7 @@ private fun HomeHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = NexaSpacing.sm, vertical = NexaSpacing.sm),
+            .padding(horizontal = NexaSpacing.sm, vertical = NexaSpacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
         NexaWordmark(modifier = Modifier.weight(1f), markSize = 32.dp, showYear = false)
@@ -352,7 +352,7 @@ private fun StoryTray(
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = NexaSpacing.lg)
         )
-        Spacer(Modifier.height(NexaSpacing.sm))
+        Spacer(Modifier.height(NexaSpacing.xs))
         LazyRow(
             contentPadding = PaddingValues(horizontal = NexaSpacing.lg),
             horizontalArrangement = Arrangement.spacedBy(NexaSpacing.md)
@@ -482,7 +482,7 @@ private fun CreatePostCard(
     NexaCard(modifier = modifier, onClick = onCreatePost) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)
+            verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
