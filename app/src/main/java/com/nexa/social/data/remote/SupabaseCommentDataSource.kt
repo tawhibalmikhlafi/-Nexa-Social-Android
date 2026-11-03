@@ -211,7 +211,7 @@ class SupabaseCommentDataSource(
     suspend fun getCommentReactions(commentId: String): List<PostReaction> {
         val rows = fetchRows(
             "comment_likes?select=emoji,created_at,user:profiles!user_id(id,username,display_name,avatar_url,account_origin)&comment_id=eq.${encode(commentId)}&order=created_at.desc"
-        ).orEmpty()
+        ) ?: throw IllegalStateException("COMMENT_REACTIONS_UNAVAILABLE")
         return rows.mapNotNull { row ->
             val user = row.getAsJsonObject("user") ?: return@mapNotNull null
             val id = user.string("id") ?: return@mapNotNull null
