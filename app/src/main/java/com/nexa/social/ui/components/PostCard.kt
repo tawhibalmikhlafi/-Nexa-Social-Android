@@ -82,6 +82,7 @@ fun PostCard(
     var expanded by remember(post.id) { mutableStateOf(false) }
     var textOverflowing by remember(post.id) { mutableStateOf(false) }
     val editedLabel = stringResource(R.string.post_edited)
+    val authorName = post.author.displayName.trim().takeIf { it.isNotBlank() } ?: post.author.username
     val meta = buildString {
         append(TimeUtils.relativeFromNow(post.createdAt))
         if (post.isEdited) {
@@ -101,7 +102,7 @@ fun PostCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 NexaAvatar(
-                    displayName = post.author.displayName,
+                    displayName = authorName,
                     avatarUri = post.author.avatarUri,
                     size = 46.dp
                 )
@@ -109,7 +110,7 @@ fun PostCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = post.author.displayName,
+                            text = authorName,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
