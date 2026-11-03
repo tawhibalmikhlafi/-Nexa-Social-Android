@@ -31,6 +31,8 @@ interface UserRemoteDataSource {
         website: String?
     ): Resource<User>
 
+    suspend fun changeUsername(uid: String, username: String): Resource<User>
+
     suspend fun updateBasicProfile(
         uid: String,
         displayName: String,
