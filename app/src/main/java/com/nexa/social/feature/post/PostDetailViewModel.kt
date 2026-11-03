@@ -168,10 +168,10 @@ class PostDetailViewModel(
         }
     }
 
-    fun report(reason: ReportReason, note: String, onDone: () -> Unit) {
+    fun report(reason: ReportReason, note: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            safetyRepository.submitReport(ReportTargetType.POST, postId, reason, note)
-            onDone()
+            val result = safetyRepository.submitReport(ReportTargetType.POST, postId, reason, note)
+            onResult(result is Resource.Success)
         }
     }
 
