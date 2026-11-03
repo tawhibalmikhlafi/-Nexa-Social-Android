@@ -87,6 +87,12 @@ class PostDetailViewModel(
 
     fun toggleSave() = viewModelScope.launch { postRepository.toggleSave(postId) }
 
+    fun recordShare() {
+        viewModelScope.launch {
+            runCatching { postRepository.incrementShare(postId) }
+        }
+    }
+
     fun addComment(
         text: String,
         parentId: String? = null,
