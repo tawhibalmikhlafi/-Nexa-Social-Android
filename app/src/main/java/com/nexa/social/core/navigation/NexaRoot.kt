@@ -387,7 +387,11 @@ fun NexaRoot() {
                         onSafety = { navController.navigate(NexaDestinations.SAFETY) },
                         onPrivacy = { navController.navigate(NexaDestinations.PRIVACY) },
                         onAi = { navController.navigate(NexaDestinations.AI) },
-                        onLabs = { navController.navigate(NexaDestinations.LABS) }
+                        onLabs = { navController.navigate(NexaDestinations.LABS) },
+                        onEditProfile = { navController.navigate(NexaDestinations.EDIT_PROFILE) },
+                        onMessages = { navController.navigate(NexaDestinations.MESSAGES) },
+                        onGroups = { navController.navigate(NexaDestinations.GROUPS) },
+                        onFriends = { navController.navigate(NexaDestinations.FRIENDS) }
                     )
                 }
 
