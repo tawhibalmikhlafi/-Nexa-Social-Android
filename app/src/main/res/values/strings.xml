@@ -145,6 +145,9 @@
     <string name="post_like">Like</string>
     <string name="post_comment">Comment</string>
     <string name="post_share">Share</string>
+    <string name="post_add_image">Photo</string>
+    <string name="post_feeling">Feeling</string>
+    <string name="post_publish">Post</string>
     <string name="post_save">Save</string>
     <string name="post_saved">Saved locally</string>
     <string name="post_unsave">Unsave</string>
