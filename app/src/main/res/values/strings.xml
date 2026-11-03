@@ -302,7 +302,7 @@
     <string name="settings_section_connections">Messages and connections</string>
     <string name="settings_section_activity">Your activity</string>
     <string name="settings_section_privacy">Audience and safety</string>
-    <string name="settings_notifications_device_summary">Controls notifications on this device</string>
+    <string name="settings_notifications_device_summary">Show or hide notifications in this app on this device</string>
     <string name="settings_section_preferences">Your preferences</string>
     <string name="settings_edit_profile_summary">Update your profile information and photos</string>
     <string name="settings_edit_profile">Edit profile</string>
@@ -315,6 +315,15 @@
     <string name="settings_language_english">English</string>
     <string name="settings_privacy">Privacy</string>
     <string name="settings_privacy_private_account">Private account (local)</string>
+    <string name="settings_notif_likes">Likes</string>
+    <string name="settings_notif_comments">Comments</string>
+    <string name="settings_notif_replies">Replies</string>
+    <string name="settings_notif_follows">New followers</string>
+    <string name="settings_notif_messages">Messages</string>
+    <string name="settings_notif_groups">Groups</string>
+    <string name="settings_notif_stories">Story replies</string>
+    <string name="settings_notif_mentions">Mentions</string>
+    <string name="settings_notif_system">System and account updates</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_enabled">Enable local notifications</string>
     <string name="settings_about">About Nexa</string>
