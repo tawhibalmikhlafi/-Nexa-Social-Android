@@ -87,8 +87,8 @@ class PostRepositoryImpl(
         if (isRemote(session) && remoteStore != null && uid != null) {
             combine(
                 remoteStore.observeFeed(),
-                prefs.hiddenPostIds,
-                prefs.pinnedPostIds,
+                remoteStore.observeHiddenPostIds(),
+                remoteStore.observePinnedPostIds(),
                 userRepository.observeFollowingIds(),
                 prefs.reactionOverrides
             ) { posts, hidden, pinned, following, overrides ->
@@ -109,7 +109,7 @@ class PostRepositoryImpl(
             if (isRemote(session) && remoteStore != null && uid != null) {
                 combine(
                     remoteStore.observePostsByAuthor(authorId),
-                    prefs.hiddenPostIds,
+                    remoteStore.observeHiddenPostIds(),
                     userRepository.observeFollowingIds(),
                     prefs.reactionOverrides
                 ) { posts, hidden, following, overrides ->
@@ -130,7 +130,7 @@ class PostRepositoryImpl(
         if (isRemote(session) && remoteStore != null) {
             combine(
                 remoteStore.observeSavedPosts(),
-                prefs.hiddenPostIds,
+                remoteStore.observeHiddenPostIds(),
                 prefs.reactionOverrides
             ) { posts, hidden, overrides ->
                 applyReactionOverrides(posts.filterNot { it.id in hidden }, overrides)
@@ -146,7 +146,7 @@ class PostRepositoryImpl(
     override fun observeHiddenPosts(): Flow<List<Post>> = prefs.session.flatMapLatest { session ->
         val remoteStore = remote
         if (isRemote(session) && remoteStore != null) {
-            remoteStore.observeHiddenPosts(prefs.hiddenPostIds)
+            remoteStore.observeHiddenPosts(remoteStore.observeHiddenPostIds())
         } else {
             _posts.asStateFlow().map { posts -> posts.filter { it.isHiddenLocally } }
         }
@@ -439,7 +439,8 @@ class PostRepositoryImpl(
     override suspend fun hidePost(postId: String) {
         val session = prefs.session.first()
         if (isRemote(session)) {
-            prefs.setHiddenPostIds(prefs.hiddenPostIds.first() + postId)
+            remote?.setHidden(postId, true)
+                ?: throw IllegalStateException("SUPABASE_POST_BACKEND_UNAVAILABLE")
             return
         }
         _posts.value = _posts.value.map { post ->
@@ -451,7 +452,8 @@ class PostRepositoryImpl(
     override suspend fun unhidePost(postId: String) {
         val session = prefs.session.first()
         if (isRemote(session)) {
-            prefs.setHiddenPostIds(prefs.hiddenPostIds.first() - postId)
+            remote?.setHidden(postId, false)
+                ?: throw IllegalStateException("SUPABASE_POST_BACKEND_UNAVAILABLE")
             return
         }
         _posts.value = _posts.value.map { post ->
@@ -463,10 +465,8 @@ class PostRepositoryImpl(
     override suspend fun togglePin(postId: String) {
         val session = prefs.session.first()
         if (isRemote(session)) {
-            val pinned = prefs.pinnedPostIds.first()
-            prefs.setPinnedPostIds(
-                if (postId in pinned) pinned - postId else pinned + postId
-            )
+            remote?.togglePin(postId)
+                ?: throw IllegalStateException("SUPABASE_POST_BACKEND_UNAVAILABLE")
             return
         }
         _posts.value = _posts.value.map { post ->
