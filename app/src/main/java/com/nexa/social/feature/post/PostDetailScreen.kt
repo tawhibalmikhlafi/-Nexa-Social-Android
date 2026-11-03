@@ -395,7 +395,7 @@ fun PostDetailScreen(
                 item {
                     PostActions(
                         post = current,
-                        commentCount = maxOf(current.commentCount, comments.size),
+                        commentCount = comments.size,
                         onLike = { viewModel.toggleLike() },
                         onReaction = { emoji -> viewModel.toggleLike(emoji) },
                         onComment = { runCatching { commentFocusRequester.requestFocus() } },
@@ -423,7 +423,7 @@ fun PostDetailScreen(
                     )
                     Text(
                         text = "${stringResource(R.string.post_comments_title)} · " +
-                            maxOf(current.commentCount, comments.size),
+                            comments.size,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
