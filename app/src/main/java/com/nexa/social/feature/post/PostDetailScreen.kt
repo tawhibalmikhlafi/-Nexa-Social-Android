@@ -1314,7 +1314,8 @@ private fun CommentRow(
     depth: Int,
     replyToName: String?,
     onOpenProfile: (String) -> Unit,
-    onToggleLike: () -> Unit,
+    onToggleLike: (String) -> Unit,
+    onOpenReactions: () -> Unit,
     onReply: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -1322,9 +1323,9 @@ private fun CommentRow(
 ) {
     val editedLabel = stringResource(R.string.comment_edited)
     val authorName = comment.author.preferredName()
-    val handle = comment.author.visibleHandle()
     val imageUrl = comment.imageUri
     var showActions by remember { mutableStateOf(false) }
+    var showCommentReactionPicker by remember { mutableStateOf(false) }
     val indent = (depth.coerceAtMost(3) * 16).dp
 
     Row(
@@ -1345,6 +1346,7 @@ private fun CommentRow(
                 modifier = Modifier
                     .clip(RoundedCornerShape(18.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                    .combinedClickable(onClick = {}, onLongClick = { showActions = true })
                     .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.sm + 2.dp)
             ) {
                 if (replyToName != null) {
@@ -1369,16 +1371,6 @@ private fun CommentRow(
                             .weight(1f, fill = false)
                             .clickable { onOpenProfile(comment.author.id) }
                     )
-                    if (handle != null) {
-                        Spacer(Modifier.width(NexaSpacing.xs))
-                        Text(
-                            text = handle,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
                 }
                 if (comment.text.isNotBlank()) {
                     Spacer(Modifier.height(6.dp))
@@ -1421,18 +1413,54 @@ private fun CommentRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Text(
+                    text = stringResource(R.string.comment_reply),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onReply)
+                        .padding(horizontal = 5.dp, vertical = 3.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Box {
+                    Text(
+                        text = if (comment.myReaction != null) "${comment.myReaction} " + stringResource(R.string.comment_unlike)
+                        else "♡ " + stringResource(R.string.post_like),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .combinedClickable(
+                                onClick = { onToggleLike(comment.myReaction ?: "❤️") },
+                                onLongClick = { showCommentReactionPicker = true }
+                            )
+                            .padding(horizontal = 5.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (comment.likedByMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    ReactionPicker(
+                        expanded = showCommentReactionPicker,
+                        selected = comment.myReaction,
+                        onDismiss = { showCommentReactionPicker = false },
+                        onSelect = { emoji ->
+                            showCommentReactionPicker = false
+                            onToggleLike(emoji)
+                        }
+                    )
+                }
                 Spacer(Modifier.weight(1f))
                 if (comment.likeCount > 0 || comment.likedByMe) {
                     Row(
-                        modifier = Modifier.padding(horizontal = NexaSpacing.xs, vertical = 4.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable(onClick = onOpenReactions)
+                            .padding(horizontal = NexaSpacing.xs, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Favorite,
-                            contentDescription = stringResource(R.string.post_like),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(14.dp)
+                        Text(
+                            text = comment.myReaction ?: "❤️",
+                            style = MaterialTheme.typography.labelSmall
                         )
                         Text(
                             text = comment.likeCount.toString(),
