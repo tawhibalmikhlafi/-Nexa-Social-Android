@@ -302,7 +302,7 @@ fun PostCard(
                     }
                 }
                 Text(
-                    text = stringResource(R.string.post_view_all_comments, post.commentCount),
+                    text = stringResource(R.string.post_view_all_comments, maxOf(post.commentCount, commentPreview.size)),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
