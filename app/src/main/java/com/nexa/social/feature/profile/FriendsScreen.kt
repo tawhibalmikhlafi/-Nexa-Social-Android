@@ -155,6 +155,7 @@ private fun FollowTab(
     val currentUserId by followViewModel.currentUserId.collectAsStateWithLifecycle()
     val overrides by followViewModel.overrides.collectAsStateWithLifecycle()
     val pending by followViewModel.pending.collectAsStateWithLifecycle()
+    val requestPending by followViewModel.requestPending.collectAsStateWithLifecycle()
     val error by followViewModel.error.collectAsStateWithLifecycle()
 
     FollowListContent(
@@ -163,6 +164,7 @@ private fun FollowTab(
         currentUserId = currentUserId,
         overrides = overrides,
         pending = pending,
+        requestPending = requestPending,
         emptyTitle = emptyTitle,
         emptyBody = emptyBody,
         onOpenProfile = onOpenProfile,
@@ -193,6 +195,7 @@ private fun SuggestionsTab(
     val followingIds by viewModel.followingIds.collectAsStateWithLifecycle()
     val overrides by viewModel.overrides.collectAsStateWithLifecycle()
     val pending by viewModel.pending.collectAsStateWithLifecycle()
+    val requestPending by viewModel.requestPending.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
 
     FollowListContent(
