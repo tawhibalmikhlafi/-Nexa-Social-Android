@@ -349,6 +349,10 @@
     <string name="post_menu">Post options</string>
     <string name="post_delete">Delete post</string>
     <string name="post_delete_confirm">Delete this post? This cannot be undone.</string>
+    <string name="post_unfollow_author">Unfollow author</string>
+    <string name="post_unfollow_done">You unfollowed this account</string>
+    <string name="post_block_author">Block author</string>
+    <string name="post_block_done">User blocked</string>
     <string name="post_hide">Hide post</string>
     <string name="post_hide_done">Post hidden from your feeds</string>
     <string name="post_report">Report</string>
