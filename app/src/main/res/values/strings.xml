@@ -355,6 +355,10 @@
     <string name="post_block_author">Block author</string>
     <string name="post_block_done">User blocked</string>
     <string name="post_hide">Hide post</string>
+    <string name="post_pin">Pin post</string>
+    <string name="post_unpin">Unpin post</string>
+    <string name="post_pin_done">Post pinned</string>
+    <string name="post_unpin_done">Post unpinned</string>
     <string name="post_hide_done">Post hidden from your feeds</string>
     <string name="post_report">Report</string>
     <string name="post_report_title">Report post</string>
