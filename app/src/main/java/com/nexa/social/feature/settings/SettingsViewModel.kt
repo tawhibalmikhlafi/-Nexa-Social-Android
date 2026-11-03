@@ -10,6 +10,7 @@ import com.nexa.social.core.common.LocaleManager
 import com.nexa.social.core.storage.PreferenceStorage
 import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.domain.model.SessionState
+import com.nexa.social.domain.model.NotificationType
 import com.nexa.social.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,9 @@ class SettingsViewModel(
     val notificationsEnabled: StateFlow<Boolean> = preferenceStorage.notificationsEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
+    val notificationCategories: StateFlow<Map<NotificationType, Boolean>> = preferenceStorage.notificationTypeEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     val session: StateFlow<SessionState> = authRepository.session
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionState.None)
 
@@ -40,6 +44,10 @@ class SettingsViewModel(
 
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch { preferenceStorage.setNotificationsEnabled(enabled) }
+    }
+
+    fun setNotificationCategory(type: NotificationType, enabled: Boolean) {
+        viewModelScope.launch { preferenceStorage.setNotificationTypeEnabled(type, enabled) }
     }
 
     fun signOut() {
