@@ -1,6 +1,13 @@
 package com.nexa.social.core.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -14,6 +21,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -130,14 +140,47 @@ fun NexaRoot() {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 if (showBottomBar) {
-                    NavigationBar {
-                        BottomNavItem.entries.forEach { item ->
-                            NavigationBarItem(
-                                selected = currentRoute == item.route,
-                                onClick = { navController.navigateTab(item.route) },
-                                icon = { Icon(item.icon, contentDescription = null) },
-                                label = { Text(stringResource(item.labelRes)) }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFF1A1030), Color(0xFF080511))
+                                ),
+                                RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
                             )
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFF8B35E8).copy(alpha = 0.75f),
+                                shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
+                            )
+                    ) {
+                        NavigationBar(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = Color.Transparent,
+                            tonalElevation = 0.dp
+                        ) {
+                            BottomNavItem.entries.forEach { item ->
+                                NavigationBarItem(
+                                    selected = currentRoute == item.route,
+                                    onClick = { navController.navigateTab(item.route) },
+                                    icon = {
+                                        Icon(
+                                            imageVector = item.icon,
+                                            contentDescription = stringResource(item.labelRes),
+                                            modifier = Modifier.size(25.dp)
+                                        )
+                                    },
+                                    label = { Text(stringResource(item.labelRes)) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = Color.White,
+                                        selectedTextColor = Color(0xFFE4C8FF),
+                                        indicatorColor = Color(0xFF6420A8),
+                                        unselectedIconColor = Color(0xFFB9A6D8),
+                                        unselectedTextColor = Color(0xFFB9A6D8)
+                                    )
+                                )
+                            }
                         }
                     }
                 }
