@@ -320,6 +320,15 @@ class SupabaseUserDataSource(
         return rows.isNotEmpty()
     }
 
+    override suspend fun hasPendingFollowRequest(uid: String, targetId: String): Boolean {
+        if (uid == targetId) return false
+        val rows = fetchRows(
+            "follow_requests?select=id&requester_id=eq.${encode(uid)}" +
+                "&target_id=eq.${encode(targetId)}&status=eq.pending&limit=1"
+        ) ?: return false
+        return rows.isNotEmpty()
+    }
+
     override suspend fun setFollowing(uid: String, targetId: String, following: Boolean): Boolean {
         if (uid == targetId) return false
         val token = accessToken() ?: return false
