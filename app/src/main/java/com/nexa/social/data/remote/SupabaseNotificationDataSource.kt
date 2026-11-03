@@ -42,6 +42,48 @@ class SupabaseNotificationDataSource(
         refreshSignal.tryEmit(Unit)
     }
 
+    suspend fun loadPreferences(uid: String): Pair<Boolean, Map<NotificationType, Boolean>>? {
+        val token = accessToken() ?: return null
+        val response = execute(
+            http.authenticatedRequest(
+                "$restUrl/user_notification_preferences?user_id=eq.${encode(uid)}&select=notifications_enabled,categories&limit=1",
+                token
+            ).get().build()
+        ) ?: return null
+        if (!response.successful) return null
+        val row = runCatching { JsonParser.parseString(response.body).asJsonArray.firstOrNull()?.asJsonObject }.getOrNull()
+            ?: return Pair(true, emptyMap())
+        val enabled = row.boolean("notifications_enabled") ?: true
+        val json = row.getAsJsonObject("categories")
+        val categories = NotificationType.entries.mapNotNull { type ->
+            json?.get(type.name)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isBoolean }
+                ?.let { type to it.asBoolean }
+        }.toMap()
+        return enabled to categories
+    }
+
+    suspend fun savePreferences(
+        uid: String,
+        enabled: Boolean,
+        categories: Map<NotificationType, Boolean>
+    ): Boolean {
+        val token = accessToken() ?: return false
+        val categoryJson = JsonObject().apply {
+            categories.forEach { (type, value) -> addProperty(type.name, value) }
+        }
+        val body = JsonObject().apply {
+            addProperty("user_id", uid)
+            addProperty("notifications_enabled", enabled)
+            add("categories", categoryJson)
+        }
+        val response = execute(
+            http.authenticatedRequest("$restUrl/user_notification_preferences?on_conflict=user_id", token)
+                .header("Prefer", "resolution=merge-duplicates,return=minimal")
+                .post(http.jsonBody(body)).build()
+        ) ?: return false
+        return response.successful
+    }
+
     private suspend fun awaitNextPoll() {
         withTimeoutOrNull(POLL_MS) {
             merge(refreshSignal, RefreshBus.requests).first()
