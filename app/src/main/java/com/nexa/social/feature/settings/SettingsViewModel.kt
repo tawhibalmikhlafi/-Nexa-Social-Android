@@ -32,6 +32,15 @@ class SettingsViewModel(
     val notificationCategories: StateFlow<Map<NotificationType, Boolean>> = preferenceStorage.notificationTypeEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
+    val videoAutoplay: StateFlow<Boolean> = preferenceStorage.videoAutoplay
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val dataSaver: StateFlow<Boolean> = preferenceStorage.dataSaver
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    val reduceMotion: StateFlow<Boolean> = preferenceStorage.reduceMotion
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     val session: StateFlow<SessionState> = authRepository.session
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionState.None)
 
@@ -48,6 +57,18 @@ class SettingsViewModel(
 
     fun setNotificationCategory(type: NotificationType, enabled: Boolean) {
         viewModelScope.launch { preferenceStorage.setNotificationTypeEnabled(type, enabled) }
+    }
+
+    fun setVideoAutoplay(enabled: Boolean) {
+        viewModelScope.launch { preferenceStorage.setVideoAutoplay(enabled) }
+    }
+
+    fun setDataSaver(enabled: Boolean) {
+        viewModelScope.launch { preferenceStorage.setDataSaver(enabled) }
+    }
+
+    fun setReduceMotion(enabled: Boolean) {
+        viewModelScope.launch { preferenceStorage.setReduceMotion(enabled) }
     }
 
     fun signOut() {
