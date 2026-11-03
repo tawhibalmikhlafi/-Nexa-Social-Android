@@ -503,7 +503,12 @@ private fun CreatePostCard(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    NexaWordmark()
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
