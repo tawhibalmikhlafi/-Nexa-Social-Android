@@ -188,8 +188,10 @@ fun HomeScreen(
             }
         } else {
             items(feed, key = { it.id }) { post ->
+                val commentPreview by viewModel.observeCommentPreview(post.id).collectAsStateWithLifecycle(initialValue = emptyList())
                 PostCard(
                     post = post,
+                    commentPreview = commentPreview.take(2),
                     onLike = { viewModel.toggleLike(post.id) },
                     onReaction = { emoji -> viewModel.toggleLike(post.id, emoji) },
                     onComment = { onOpenPost(post.id) },
