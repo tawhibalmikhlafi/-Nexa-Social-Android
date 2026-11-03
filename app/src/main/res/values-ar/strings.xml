@@ -335,6 +335,8 @@
     <string name="nav_home">الرئيسية</string>
     <string name="nav_worlds">العوالم</string>
     <string name="nav_create">إنشاء</string>
+    <string name="nav_reels">الريلزات</string>
+    <string name="nav_groups">المجموعات</string>
     <string name="nav_messages">الرسائل</string>
     <string name="nav_profile">الملف الشخصي</string>
     <string name="title_notifications">الإشعارات</string>
