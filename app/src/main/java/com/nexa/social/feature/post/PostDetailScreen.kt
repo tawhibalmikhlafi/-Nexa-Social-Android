@@ -409,7 +409,9 @@ fun PostDetailScreen(
                         onReaction = { emoji -> viewModel.toggleLike(emoji) },
                         onComment = { runCatching { commentFocusRequester.requestFocus() } },
                         onShare = {
-                            if (!sharePost(context, postId, current.text)) {
+                            if (sharePost(context, postId, current.text)) {
+                                viewModel.recordShare()
+                            } else {
                                 snackbarHost?.let { host -> scope.launch { host.showSnackbar(shareFailedMessage) } }
                             }
                         },
@@ -637,7 +639,9 @@ fun PostDetailScreen(
             NexaOptionRow(icon = Icons.Filled.Share, label = stringResource(R.string.post_share), onClick = {
                 showMenu = false
                 current?.let {
-                    if (!sharePost(context, postId, it.text)) {
+                    if (sharePost(context, postId, it.text)) {
+                        viewModel.recordShare()
+                    } else {
                         snackbarHost?.let { host -> scope.launch { host.showSnackbar(shareFailedMessage) } }
                     }
                 }
