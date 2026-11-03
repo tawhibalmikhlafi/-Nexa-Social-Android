@@ -19,6 +19,7 @@
     <string name="action_leave">مغادرة</string>
     <string name="action_open">فتح</string>
     <string name="action_follow">متابعة</string>
+    <string name="action_follow_requested">تم إرسال طلب المتابعة · اضغط للإلغاء</string>
     <string name="action_unfollow">إلغاء المتابعة</string>
     <string name="action_edit">تعديل</string>
     <string name="action_delete">حذف</string>
