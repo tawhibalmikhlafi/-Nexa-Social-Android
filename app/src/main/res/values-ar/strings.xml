@@ -302,7 +302,7 @@
     <string name="settings_section_connections">الرسائل والتواصل</string>
     <string name="settings_section_activity">نشاطك ومحتواك</string>
     <string name="settings_section_privacy">الجمهور والسلامة</string>
-    <string name="settings_notifications_device_summary">يتحكم في إشعارات هذا الجهاز</string>
+    <string name="settings_notifications_device_summary">إظهار إشعارات نيكسا أو إخفاؤها على هذا الجهاز</string>
     <string name="settings_section_preferences">تفضيلاتك</string>
     <string name="settings_edit_profile_summary">تحديث معلومات ملفك وصورك</string>
     <string name="settings_edit_profile">تعديل الملف الشخصي</string>
@@ -315,6 +315,15 @@
     <string name="settings_language_english">English</string>
     <string name="settings_privacy">الخصوصية</string>
     <string name="settings_privacy_private_account">حساب خاص (محلي)</string>
+    <string name="settings_notif_likes">الإعجابات</string>
+    <string name="settings_notif_comments">التعليقات</string>
+    <string name="settings_notif_replies">الردود</string>
+    <string name="settings_notif_follows">المتابعون الجدد</string>
+    <string name="settings_notif_messages">الرسائل</string>
+    <string name="settings_notif_groups">المجموعات</string>
+    <string name="settings_notif_stories">الردود على القصص</string>
+    <string name="settings_notif_mentions">الإشارات إليك</string>
+    <string name="settings_notif_system">تحديثات النظام والحساب</string>
     <string name="settings_notifications">الإشعارات</string>
     <string name="settings_notifications_enabled">تفعيل الإشعارات المحلية</string>
     <string name="settings_about">حول Nexa</string>
