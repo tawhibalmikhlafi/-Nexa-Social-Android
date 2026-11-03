@@ -624,13 +624,19 @@ fun PostDetailScreen(
             })
             NexaOptionRow(icon = Icons.Filled.Share, label = stringResource(R.string.post_share), onClick = {
                 showMenu = false
-                current?.let { sharePost(context, postId, it.text) }
-            })
-            NexaOptionRow(icon = Icons.Filled.Flag, label = stringResource(R.string.post_report), onClick = {
-                showMenu = false
-                showReport = true
+                current?.let {
+                    if (!sharePost(context, postId, it.text)) {
+                        snackbarHost?.let { host -> scope.launch { host.showSnackbar(shareFailedMessage) } }
+                    }
+                }
             })
             if (!canManage && current != null) {
+                NexaOptionRow(icon = Icons.Filled.Flag, label = stringResource(R.string.post_report), onClick = {
+                    showMenu = false
+                    showReport = true
+                })
+                NexaOptionRow(
+                    icon = Icons.Filled.VisibilityOff,
                 NexaOptionRow(
                     icon = Icons.Filled.VisibilityOff,
                     label = stringResource(R.string.post_unfollow_author),
@@ -655,12 +661,14 @@ fun PostDetailScreen(
                     }
                 )
             }
-            NexaOptionRow(icon = Icons.Filled.VisibilityOff, label = stringResource(R.string.post_hide), onClick = {
-                showMenu = false
-                viewModel.hide {
-                    snackbarHost?.let { host -> scope.launch { host.showSnackbar(hiddenMessage) } }
-                }
-            })
+            if (!canManage) {
+                NexaOptionRow(icon = Icons.Filled.VisibilityOff, label = stringResource(R.string.post_hide), onClick = {
+                    showMenu = false
+                    viewModel.hide {
+                        snackbarHost?.let { host -> scope.launch { host.showSnackbar(hiddenMessage) } }
+                    }
+                })
+            }
             if (canManage) {
                 NexaOptionRow(
                     icon = Icons.Filled.Edit,
