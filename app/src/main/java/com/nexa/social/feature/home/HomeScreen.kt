@@ -196,7 +196,9 @@ fun HomeScreen(
                     onReaction = { emoji -> viewModel.toggleLike(post.id, emoji) },
                     onComment = { onOpenPost(post.id) },
                     onShare = {
-                        if (!sharePost(context, post.id, post.text)) {
+                        if (sharePost(context, post.id, post.text)) {
+                            viewModel.recordShare(post.id)
+                        } else {
                             scope.launch { snackbarHost?.showSnackbar(shareFailedMessage) }
                         }
                     },
