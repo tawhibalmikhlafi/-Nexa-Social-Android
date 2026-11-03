@@ -736,20 +736,23 @@ fun PostDetailScreen(
     if (showReport) {
         NexaBottomSheet(onDismiss = { showReport = false }) {
             SheetTitle(stringResource(R.string.post_report_title))
-            Text(
-                text = stringResource(R.string.post_report_local_notice),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(NexaSpacing.sm))
             ReportReason.entries.forEach { reason ->
                 NexaOptionRow(
                     icon = Icons.Filled.Flag,
                     label = reportReasonLabel(reason),
                     onClick = {
                         showReport = false
-                        viewModel.report(reason, "") {
-                            snackbarHost?.let { host -> scope.launch { host.showSnackbar(reportMessage) } }
+                        viewModel.report(reason, "") { submitted ->
+                            snackbarHost?.let { host ->
+                                scope.launch {
+                                    host.showSnackbar(
+                                        context.getString(
+                                            if (submitted) R.string.post_report_sent
+                                            else R.string.comment_action_failed
+                                        )
+                                    )
+                                }
+                            }
                         }
                     }
                 )
