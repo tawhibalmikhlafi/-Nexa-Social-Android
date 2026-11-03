@@ -178,11 +178,21 @@ class CommentRepositoryImpl(
         }
         _comments.value = _comments.value.map { comment ->
             if (comment.id != commentId) comment else {
-                val liked = !comment.likedByMe
-                comment.copy(
-                    likedByMe = liked,
-                    likeCount = (comment.likeCount + if (liked) 1 else -1).coerceAtLeast(0)
-                )
+                when {
+                    !comment.likedByMe -> comment.copy(
+                        likedByMe = true,
+                        myReaction = emoji,
+                        likeCount = comment.likeCount + 1
+                    )
+                    comment.myReaction != null && comment.myReaction != emoji -> comment.copy(
+                        myReaction = emoji
+                    )
+                    else -> comment.copy(
+                        likedByMe = false,
+                        myReaction = null,
+                        likeCount = (comment.likeCount - 1).coerceAtLeast(0)
+                    )
+                }
             }
         }
         persist()
