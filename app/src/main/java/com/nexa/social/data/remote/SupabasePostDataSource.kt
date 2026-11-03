@@ -137,6 +137,82 @@ class SupabasePostDataSource(
         }
     }
 
+    fun observeHiddenPostIds(): Flow<Set<String>> = flow {
+        while (currentCoroutineContext().isActive) {
+            val uid = currentUid()
+            val ids = if (uid == null) emptySet() else {
+                fetchRows("post_hides?select=post_id&user_id=eq.${encode(uid)}")
+                    ?.mapNotNull { it.string("post_id") }
+                    ?.toSet()
+                    .orEmpty()
+            }
+            emit(ids)
+            withTimeoutOrNull(POLL_MS) { refreshSignal.first() }
+        }
+    }
+
+    fun observePinnedPostIds(): Flow<Set<String>> = flow {
+        while (currentCoroutineContext().isActive) {
+            val uid = currentUid()
+            val ids = if (uid == null) emptySet() else {
+                fetchRows("post_pins?select=post_id&user_id=eq.${encode(uid)}")
+                    ?.mapNotNull { it.string("post_id") }
+                    ?.toSet()
+                    .orEmpty()
+            }
+            emit(ids)
+            withTimeoutOrNull(POLL_MS) { refreshSignal.first() }
+        }
+    }
+
+    suspend fun setHidden(postId: String, hidden: Boolean) {
+        setPostPreference("post_hides", postId, hidden, ownerOnly = false)
+    }
+
+    suspend fun togglePin(postId: String) {
+        val uid = currentUid() ?: throw IllegalStateException("NOT_AUTHENTICATED")
+        val token = accessToken() ?: throw IllegalStateException("NOT_AUTHENTICATED")
+        val exists = fetchRows(
+            "post_pins?select=post_id&post_id=eq.${encode(postId)}&user_id=eq.${encode(uid)}"
+        )?.isNotEmpty() == true
+        setPostPreference("post_pins", postId, !exists, ownerOnly = true)
+    }
+
+    private suspend fun setPostPreference(
+        table: String,
+        postId: String,
+        enabled: Boolean,
+        ownerOnly: Boolean
+    ) {
+        require(table == "post_hides" || table == "post_pins")
+        val uid = currentUid() ?: throw IllegalStateException("NOT_AUTHENTICATED")
+        val token = accessToken() ?: throw IllegalStateException("NOT_AUTHENTICATED")
+        val url = if (enabled) {
+            "$restUrl/$table?on_conflict=post_id,user_id"
+        } else {
+            "$restUrl/$table?post_id=eq.${encode(postId)}&user_id=eq.${encode(uid)}"
+        }
+        val request = if (enabled) {
+            val body = JsonObject().apply {
+                addProperty("post_id", postId)
+                addProperty("user_id", uid)
+            }
+            http.authenticatedRequest(url, token)
+                .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+                .post(http.jsonBody(body))
+                .build()
+        } else {
+            http.authenticatedRequest(url, token).delete().build()
+        }
+        val response = execute(request)
+        if (response?.successful != true) {
+            throw IllegalStateException(
+                "POST_${table.uppercase()}_FAILED_HTTP_${response?.code ?: "NETWORK_ERROR"}"
+            )
+        }
+        notifyChanged()
+    }
+
     fun observeHiddenPosts(hiddenIds: Flow<Set<String>>): Flow<List<Post>> = flow {
         while (currentCoroutineContext().isActive) {
             val uid = currentUid()
