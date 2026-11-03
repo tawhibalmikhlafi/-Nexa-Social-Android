@@ -748,7 +748,6 @@
     <string name="comment_load_more">Load more comments</string>
     <string name="comment_show_all">View all comments (%1$d)</string>
     <string name="comment_show_less">Show only two comments</string>
-    <string name="post_unsave">Remove from saved</string>
     <string name="comment_action_failed">Could not complete the action. Try again.</string>
     <string name="post_share_chooser">Share post</string>
     <string name="post_share_text">View this post on Nexa:\n%1$s</string>
