@@ -195,7 +195,7 @@ fun EditProfileScreen(
 
             NexaTextField(
                 value = username,
-                onValueChange = { username = it.removePrefix("@").filter { ch -> ch.isLetterOrDigit() || ch == '_' }.take(20) },
+                onValueChange = { username = it.removePrefix("@").filter { ch -> ch in 'a'..'z' || ch in 'A'..'Z' || ch in '0'..'9' || ch == '_' }.take(20) },
                 label = stringResource(R.string.label_username),
                 singleLine = true,
                 imeAction = ImeAction.Next
