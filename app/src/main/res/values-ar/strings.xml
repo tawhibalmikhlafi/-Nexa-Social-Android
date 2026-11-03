@@ -358,7 +358,7 @@
     <string name="post_hide_done">تم إخفاء المنشور من قوائمك</string>
     <string name="post_report">إبلاغ</string>
     <string name="post_report_title">الإبلاغ عن منشور</string>
-    <string name="post_report_sent">تم حفظ الإبلاغ محليًا</string>
+    <string name="post_report_sent">تم إرسال البلاغ بنجاح</string>
     <string name="post_report_local_notice">تُحفظ الإبلاغات على جهازك فقط في هذا الإصدار.</string>
     <string name="post_comments_title">التعليقات</string>
     <string name="post_view_all_comments">عرض كل التعليقات (%1$d)</string>
