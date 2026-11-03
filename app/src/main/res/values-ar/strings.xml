@@ -753,6 +753,9 @@
     <string name="comment_delete_confirm_body">لا يمكن التراجع عن هذا الإجراء.</string>
     <string name="comment_too_long">يمكن أن يصل التعليق إلى 1000 حرف.</string>
     <string name="comment_load_more">تحميل المزيد من التعليقات</string>
+    <string name="comment_show_all">عرض كل التعليقات (%1$d)</string>
+    <string name="comment_show_less">عرض تعليقين فقط</string>
+    <string name="post_unsave">إزالة من المحفوظات</string>
     <string name="comment_action_failed">تعذر إكمال العملية. حاول مرة أخرى.</string>
     <string name="post_share_chooser">مشاركة المنشور</string>
     <string name="post_share_text">شاهد هذا المنشور على Nexa:\n%1$s</string>
