@@ -30,8 +30,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Safety state. Blocks are mirrored to Supabase when an account is signed in and fall back to the
- * on-device copy when offline. Reports stay on the device and are NOT delivered to any moderation
- * team, because no report backend exists yet. The UI states this explicitly.
+ * on-device copy when offline. Reports are submitted to Supabase for remote accounts and kept locally for offline/local accounts. The UI states this explicitly.
  */
 class SafetyRepositoryImpl(
     private val local: SafetyLocalDataSource,
@@ -146,6 +145,15 @@ class SafetyRepositoryImpl(
         reason: ReportReason,
         note: String
     ): Resource<Unit> {
+        if (isRemoteSession()) {
+            val remoteStore = remote ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
+            val submitted = remoteStore.submitReport(targetType, targetId, reason, note)
+            return if (submitted) {
+                Resource.Success(Unit)
+            } else {
+                Resource.Failure(FailureReason.NETWORK)
+            }
+        }
         val record = ReportRecord(
             id = Ids.newId(),
             targetType = targetType,
