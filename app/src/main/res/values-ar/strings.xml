@@ -313,6 +313,7 @@
     <string name="settings_video_autoplay_summary">تشغيل المقاطع تلقائيًا عند فتحها</string>
     <string name="settings_data_saver">توفير البيانات</string>
     <string name="settings_data_saver_summary">منع التشغيل التلقائي للفيديو لتقليل استهلاك البيانات</string>
+    <string name="settings_font_size">حجم الخط (%1$d%%)</string>
     <string name="settings_reduce_motion">تقليل الحركة</string>
     <string name="settings_reduce_motion_summary">تقليل الحركة حيثما كان ذلك مدعومًا</string>
     <string name="settings_clear_cache">مسح الملفات المؤقتة</string>
