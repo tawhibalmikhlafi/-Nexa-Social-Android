@@ -80,7 +80,7 @@ class SupabaseSafetyDataSource(
             addProperty("note", note.trim().take(1000))
         }
         val response = http.execute(
-            http.authenticatedRequest("$restUrl/content_reports", token)
+            http.authenticatedRequest("$restUrl/content_reports?on_conflict=reporter_id,target_type,target_id", token)
                 .header("Prefer", "resolution=ignore-duplicates,return=minimal")
                 .post(http.jsonBody(body))
                 .build()
