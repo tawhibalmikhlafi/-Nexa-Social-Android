@@ -99,6 +99,12 @@ class HomeViewModel(
         viewModelScope.launch { postRepository.toggleSave(postId) }
     }
 
+    fun recordShare(postId: String) {
+        viewModelScope.launch {
+            runCatching { postRepository.incrementShare(postId) }
+        }
+    }
+
     fun deletePost(postId: String) {
         viewModelScope.launch { postRepository.deletePost(postId) }
     }
