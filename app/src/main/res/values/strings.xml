@@ -313,6 +313,7 @@
     <string name="settings_video_autoplay_summary">Play clips automatically when opened</string>
     <string name="settings_data_saver">Data saver</string>
     <string name="settings_data_saver_summary">Avoid automatic video playback to reduce data use</string>
+    <string name="settings_font_size">Text size (%1$d%%)</string>
     <string name="settings_reduce_motion">Reduce motion</string>
     <string name="settings_reduce_motion_summary">Prefer reduced motion where supported</string>
     <string name="settings_clear_cache">Clear temporary cache</string>
