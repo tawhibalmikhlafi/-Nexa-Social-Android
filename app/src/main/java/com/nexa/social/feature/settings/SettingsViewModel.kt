@@ -11,6 +11,7 @@ import com.nexa.social.core.storage.PreferenceStorage
 import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.model.NotificationType
+import com.nexa.social.domain.model.FeedType
 import com.nexa.social.domain.repository.AuthRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +37,9 @@ class SettingsViewModel(
 
     val notificationCategories: StateFlow<Map<NotificationType, Boolean>> = preferenceStorage.notificationTypeEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    val feedType: StateFlow<FeedType> = preferenceStorage.feedType
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeedType.LATEST)
 
     val videoAutoplay: StateFlow<Boolean> = preferenceStorage.videoAutoplay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
@@ -95,6 +99,10 @@ class SettingsViewModel(
 
     fun setNotificationCategory(type: NotificationType, enabled: Boolean) {
         viewModelScope.launch { preferenceStorage.setNotificationTypeEnabled(type, enabled) }
+    }
+
+    fun setFeedType(type: FeedType) {
+        viewModelScope.launch { preferenceStorage.setFeedType(type) }
     }
 
     fun setVideoAutoplay(enabled: Boolean) {
