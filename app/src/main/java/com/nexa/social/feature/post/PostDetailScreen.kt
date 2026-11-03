@@ -157,11 +157,14 @@ private data class CommentNode(
     val replyToName: String?
 )
 
-private fun List<PostComment>.toCommentThread(): List<CommentNode> {
+private fun List<PostComment>.toCommentThread(popularFirst: Boolean = false): List<CommentNode> {
     if (isEmpty()) return emptyList()
     val byParent = groupBy { it.parentId }
     val byId = associateBy { it.id }
     val result = mutableListOf<CommentNode>()
+    fun ordered(items: List<PostComment>): List<PostComment> =
+        if (popularFirst) items.sortedWith(compareByDescending<PostComment> { it.likeCount }.thenByDescending { it.createdAt })
+        else items.sortedBy { it.createdAt }
     val visited = mutableSetOf<String>()
 
     fun append(comment: PostComment, depth: Int) {
@@ -173,13 +176,10 @@ private fun List<PostComment>.toCommentThread(): List<CommentNode> {
                 ?.let { byId[it]?.author }
                 ?.preferredName()
         )
-        byParent[comment.id].orEmpty()
-            .sortedBy { it.createdAt }
-            .forEach { append(it, depth + 1) }
+        ordered(byParent[comment.id].orEmpty()).forEach { append(it, depth + 1) }
     }
 
-    filter { it.parentId == null || byId[it.parentId] == null }
-        .sortedBy { it.createdAt }
+    ordered(filter { it.parentId == null || byId[it.parentId] == null })
         .forEach { append(it, 0) }
     sortedBy { it.createdAt }.forEach { if (it.id !in visited) append(it, 0) }
     return result
@@ -288,7 +288,8 @@ fun PostDetailScreen(
     } else {
         suggestedUsers
     }
-    val commentThread = remember(comments) { comments.toCommentThread() }
+    var popularComments by rememberSaveable(postId) { mutableStateOf(false) }
+    val commentThread = remember(comments, popularComments) { comments.toCommentThread(popularComments) }
     var showAllComments by rememberSaveable(postId) { mutableStateOf(false) }
     val visibleCommentThread = remember(commentThread, showAllComments) {
         if (showAllComments) commentThread else {
@@ -434,6 +435,18 @@ fun PostDetailScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
+                    Row(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
+                        FilterChip(
+                            selected = !popularComments,
+                            onClick = { popularComments = false },
+                            label = { Text(stringResource(R.string.comment_sort_newest)) }
+                        )
+                        FilterChip(
+                            selected = popularComments,
+                            onClick = { popularComments = true },
+                            label = { Text(stringResource(R.string.comment_sort_popular)) }
+                        )
+                    }
                 }
                 if (comments.isEmpty()) {
                     item {
