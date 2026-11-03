@@ -95,6 +95,9 @@ class FollowListViewModel(
     private val _pending = MutableStateFlow<Set<String>>(emptySet())
     val pending: StateFlow<Set<String>> = _pending.asStateFlow()
 
+    private val _requestPending = MutableStateFlow<Set<String>>(emptySet())
+    val requestPending: StateFlow<Set<String>> = _requestPending.asStateFlow()
+
     private val _error = MutableStateFlow(false)
     val error: StateFlow<Boolean> = _error.asStateFlow()
 
@@ -102,13 +105,29 @@ class FollowListViewModel(
         if (userId in _pending.value) return
         viewModelScope.launch {
             _pending.value = _pending.value + userId
-            val updated = userRepository.setFollowing(userId, follow)
-            if (updated) {
-                _overrides.value = _overrides.value + (userId to follow)
-            } else {
+            try {
+                val updated = userRepository.setFollowing(userId, follow)
+                if (updated) {
+                    if (follow) {
+                        val isRequest = userRepository.hasPendingFollowRequest(userId)
+                        if (isRequest == null) {
+                            _error.value = true
+                        } else {
+                            _requestPending.value = if (isRequest) _requestPending.value + userId else _requestPending.value - userId
+                            _overrides.value = _overrides.value + (userId to !isRequest)
+                        }
+                    } else {
+                        _requestPending.value = _requestPending.value - userId
+                        _overrides.value = _overrides.value + (userId to false)
+                    }
+                } else {
+                    _error.value = true
+                }
+            } catch (_: Exception) {
                 _error.value = true
+            } finally {
+                _pending.value = _pending.value - userId
             }
-            _pending.value = _pending.value - userId
         }
     }
 
