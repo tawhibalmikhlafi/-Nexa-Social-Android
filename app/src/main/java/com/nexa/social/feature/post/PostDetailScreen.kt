@@ -1335,6 +1335,15 @@ private fun CommentRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
     ) {
+        if (depth > 0) {
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .height(64.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.42f))
+            )
+        }
         NexaAvatar(
             displayName = authorName,
             avatarUri = comment.author.avatarUri,
