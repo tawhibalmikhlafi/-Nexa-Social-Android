@@ -145,6 +145,9 @@
     <string name="post_like">إعجاب</string>
     <string name="post_comment">تعليق</string>
     <string name="post_share">مشاركة</string>
+    <string name="post_add_image">صورة</string>
+    <string name="post_feeling">شعور</string>
+    <string name="post_publish">نشر</string>
     <string name="post_save">حفظ</string>
     <string name="post_saved">تم الحفظ محليًا</string>
     <string name="post_unsave">إلغاء الحفظ</string>
