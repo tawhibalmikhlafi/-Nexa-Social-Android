@@ -1,6 +1,8 @@
 package com.nexa.social.feature.settings
 
 import android.app.Activity
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -144,6 +146,18 @@ fun SettingsScreen(
                 subtitle = stringResource(R.string.settings_notifications_device_summary),
                 trailing = {
                     Switch(checked = notifications, onCheckedChange = viewModel::setNotificationsEnabled)
+                }
+            )
+
+            SettingsRow(
+                icon = Icons.Filled.Notifications,
+                title = stringResource(R.string.settings_os_notifications),
+                subtitle = stringResource(R.string.settings_os_notifications_summary),
+                onClick = {
+                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                    }
+                    context.startActivity(intent)
                 }
             )
 
