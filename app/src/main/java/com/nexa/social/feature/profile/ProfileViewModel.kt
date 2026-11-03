@@ -141,7 +141,9 @@ class ProfileViewModel(
             viewModelScope.launch {
                 user.filterNotNull().collect { resolved ->
                     followingOverride.value = userRepository.isFollowing(resolved.id)
-                    followRequestPending.value = userRepository.hasPendingFollowRequest(resolved.id)
+                    userRepository.hasPendingFollowRequest(resolved.id)?.let { pending ->
+                        followRequestPending.value = pending
+                    }
                     followersDelta.value = 0
                 }
             }
@@ -168,9 +170,13 @@ class ProfileViewModel(
                 if (updated) {
                     if (follow) {
                         val pending = userRepository.hasPendingFollowRequest(resolved.id)
-                        followRequestPending.value = pending
-                        followingOverride.value = !pending
-                        if (!pending) followersDelta.value += 1
+                        if (pending == null) {
+                            _followError.value = true
+                        } else {
+                            followRequestPending.value = pending
+                            followingOverride.value = !pending
+                            if (!pending) followersDelta.value += 1
+                        }
                     } else {
                         followRequestPending.value = false
                         if (followingOverride.value == true) followersDelta.value -= 1
