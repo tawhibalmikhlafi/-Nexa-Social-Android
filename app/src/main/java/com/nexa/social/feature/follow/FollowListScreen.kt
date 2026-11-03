@@ -79,6 +79,7 @@ fun FollowListScreen(
     val currentUserId by viewModel.currentUserId.collectAsStateWithLifecycle()
     val overrides by viewModel.overrides.collectAsStateWithLifecycle()
     val pending by viewModel.pending.collectAsStateWithLifecycle()
+    val requestPending by viewModel.requestPending.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -93,6 +94,7 @@ fun FollowListScreen(
             currentUserId = currentUserId,
             overrides = overrides,
             pending = pending,
+            requestPending = requestPending,
             emptyTitle = stringResource(mode.emptyTitleRes),
             emptyBody = stringResource(mode.emptyBodyRes),
             onOpenProfile = onOpenProfile,
@@ -115,6 +117,7 @@ fun FollowListContent(
     currentUserId: String?,
     overrides: Map<String, Boolean>,
     pending: Set<String>,
+    requestPending: Set<String> = emptySet(),
     emptyTitle: String,
     emptyBody: String,
     onOpenProfile: (String) -> Unit,
@@ -156,6 +159,7 @@ fun FollowListContent(
                     isSelf = currentUserId == null || user.id == currentUserId,
                     isFollowing = overrides[user.id] ?: (user.id in followingIds),
                     busy = user.id in pending,
+                    isFollowRequestPending = user.id in requestPending,
                     onOpen = { onOpenProfile(user.id) },
                     onToggle = { follow -> onToggleFollowing(user.id, follow) },
                     presenceViewModel = presenceViewModel
@@ -171,6 +175,7 @@ private fun FollowRow(
     isSelf: Boolean,
     isFollowing: Boolean,
     busy: Boolean,
+    isFollowRequestPending: Boolean,
     onOpen: () -> Unit,
     onToggle: (Boolean) -> Unit,
     presenceViewModel: PresenceViewModel
@@ -205,9 +210,13 @@ private fun FollowRow(
             } else {
                 NexaTextButton(
                     text = stringResource(
-                        if (isFollowing) R.string.action_unfollow else R.string.action_follow
+                        when {
+                            isFollowRequestPending -> R.string.action_follow_requested
+                            isFollowing -> R.string.action_unfollow
+                            else -> R.string.action_follow
+                        }
                     ),
-                    onClick = { onToggle(!isFollowing) }
+                    onClick = { onToggle(!isFollowing && !isFollowRequestPending) }
                 )
             }
         }
