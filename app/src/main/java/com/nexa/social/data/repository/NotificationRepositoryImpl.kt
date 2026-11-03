@@ -125,6 +125,25 @@ class NotificationRepositoryImpl(
         prefs.setNotificationTypeEnabled(type, enabled)
     }
 
+    override suspend fun syncPreferences(): Boolean {
+        val remoteStore = remote ?: return false
+        val uid = (prefs.session.first() as? SessionState.RemoteAccount)?.userId ?: return false
+        val remotePreferences = remoteStore.loadPreferences(uid)
+        if (remotePreferences == null) return persistPreferences()
+        prefs.applyNotificationPreferences(remotePreferences.first, remotePreferences.second)
+        return true
+    }
+
+    override suspend fun persistPreferences(): Boolean {
+        val remoteStore = remote ?: return false
+        val uid = (prefs.session.first() as? SessionState.RemoteAccount)?.userId ?: return false
+        return remoteStore.savePreferences(
+            uid = uid,
+            enabled = prefs.notificationsEnabled.first(),
+            categories = prefs.notificationTypeEnabled.first()
+        )
+    }
+
     override suspend fun refresh() {
         if (useRemote()) remote?.refresh()
     }
