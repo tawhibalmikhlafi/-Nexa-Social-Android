@@ -303,6 +303,11 @@
     <string name="settings_section_activity">Your activity</string>
     <string name="settings_section_privacy">Audience and safety</string>
     <string name="settings_notifications_device_summary">Show or hide notifications in this app on this device</string>
+    <string name="settings_feed_preference">Feed preference</string>
+    <string name="settings_feed_latest">Latest posts</string>
+    <string name="settings_feed_engaging">Most engaging</string>
+    <string name="settings_feed_following">Following</string>
+    <string name="settings_feed_worlds">Worlds</string>
     <string name="settings_section_media">Media, data and accessibility</string>
     <string name="settings_video_autoplay">Video autoplay</string>
     <string name="settings_video_autoplay_summary">Play clips automatically when opened</string>
