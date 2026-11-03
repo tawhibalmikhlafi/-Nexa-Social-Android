@@ -9,6 +9,7 @@ import com.nexa.social.core.supabase.long
 import com.nexa.social.core.supabase.string
 import com.nexa.social.domain.model.AccountOrigin
 import com.nexa.social.domain.model.PostComment
+import com.nexa.social.domain.model.PostReaction
 import com.nexa.social.domain.model.UserSummary
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -47,13 +48,19 @@ class SupabaseCommentDataSource(
             val uid = currentUid()
             val limit = pageSize.value
             val rows = fetchRows("comments?select=*,author:profiles!author_id(id,username,display_name,avatar_url,account_origin)&post_id=eq.${encode(postId)}&order=created_at.asc&limit=$limit")
-            val liked = uid?.let { fetchRows("comment_likes?select=comment_id&user_id=eq.${encode(uid)}")?.mapNotNull { it.string("comment_id") }.orEmpty().toSet() } ?: emptySet()
+            val myRows = uid?.let {
+                fetchRows("comment_likes?select=comment_id,emoji&user_id=eq.${encode(uid)}").orEmpty()
+            }.orEmpty()
+            val myReactions = myRows.mapNotNull { row ->
+                row.string("comment_id")?.let { id -> id to (row.string("emoji") ?: "❤️") }
+            }.toMap()
+            val liked = myReactions.keys
             val postAuthorId = fetchRows("posts?select=author_id&id=eq.${encode(postId)}&limit=1")
                 ?.firstOrNull()
                 ?.string("author_id")
 
             val comments = rows.orEmpty().mapNotNull { row ->
-                parseComment(row, uid, liked, postAuthorId)
+                parseComment(row, uid, liked, postAuthorId, myReactions)
             }
             emit(comments)
             withTimeoutOrNull(POLL_MS) { refreshSignal.first() }
@@ -65,12 +72,15 @@ class SupabaseCommentDataSource(
         val rows = fetchRows("comments?select=*,author:profiles!author_id(id,username,display_name,avatar_url,account_origin)&post_id=eq.${encode(postId)}&order=created_at.desc&limit=2").orEmpty()
         if (rows.isEmpty()) return emptyList()
         val ids = rows.mapNotNull { it.string("id") }
-        val liked = if (uid == null || ids.isEmpty()) emptySet() else {
-            fetchRows("comment_likes?select=comment_id&user_id=eq.${encode(uid)}&comment_id=in.(${ids.joinToString(",") { encode(it) }})")
-                .orEmpty().mapNotNull { it.string("comment_id") }.toSet()
+        val myRows = if (uid == null || ids.isEmpty()) emptyList() else {
+            fetchRows("comment_likes?select=comment_id,emoji&user_id=eq.${encode(uid)}&comment_id=in.(${ids.joinToString(",") { encode(it) }})").orEmpty()
         }
+        val myReactions = myRows.mapNotNull { row ->
+            row.string("comment_id")?.let { id -> id to (row.string("emoji") ?: "❤️") }
+        }.toMap()
+        val liked = myReactions.keys
         val postAuthorId = fetchRows("posts?select=author_id&id=eq.${encode(postId)}&limit=1")?.firstOrNull()?.string("author_id")
-        return rows.mapNotNull { parseComment(it, uid, liked, postAuthorId) }.sortedBy { it.createdAt }
+        return rows.mapNotNull { parseComment(it, uid, liked, postAuthorId, myReactions) }.sortedBy { it.createdAt }
     }
 
     suspend fun addComment(
@@ -122,8 +132,11 @@ class SupabaseCommentDataSource(
         val rows = fetchRows("comments?select=*,author:profiles!author_id(id,username,display_name,avatar_url,account_origin)&id=eq.${encode(commentId)}&limit=1")
         val row = rows?.firstOrNull() ?: return null
         val uid = currentUid()
-        val liked = uid?.let { fetchRows("comment_likes?select=comment_id&user_id=eq.${encode(uid)}&comment_id=eq.${encode(commentId)}")?.isNotEmpty() == true } ?: false
-        return parseComment(row, uid, if (liked) setOf(commentId) else emptySet())
+        val myReaction = uid?.let {
+            fetchRows("comment_likes?select=emoji&user_id=eq.${encode(uid)}&comment_id=eq.${encode(commentId)}")
+                ?.firstOrNull()?.string("emoji")
+        }
+        return parseComment(row, uid, if (myReaction != null) setOf(commentId) else emptySet(), myReactions = if (myReaction != null) mapOf(commentId to myReaction) else emptyMap())
     }
 
     suspend fun editComment(commentId: String, text: String): PostComment? {
@@ -156,7 +169,7 @@ class SupabaseCommentDataSource(
         return deleted
     }
 
-    suspend fun toggleLike(commentId: String) {
+    suspend fun toggleLike(commentId: String, emoji: String = "❤️") {
         val uid = currentUid() ?: return
         val token = accessToken() ?: return
         val liked = fetchRows("comment_likes?select=comment_id&comment_id=eq.${encode(commentId)}&user_id=eq.${encode(uid)}")?.isNotEmpty() == true
@@ -169,6 +182,7 @@ class SupabaseCommentDataSource(
             val body = JsonObject().apply {
                 addProperty("comment_id", commentId)
                 addProperty("user_id", uid)
+                addProperty("emoji", emoji)
             }
             execute(
                 http.authenticatedRequest("$restUrl/comment_likes", token)
@@ -183,13 +197,35 @@ class SupabaseCommentDataSource(
         notifyChanged()
     }
 
+    suspend fun getCommentReactions(commentId: String): List<PostReaction> {
+        val rows = fetchRows(
+            "comment_likes?select=emoji,created_at,user:profiles!user_id(id,username,display_name,avatar_url,account_origin)&comment_id=eq.${encode(commentId)}&order=created_at.desc"
+        ).orEmpty()
+        return rows.mapNotNull { row ->
+            val user = row.getAsJsonObject("user") ?: return@mapNotNull null
+            val id = user.string("id") ?: return@mapNotNull null
+            val username = user.string("username") ?: "user"
+            val displayName = user.string("display_name")?.takeIf { it.isNotBlank() } ?: username
+            val author = UserSummary(
+                id, username, displayName, user.string("avatar_url"),
+                enumOrDefault(user.string("account_origin"), AccountOrigin.REMOTE_ACCOUNT)
+            )
+            PostReaction(
+                user = author,
+                emoji = row.string("emoji") ?: "❤️",
+                createdAt = parseMillis(row.string("created_at"))
+            )
+        }
+    }
+
     suspend fun refreshAuthor(_author: UserSummary) {}
 
     private fun parseComment(
         row: JsonObject,
         currentUid: String?,
         liked: Set<String>,
-        postAuthorId: String? = null
+        postAuthorId: String? = null,
+        myReactions: Map<String, String> = emptyMap()
     ): PostComment? {
         val id = row.string("id") ?: return null
         val postId = row.string("post_id") ?: return null
@@ -220,6 +256,7 @@ class SupabaseCommentDataSource(
             parentId = parentId,
             likeCount = likeCount,
             likedByMe = id in liked,
+            myReaction = myReactions[id],
             isMine = isMine,
             canDelete = isMine || (postAuthorId != null && postAuthorId == currentUid),
             isLocal = false
