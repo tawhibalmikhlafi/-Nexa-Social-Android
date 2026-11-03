@@ -649,8 +649,6 @@ fun PostDetailScreen(
                 })
                 NexaOptionRow(
                     icon = Icons.Filled.VisibilityOff,
-                NexaOptionRow(
-                    icon = Icons.Filled.VisibilityOff,
                     label = stringResource(R.string.post_unfollow_author),
                     onClick = {
                         showMenu = false
