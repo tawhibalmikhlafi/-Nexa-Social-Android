@@ -303,6 +303,11 @@
     <string name="settings_section_activity">نشاطك ومحتواك</string>
     <string name="settings_section_privacy">الجمهور والسلامة</string>
     <string name="settings_notifications_device_summary">إظهار إشعارات نيكسا أو إخفاؤها على هذا الجهاز</string>
+    <string name="settings_feed_preference">تفضيلات الخلاصة</string>
+    <string name="settings_feed_latest">أحدث المنشورات</string>
+    <string name="settings_feed_engaging">الأكثر تفاعلًا</string>
+    <string name="settings_feed_following">المتابَعون</string>
+    <string name="settings_feed_worlds">العوالم</string>
     <string name="settings_section_media">الوسائط والبيانات وإمكانية الوصول</string>
     <string name="settings_video_autoplay">التشغيل التلقائي للفيديو</string>
     <string name="settings_video_autoplay_summary">تشغيل المقاطع تلقائيًا عند فتحها</string>
