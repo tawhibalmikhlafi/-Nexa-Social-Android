@@ -47,7 +47,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -113,7 +113,6 @@ import com.nexa.social.ui.components.NexaEmptyState
 import com.nexa.social.ui.components.NexaOptionRow
 import com.nexa.social.ui.components.NexaTextField
 import com.nexa.social.ui.components.NexaTextButton
-import com.nexa.social.ui.components.NexaTopBar
 import com.nexa.social.ui.components.ReactionEmojis
 import com.nexa.social.ui.components.ReactionPicker
 import com.nexa.social.ui.components.SheetTitle
@@ -342,18 +341,7 @@ fun PostDetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .imePadding()
-            .navigationBarsPadding()
     ) {
-        NexaTopBar(
-            title = "",
-            onBack = onBack,
-            actions = {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.post_menu))
-                }
-            }
-        )
-
         if (current == null) {
             NexaEmptyState(
                 icon = Icons.Filled.ChatBubbleOutline,
@@ -364,11 +352,10 @@ fun PostDetailScreen(
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = NexaSpacing.lg),
-                verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
             ) {
-                item { PostHeader(current, onOpenProfile, onMenu = { showMenu = true }) }
+                item { PostHeader(current, onOpenProfile, onBack, onMenu = { showMenu = true }) }
                 if (current.text.isNotBlank()) {
                     item {
                         Text(
@@ -1015,6 +1002,7 @@ private fun ReactionRow(
 private fun PostHeader(
     post: Post,
     onOpenProfile: (String) -> Unit,
+    onBack: () -> Unit,
     onMenu: () -> Unit
 ) {
     val authorName = post.author.preferredName()
@@ -1075,12 +1063,24 @@ private fun PostHeader(
                     }
                 }
             }
-            IconButton(onClick = onMenu, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Filled.MoreHoriz,
-                    contentDescription = stringResource(R.string.post_menu),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.action_back),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = onMenu, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Filled.MoreHoriz,
+                        contentDescription = stringResource(R.string.post_menu),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
