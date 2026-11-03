@@ -46,6 +46,7 @@ fun ClipDetailScreen(
     val clips by viewModel.clips.collectAsStateWithLifecycle()
     val autoplay by viewModel.videoAutoplay.collectAsStateWithLifecycle()
     val dataSaver by viewModel.dataSaver.collectAsStateWithLifecycle()
+    val reduceMotion by viewModel.reduceMotion.collectAsStateWithLifecycle()
     val clip = clips.firstOrNull { it.id == clipId }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -80,7 +81,7 @@ fun ClipDetailScreen(
                     )
                 }
             } else {
-                ClipVideo(uri = clip.videoUri, autoplay = autoplay && !dataSaver)
+                ClipVideo(uri = clip.videoUri, autoplay = autoplay && !dataSaver && !reduceMotion)
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
