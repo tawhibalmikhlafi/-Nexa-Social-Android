@@ -191,6 +191,7 @@ class PreferenceStorage(private val context: Context) {
         preferences.map { prefs ->
             mapOf(
                 NotificationType.LIKE to (prefs[Keys.notifLike] ?: true),
+                NotificationType.COMMENT_LIKE to (prefs[Keys.notifLike] ?: true),
                 NotificationType.COMMENT to (prefs[Keys.notifComment] ?: true),
                 NotificationType.REPLY to (prefs[Keys.notifReply] ?: true),
                 NotificationType.FOLLOW to (prefs[Keys.notifFollow] ?: true),
