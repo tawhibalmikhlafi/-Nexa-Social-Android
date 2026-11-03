@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -67,6 +65,7 @@ fun EditProfileScreen(
     val coverSavedMessage = stringResource(R.string.edit_profile_cover_saved)
 
     var displayName by rememberSaveable { mutableStateOf("") }
+    var username by rememberSaveable { mutableStateOf("") }
     var bio by rememberSaveable { mutableStateOf("") }
     var avatarUri by rememberSaveable { mutableStateOf<String?>(null) }
     var coverUri by rememberSaveable { mutableStateOf<String?>(null) }
@@ -78,6 +77,7 @@ fun EditProfileScreen(
         val current = user
         if (!prefilled && current != null) {
             displayName = current.displayName
+            username = current.username
             bio = current.bio
             avatarUri = current.avatarUri
             coverUri = current.coverUri
@@ -193,31 +193,18 @@ fun EditProfileScreen(
                 imeAction = ImeAction.Default
             )
 
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Lock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Text(
-                        text = "@${user?.username.orEmpty()}",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(
-                            start = NexaSpacing.sm
-                        )
-                    )
-                }
-
-                Text(
-                    text = stringResource(
-                        R.string.edit_profile_username_locked
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            NexaTextField(
+                value = username,
+                onValueChange = { username = it.removePrefix("@").filter { ch -> ch.isLetterOrDigit() || ch == '_' }.take(20) },
+                label = stringResource(R.string.label_username),
+                singleLine = true,
+                imeAction = ImeAction.Next
+            )
+            Text(
+                text = stringResource(R.string.edit_profile_username_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             if (!remoteMode) {
                 LocalDataBanner(
@@ -270,6 +257,7 @@ fun EditProfileScreen(
                 onClick = {
                     viewModel.save(
                         displayName = displayName,
+                        username = username,
                         bio = bio,
                         avatarUri = avatarUri,
                         coverUri = coverUri
