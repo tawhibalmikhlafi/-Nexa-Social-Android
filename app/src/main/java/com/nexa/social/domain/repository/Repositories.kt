@@ -204,7 +204,8 @@ interface CommentRepository {
     ): Resource<PostComment>
     suspend fun editComment(commentId: String, text: String): Resource<PostComment>
     suspend fun deleteComment(commentId: String): Boolean
-    suspend fun toggleCommentLike(commentId: String)
+    suspend fun toggleCommentLike(commentId: String, emoji: String = "❤️")
+    suspend fun getCommentReactions(commentId: String): List<com.nexa.social.domain.model.PostReaction>
     fun observeCommentPageSize(): Flow<Int> = flowOf(100)
     suspend fun loadMoreComments() {}
 
