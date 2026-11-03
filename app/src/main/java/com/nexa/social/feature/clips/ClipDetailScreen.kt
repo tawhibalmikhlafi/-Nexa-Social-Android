@@ -44,6 +44,8 @@ fun ClipDetailScreen(
     viewModel: ClipsViewModel = viewModel(factory = ClipsViewModel.Factory)
 ) {
     val clips by viewModel.clips.collectAsStateWithLifecycle()
+    val autoplay by viewModel.videoAutoplay.collectAsStateWithLifecycle()
+    val dataSaver by viewModel.dataSaver.collectAsStateWithLifecycle()
     val clip = clips.firstOrNull { it.id == clipId }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -78,7 +80,7 @@ fun ClipDetailScreen(
                     )
                 }
             } else {
-                ClipVideo(uri = clip.videoUri)
+                ClipVideo(uri = clip.videoUri, autoplay = autoplay && !dataSaver)
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -117,7 +119,7 @@ fun ClipDetailScreen(
 }
 
 @Composable
-private fun ClipVideo(uri: String) {
+private fun ClipVideo(uri: String, autoplay: Boolean) {
     // Zero-dependency playback: Android's own VideoView, no streaming library.
     AndroidView(
         modifier = Modifier
@@ -127,7 +129,10 @@ private fun ClipVideo(uri: String) {
             VideoView(context).apply {
                 setMediaController(MediaController(context).also { it.setAnchorView(this) })
                 setVideoURI(Uri.parse(uri))
-                setOnPreparedListener { it.isLooping = false }
+                setOnPreparedListener { player ->
+                    player.isLooping = false
+                    if (autoplay) start() else pause()
+                }
             }
         }
     )
