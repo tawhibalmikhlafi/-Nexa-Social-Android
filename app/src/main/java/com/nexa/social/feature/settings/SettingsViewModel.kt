@@ -12,10 +12,15 @@ import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.model.NotificationType
 import com.nexa.social.domain.repository.AuthRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 class SettingsViewModel(
     private val preferenceStorage: PreferenceStorage,
@@ -43,6 +48,39 @@ class SettingsViewModel(
 
     val session: StateFlow<SessionState> = authRepository.session
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionState.None)
+
+    private val _cacheSizeBytes = MutableStateFlow(0L)
+    val cacheSizeBytes: StateFlow<Long> = _cacheSizeBytes.asStateFlow()
+
+    init { refreshCacheSize() }
+
+    fun refreshCacheSize() {
+        viewModelScope.launch {
+            _cacheSizeBytes.value = withContext(Dispatchers.IO) {
+                cacheDirectories().sumOf { it.recursiveSize() }
+            }
+        }
+    }
+
+    fun clearCache(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                cacheDirectories().forEach { directory ->
+                    directory.listFiles()?.forEach { file -> file.deleteRecursively() }
+                }
+            }
+            refreshCacheSize()
+            onComplete()
+        }
+    }
+
+    private fun cacheDirectories(): List<File> = listOfNotNull(
+        appContext.cacheDir,
+        appContext.externalCacheDir
+    )
+
+    private fun File.recursiveSize(): Long =
+        if (isFile) length() else listFiles()?.sumOf { it.recursiveSize() } ?: 0L
 
     fun setLanguage(tag: String) {
         viewModelScope.launch {
