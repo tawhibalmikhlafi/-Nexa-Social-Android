@@ -137,8 +137,9 @@ private fun UserSummary.preferredName(): String {
     val name = displayName.trim()
     val handle = username.trim()
     return when {
-        name.isNotBlank() && !name.looksLikeOpaqueId() -> name
+        name.isNotBlank() && !name.looksLikeOpaqueId() && !name.equals(handle, ignoreCase = true) -> name
         handle.isNotBlank() && !handle.looksLikeOpaqueId() -> handle
+        name.isNotBlank() && !name.looksLikeOpaqueId() -> name
         else -> "Nexa"
     }
 }
@@ -249,6 +250,7 @@ fun PostDetailScreen(
     val canManage by viewModel.canManage.collectAsStateWithLifecycle()
     val canLoadMore by viewModel.canLoadMore.collectAsStateWithLifecycle()
     val reactionsState by viewModel.reactions.collectAsStateWithLifecycle()
+    val commentReactionsState by viewModel.commentReactions.collectAsStateWithLifecycle()
     val remoteMode = rememberRemoteMode()
     val snackbarHost = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
@@ -259,6 +261,8 @@ fun PostDetailScreen(
     var showBlockConfirm by remember { mutableStateOf(false) }
     var showReport by remember { mutableStateOf(false) }
     var showReactions by remember { mutableStateOf(false) }
+    var showCommentReactions by remember { mutableStateOf(false) }
+    var selectedCommentReactionCount by remember { mutableStateOf(0) }
     var showEditPost by remember { mutableStateOf(false) }
     var showMentionSuggestions by remember { mutableStateOf(false) }
     var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
@@ -340,7 +344,7 @@ fun PostDetailScreen(
             .navigationBarsPadding()
     ) {
         NexaTopBar(
-            title = stringResource(R.string.post_detail_title),
+            title = "",
             onBack = onBack,
             actions = {
                 IconButton(onClick = { showMenu = true }) {
@@ -464,7 +468,12 @@ fun PostDetailScreen(
                             depth = node.depth,
                             replyToName = node.replyToName,
                             onOpenProfile = onOpenProfile,
-                            onToggleLike = { viewModel.toggleCommentLike(node.comment.id) },
+                            onToggleLike = { emoji -> viewModel.toggleCommentLike(node.comment.id, emoji) },
+                            onOpenReactions = {
+                                selectedCommentReactionCount = node.comment.likeCount
+                                showCommentReactions = true
+                                viewModel.loadCommentReactions(node.comment.id)
+                            },
                             onReply = { replyingToComment = node.comment },
                             onEdit = { editingComment = node.comment },
                             onDelete = { deletingComment = node.comment },
@@ -787,6 +796,20 @@ fun PostDetailScreen(
             onRetry = { viewModel.loadReactions(force = true) },
             onOpenProfile = { userId ->
                 showReactions = false
+                onOpenProfile(userId)
+            }
+        )
+    }
+
+    if (showCommentReactions) {
+        ReactionsSheet(
+            state = commentReactionsState,
+            total = maxOf(selectedCommentReactionCount, commentReactionsState.reactions.size),
+            remoteMode = remoteMode,
+            onDismiss = { showCommentReactions = false },
+            onRetry = {},
+            onOpenProfile = { userId ->
+                showCommentReactions = false
                 onOpenProfile(userId)
             }
         )
