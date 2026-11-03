@@ -162,13 +162,17 @@ fun HomeScreen(
             )
         }
 
-        nextGathering?.let { gathering ->
-            item {
-                UpcomingGatheringCard(
-                    gathering = gathering,
-                    onOpen = onOpenGatherings,
-                    modifier = Modifier.padding(horizontal = NexaSpacing.lg)
-                )
+        // Gatherings are currently stored locally; do not present them as live server data
+        // to a remote Supabase account until a remote gatherings table/repository is configured.
+        if (!remoteMode) {
+            nextGathering?.let { gathering ->
+                item {
+                    UpcomingGatheringCard(
+                        gathering = gathering,
+                        onOpen = onOpenGatherings,
+                        modifier = Modifier.padding(horizontal = NexaSpacing.lg)
+                    )
+                }
             }
         }
 
