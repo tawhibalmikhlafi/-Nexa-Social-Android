@@ -101,6 +101,27 @@ class FollowListViewModel(
     private val _error = MutableStateFlow(false)
     val error: StateFlow<Boolean> = _error.asStateFlow()
 
+    init {
+        if (mode == FollowListMode.SUGGESTIONS) {
+            viewModelScope.launch {
+                users.collect { listedUsers ->
+                    listedUsers.forEach { user ->
+                        val isPending = runCatching {
+                            userRepository.hasPendingFollowRequest(user.id)
+                        }.getOrNull()
+                        if (isPending != null) {
+                            _requestPending.value = if (isPending) {
+                                _requestPending.value + user.id
+                            } else {
+                                _requestPending.value - user.id
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun toggleFollowing(userId: String, follow: Boolean) {
         if (userId in _pending.value) return
         viewModelScope.launch {
