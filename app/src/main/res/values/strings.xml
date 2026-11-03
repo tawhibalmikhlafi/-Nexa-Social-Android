@@ -19,6 +19,7 @@
     <string name="action_leave">Leave</string>
     <string name="action_open">Open</string>
     <string name="action_follow">Follow</string>
+    <string name="action_follow_requested">Requested · tap to cancel</string>
     <string name="action_unfollow">Unfollow</string>
     <string name="action_edit">Edit</string>
     <string name="action_delete">Delete</string>
