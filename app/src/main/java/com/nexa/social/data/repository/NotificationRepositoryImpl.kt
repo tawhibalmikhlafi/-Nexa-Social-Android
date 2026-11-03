@@ -128,8 +128,10 @@ class NotificationRepositoryImpl(
     override suspend fun syncPreferences(): Boolean {
         val remoteStore = remote ?: return false
         val uid = (prefs.session.first() as? SessionState.RemoteAccount)?.userId ?: return false
-        val remotePreferences = remoteStore.loadPreferences(uid)
-        if (remotePreferences == null) return persistPreferences()
+        val remotePreferences = remoteStore.loadPreferences(uid) ?: return false
+        if (remotePreferences.second.isEmpty()) {
+            return persistPreferences()
+        }
         prefs.applyNotificationPreferences(remotePreferences.first, remotePreferences.second)
         return true
     }
