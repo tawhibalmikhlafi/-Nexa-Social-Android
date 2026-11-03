@@ -281,6 +281,7 @@
     <string name="edit_profile_title">Edit profile</string>
     <string name="edit_profile_bio">Bio</string>
     <string name="edit_profile_username_locked">Username cannot be changed locally</string>
+    <string name="edit_profile_username_hint">3–20 characters. Start with a letter; use English letters, numbers, and underscores.</string>
     <string name="edit_profile_saved">Profile updated</string>
     <string name="edit_profile_photo_saved">Profile photo saved</string>
     <string name="edit_profile_cover_saved">Cover photo saved</string>
