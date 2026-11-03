@@ -65,6 +65,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeConfig by container.themeRepository.themeConfig
                 .collectAsStateWithLifecycle(initialValue = ThemeConfig())
+            val fontScale by container.preferenceStorage.fontScale
+                .collectAsStateWithLifecycle(initialValue = 1.0f)
             var crashReport by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(Unit) {
@@ -73,7 +75,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            NexaTheme(config = themeConfig) {
+            NexaTheme(config = themeConfig, fontScale = fontScale) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
