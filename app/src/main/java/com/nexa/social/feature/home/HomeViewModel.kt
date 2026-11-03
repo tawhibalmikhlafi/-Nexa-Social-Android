@@ -1,6 +1,7 @@
 package com.nexa.social.feature.home
 
 import com.nexa.social.domain.repository.AuthRepository
+import com.nexa.social.domain.repository.CommentRepository
 import com.nexa.social.domain.repository.FeedRepository
 import com.nexa.social.domain.repository.GatheringRepository
 import com.nexa.social.domain.repository.NotificationRepository
@@ -8,6 +9,7 @@ import com.nexa.social.domain.repository.PostRepository
 import com.nexa.social.domain.repository.StoryRepository
 import com.nexa.social.domain.model.accountUserId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,12 +31,14 @@ import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.domain.model.FeedType
 import com.nexa.social.domain.model.Gathering
 import com.nexa.social.domain.model.Post
+import com.nexa.social.domain.model.PostComment
 import com.nexa.social.domain.model.StoryGroup
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val feedRepository: FeedRepository,
     private val postRepository: PostRepository,
+    private val commentRepository: CommentRepository,
     private val preferenceStorage: PreferenceStorage,
     notificationRepository: NotificationRepository,
     storyRepository: StoryRepository,
@@ -76,6 +80,8 @@ class HomeViewModel(
         viewModelScope.launch { preferenceStorage.setFeedType(type) }
     }
 
+    fun observeCommentPreview(postId: String): Flow<List<PostComment>> = commentRepository.observeComments(postId)
+
     fun loadMore() {
         viewModelScope.launch { postRepository.loadMoreFeed() }
     }
@@ -99,6 +105,7 @@ class HomeViewModel(
                 HomeViewModel(
                     feedRepository = container.feedRepository,
                     postRepository = container.postRepository,
+                    commentRepository = container.commentRepository,
                     preferenceStorage = container.preferenceStorage,
                     notificationRepository = container.notificationRepository,
                     storyRepository = container.storyRepository,
