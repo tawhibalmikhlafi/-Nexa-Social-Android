@@ -40,7 +40,7 @@ class PostDetailViewModel(
     private val postRepository: PostRepository,
     private val commentRepository: CommentRepository,
     private val safetyRepository: SafetyRepository,
-    userRepository: UserRepository,
+    private val userRepository: UserRepository,
     authRepository: AuthRepository
 ) : ViewModel() {
 
@@ -140,6 +140,19 @@ class PostDetailViewModel(
 
     fun toggleCommentLike(commentId: String) {
         viewModelScope.launch { commentRepository.toggleCommentLike(commentId) }
+    }
+
+    fun unfollowAuthor(authorId: String, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            onResult(runCatching { userRepository.setFollowing(authorId, false) }.getOrDefault(false))
+        }
+    }
+
+    fun blockAuthor(author: com.nexa.social.domain.model.UserSummary, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = safetyRepository.block(author)
+            onResult(result is Resource.Success)
+        }
     }
 
     fun delete(onResult: (Boolean) -> Unit) {
