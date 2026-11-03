@@ -428,8 +428,14 @@ class PostRepositoryImpl(
         if (remoteStore != null && session is SessionState.RemoteAccount) {
             val existing = remoteStore.getPost(postId) ?: return false
             if (existing.author.id != session.userId) return false
-            existing.imageUris.forEach { storage?.deleteByPublicUrl(it) }
-            return runCatching { remoteStore.deletePost(postId) }.getOrDefault(false)
+            val deleted = runCatching { remoteStore.deletePost(postId) }.getOrDefault(false)
+            if (deleted) {
+                // Only remove media after the database confirms the post was deleted.
+                existing.imageUris.forEach { url ->
+                    runCatching { storage?.deleteByPublicUrl(url) }
+                }
+            }
+            return deleted
         }
         val existing = _posts.value.firstOrNull { it.id == postId } ?: return false
         if (!canManage(existing)) return false
