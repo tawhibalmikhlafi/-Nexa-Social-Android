@@ -14,6 +14,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.DarkMode
@@ -72,11 +77,14 @@ fun SettingsScreen(
     onPrivacy: () -> Unit = {},
     onAi: () -> Unit = {},
     onLabs: () -> Unit = {},
+    onEditProfile: () -> Unit = {},
+    onMessages: () -> Unit = {},
+    onGroups: () -> Unit = {},
+    onFriends: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
 ) {
     val language by viewModel.language.collectAsStateWithLifecycle()
     val notifications by viewModel.notificationsEnabled.collectAsStateWithLifecycle()
-    val privateAccount by viewModel.privateAccount.collectAsStateWithLifecycle()
     val session by viewModel.session.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val remoteMode = rememberRemoteMode()
@@ -94,6 +102,16 @@ fun SettingsScreen(
                 .padding(horizontal = NexaSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)
         ) {
+            SettingsSectionHeader(stringResource(R.string.settings_section_account))
+            SettingsRow(
+                icon = Icons.Filled.AccountCircle,
+                title = stringResource(R.string.settings_edit_profile),
+                subtitle = stringResource(R.string.settings_edit_profile_summary),
+                onClick = onEditProfile
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.xs))
+            SettingsSectionHeader(stringResource(R.string.settings_section_preferences))
             SettingsRow(
                 icon = Icons.Filled.DarkMode,
                 title = stringResource(R.string.settings_appearance),
@@ -109,18 +127,28 @@ fun SettingsScreen(
             SettingsRow(
                 icon = Icons.Filled.Notifications,
                 title = stringResource(R.string.settings_notifications_enabled),
+                subtitle = stringResource(R.string.settings_notifications_device_summary),
                 trailing = {
                     Switch(checked = notifications, onCheckedChange = viewModel::setNotificationsEnabled)
                 }
             )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.xs))
+            SettingsSectionHeader(stringResource(R.string.settings_section_privacy))
             SettingsRow(
                 icon = Icons.Filled.Lock,
-                title = stringResource(R.string.settings_privacy_private_account),
-                trailing = {
-                    Switch(checked = privateAccount, onCheckedChange = viewModel::setPrivateAccount)
-                }
+                title = stringResource(R.string.privacy_title),
+                subtitle = stringResource(R.string.privacy_section_account_desc),
+                onClick = onPrivacy
             )
-            HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.sm))
+            SettingsRow(
+                icon = Icons.Filled.Security,
+                title = stringResource(R.string.safety_title),
+                onClick = onSafety
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.xs))
+            SettingsSectionHeader(stringResource(R.string.settings_section_activity))
             SettingsRow(
                 icon = Icons.Filled.Bookmark,
                 title = stringResource(R.string.saved_title),
@@ -136,17 +164,29 @@ fun SettingsScreen(
                 title = stringResource(R.string.achievements_title),
                 onClick = onAchievements
             )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.xs))
+            SettingsSectionHeader(stringResource(R.string.settings_section_connections))
             SettingsRow(
-                icon = Icons.Filled.Security,
-                title = stringResource(R.string.safety_title),
-                onClick = onSafety
+                icon = Icons.AutoMirrored.Filled.Chat,
+                title = stringResource(R.string.settings_messages),
+                subtitle = stringResource(R.string.settings_messages_summary),
+                onClick = onMessages
             )
             SettingsRow(
-                icon = Icons.Filled.Lock,
-                title = stringResource(R.string.privacy_title),
-                subtitle = stringResource(R.string.privacy_section_account_desc),
-                onClick = onPrivacy
+                icon = Icons.Filled.Groups,
+                title = stringResource(R.string.settings_groups),
+                subtitle = stringResource(R.string.settings_groups_summary),
+                onClick = onGroups
             )
+            SettingsRow(
+                icon = Icons.Filled.People,
+                title = stringResource(R.string.settings_friends),
+                onClick = onFriends
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.xs))
+            SettingsSectionHeader(stringResource(R.string.settings_section_tools))
             SettingsRow(
                 icon = Icons.Filled.AutoAwesome,
                 title = stringResource(R.string.ai_title),
@@ -158,7 +198,9 @@ fun SettingsScreen(
                 subtitle = stringResource(R.string.labs_subtitle),
                 onClick = onLabs
             )
-            HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.sm))
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.xs))
+            SettingsSectionHeader(stringResource(R.string.settings_section_information))
             SettingsRow(
                 icon = Icons.Filled.Info,
                 title = stringResource(R.string.settings_about),
@@ -174,13 +216,13 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_terms),
                 onClick = { dialog = "terms" }
             )
+
             Spacer(Modifier.height(NexaSpacing.sm))
             Text(
                 text = "${stringResource(R.string.settings_version)} ${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(NexaSpacing.md))
 
             if (session.isAccount || session is SessionState.Guest) {
                 SettingsRow(
@@ -283,6 +325,18 @@ fun SettingsScreen(
 }
 
 @Composable
+private fun SettingsSectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = NexaSpacing.md, bottom = NexaSpacing.xs)
+    )
+}
+
+@Composable
 private fun languageLabel(tag: String): String = when (tag) {
     LocaleManager.ARABIC -> stringResource(R.string.settings_language_arabic)
     LocaleManager.ENGLISH -> stringResource(R.string.settings_language_english)
@@ -334,6 +388,12 @@ private fun SettingsRow(
                 )
             }
         }
-        if (trailing != null) trailing()
+        if (trailing != null) trailing() else if (onClick != null) {
+            Icon(
+                imageVector = Icons.Filled.ChevronLeft,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
