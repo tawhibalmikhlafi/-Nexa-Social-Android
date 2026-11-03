@@ -23,8 +23,12 @@ class SavedPostsViewModel(
     val hidden: StateFlow<List<Post>> = postRepository.observeHiddenPosts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun toggleLike(postId: String, reaction: String? = null) = viewModelScope.launch { postRepository.toggleLike(postId, reaction) }
-    fun toggleSave(postId: String) = viewModelScope.launch { postRepository.toggleSave(postId) }
+    fun toggleLike(postId: String, reaction: String? = null) = viewModelScope.launch {
+        runCatching { postRepository.toggleLike(postId, reaction) }
+    }
+    fun toggleSave(postId: String) = viewModelScope.launch {
+        runCatching { postRepository.toggleSave(postId) }
+    }
     fun unhide(postId: String) = viewModelScope.launch { postRepository.unhidePost(postId) }
 
     companion object {
