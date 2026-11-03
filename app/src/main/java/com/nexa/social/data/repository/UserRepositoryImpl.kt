@@ -125,7 +125,8 @@ class UserRepositoryImpl(
         avatarUri: String?,
         coverUri: String?,
         city: String?,
-        website: String?
+        website: String?,
+        username: String?
     ): Resource<User> {
         val remoteStore = remote
         val activeSession = prefs.session.first()
@@ -133,6 +134,15 @@ class UserRepositoryImpl(
             userId == activeSession.userId
         ) {
             try {
+            val requestedUsername = username?.let(Validators::canonicalUsername)
+            val existingProfile = runCatching { remoteStore.getProfile(userId, includePrivate = true) }.getOrNull()
+            if (!requestedUsername.isNullOrBlank() && existingProfile?.username != requestedUsername) {
+                when (val result = remoteStore.changeUsername(userId, requestedUsername)) {
+                    is Resource.Success -> profileOverrides.update { it + (userId to result.data) }
+                    is Resource.Failure -> return result
+                    Resource.Loading -> return Resource.Failure(FailureReason.GENERIC)
+                }
+            }
             val avatar = when (val result = uploadProfileImage(
                 MediaBucket.PROFILES,
                 "$userId/avatar-${Ids.newId()}",
@@ -194,7 +204,8 @@ class UserRepositoryImpl(
             avatarUri = avatarUri,
             coverUri = coverUri,
             city = city?.trim()?.ifBlank { null } ?: existing.city,
-            website = website?.trim()?.ifBlank { null } ?: existing.website
+            website = website?.trim()?.ifBlank { null } ?: existing.website,
+            username = username?.let(Validators::canonicalUsername)?.takeIf { it.isNotBlank() } ?: existing.username
         )
         accounts.updateUser(updated)
         profileOverrides.update { it + (userId to updated) }
