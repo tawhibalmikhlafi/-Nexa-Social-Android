@@ -169,11 +169,11 @@ class CommentRepositoryImpl(
         return true
     }
 
-    override suspend fun toggleCommentLike(commentId: String) {
+    override suspend fun toggleCommentLike(commentId: String, emoji: String) {
         val session = sessionFlow.first()
         val remoteStore = remote
         if (session is SessionState.RemoteAccount && remoteStore != null) {
-            runCatching { remoteStore.toggleLike(commentId) }
+            remoteStore.toggleLike(commentId, emoji)
             return
         }
         _comments.value = _comments.value.map { comment ->
@@ -186,6 +186,15 @@ class CommentRepositoryImpl(
             }
         }
         persist()
+    }
+
+    override suspend fun getCommentReactions(commentId: String): List<com.nexa.social.domain.model.PostReaction> {
+        val session = sessionFlow.first()
+        return if (session is SessionState.RemoteAccount && remote != null) {
+            remote.getCommentReactions(commentId)
+        } else {
+            emptyList()
+        }
     }
 
     override fun observeCommentPageSize(): Flow<Int> =
