@@ -47,6 +47,8 @@ class HomeViewModel(
     authRepository: AuthRepository
 ) : ViewModel() {
 
+    private val commentPreviewFlows = mutableMapOf<String, Flow<List<PostComment>>>()
+
     val userId: StateFlow<String?> = authRepository.session
         .map { it.accountUserId }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -81,7 +83,9 @@ class HomeViewModel(
         viewModelScope.launch { preferenceStorage.setFeedType(type) }
     }
 
-    fun observeCommentPreview(postId: String): Flow<List<PostComment>> = flow { emit(commentRepository.getCommentPreview(postId)) }
+    fun observeCommentPreview(postId: String): Flow<List<PostComment>> = commentPreviewFlows.getOrPut(postId) {
+        flow { emit(commentRepository.getCommentPreview(postId)) }
+    }
 
     fun loadMore() {
         viewModelScope.launch { postRepository.loadMoreFeed() }
