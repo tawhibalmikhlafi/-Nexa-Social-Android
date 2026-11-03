@@ -166,23 +166,21 @@ class SupabasePostDataSource(
     }
 
     suspend fun setHidden(postId: String, hidden: Boolean) {
-        setPostPreference("post_hides", postId, hidden, ownerOnly = false)
+        setPostPreference("post_hides", postId, hidden)
     }
 
     suspend fun togglePin(postId: String) {
         val uid = currentUid() ?: throw IllegalStateException("NOT_AUTHENTICATED")
-        val token = accessToken() ?: throw IllegalStateException("NOT_AUTHENTICATED")
         val exists = fetchRows(
             "post_pins?select=post_id&post_id=eq.${encode(postId)}&user_id=eq.${encode(uid)}"
         )?.isNotEmpty() == true
-        setPostPreference("post_pins", postId, !exists, ownerOnly = true)
+        setPostPreference("post_pins", postId, !exists)
     }
 
     private suspend fun setPostPreference(
         table: String,
         postId: String,
-        enabled: Boolean,
-        ownerOnly: Boolean
+        enabled: Boolean
     ) {
         require(table == "post_hides" || table == "post_pins")
         val uid = currentUid() ?: throw IllegalStateException("NOT_AUTHENTICATED")
