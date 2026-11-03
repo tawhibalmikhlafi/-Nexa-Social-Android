@@ -340,10 +340,14 @@ class PostRepositoryImpl(
             reaction != null && currentReaction == reaction -> null
             else -> if (currentReaction != null) null else "👍"
         }
-        prefs.setReactionOverride(postId, newReaction)
         if (isRemote(session)) {
-            runCatching { remote?.toggleLike(postId, reaction) }
+            // Persist the reaction first; never publish a local override when Supabase rejects it.
+            remote?.toggleLike(postId, reaction)
+                ?: throw IllegalStateException("SUPABASE_POST_BACKEND_UNAVAILABLE")
+            prefs.setReactionOverride(postId, newReaction)
+            return
         }
+        prefs.setReactionOverride(postId, newReaction)
         _posts.value = _posts.value.map { post ->
             if (post.id != postId) post else {
                 val liked = newReaction != null
@@ -378,7 +382,8 @@ class PostRepositoryImpl(
     override suspend fun toggleSave(postId: String) {
         val session = prefs.session.first()
         if (isRemote(session)) {
-            runCatching { remote?.toggleSave(postId) }
+            remote?.toggleSave(postId)
+                ?: throw IllegalStateException("SUPABASE_POST_BACKEND_UNAVAILABLE")
             return
         }
         _posts.value = _posts.value.map { post ->
@@ -390,7 +395,8 @@ class PostRepositoryImpl(
     override suspend fun incrementShare(postId: String) {
         val session = prefs.session.first()
         if (isRemote(session)) {
-            runCatching { remote?.incrementShare(postId) }
+            remote?.incrementShare(postId)
+                ?: throw IllegalStateException("SUPABASE_POST_BACKEND_UNAVAILABLE")
             return
         }
         _posts.value = _posts.value.map { post ->
