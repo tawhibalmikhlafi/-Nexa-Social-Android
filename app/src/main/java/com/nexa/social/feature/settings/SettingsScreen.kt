@@ -39,6 +39,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -93,6 +94,7 @@ fun SettingsScreen(
     val videoAutoplay by viewModel.videoAutoplay.collectAsStateWithLifecycle()
     val dataSaver by viewModel.dataSaver.collectAsStateWithLifecycle()
     val reduceMotion by viewModel.reduceMotion.collectAsStateWithLifecycle()
+    val fontScale by viewModel.fontScale.collectAsStateWithLifecycle()
     val cacheSizeBytes by viewModel.cacheSizeBytes.collectAsStateWithLifecycle()
     val feedType by viewModel.feedType.collectAsStateWithLifecycle()
     val session by viewModel.session.collectAsStateWithLifecycle()
@@ -220,6 +222,19 @@ fun SettingsScreen(
                 subtitle = stringResource(R.string.settings_reduce_motion_summary),
                 trailing = { Switch(checked = reduceMotion, onCheckedChange = viewModel::setReduceMotion) }
             )
+
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = NexaSpacing.sm)) {
+                Text(
+                    text = stringResource(R.string.settings_font_size, (fontScale * 100).toInt()),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Slider(
+                    value = fontScale,
+                    onValueChange = viewModel::setFontScale,
+                    valueRange = 0.85f..1.30f,
+                    steps = 8
+                )
+            }
             SettingsRow(
                 icon = Icons.Filled.Security,
                 title = stringResource(R.string.settings_clear_cache),
