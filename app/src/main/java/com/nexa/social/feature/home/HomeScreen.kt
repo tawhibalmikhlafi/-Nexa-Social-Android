@@ -371,20 +371,29 @@ private fun CreateStoryBubble(onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(62.dp)
+                .size(66.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-                    shape = CircleShape
-                ),
+                .background(
+                    androidx.compose.ui.graphics.Brush.sweepGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary,
+                            Color(0xFFD946EF),
+                            Color(0xFF8B5CF6),
+                            MaterialTheme.colorScheme.primary
+                        )
+                    )
+                )
+                .padding(3.dp)
+                .background(MaterialTheme.colorScheme.surface, CircleShape)
+                .padding(2.dp)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Filled.Add,
                 contentDescription = stringResource(R.string.story_create_title),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
             )
         }
         Spacer(Modifier.height(NexaSpacing.xs))
@@ -415,10 +424,27 @@ private fun StoryBubble(group: StoryGroup, onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(62.dp)
+                .size(66.dp)
                 .clip(CircleShape)
-                .border(width = 2.dp, color = ringColor, shape = CircleShape)
+                .background(
+                    if (group.hasUnseen) {
+                        androidx.compose.ui.graphics.Brush.sweepGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary,
+                                Color(0xFFD946EF),
+                                Color(0xFF8B5CF6),
+                                MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    } else {
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            listOf(ringColor, ringColor.copy(alpha = 0.55f))
+                        )
+                    }
+                )
                 .padding(3.dp)
+                .background(MaterialTheme.colorScheme.background, CircleShape)
+                .padding(2.dp)
         ) {
             NexaAvatar(
                 displayName = group.author.displayName,
