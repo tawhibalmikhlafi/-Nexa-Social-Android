@@ -83,9 +83,6 @@ fun PostCard(
     var textOverflowing by remember(post.id) { mutableStateOf(false) }
     val editedLabel = stringResource(R.string.post_edited)
     val meta = buildString {
-        append('@')
-        append(post.author.username)
-        append(" · ")
         append(TimeUtils.relativeFromNow(post.createdAt))
         if (post.isEdited) {
             append(" · ")
