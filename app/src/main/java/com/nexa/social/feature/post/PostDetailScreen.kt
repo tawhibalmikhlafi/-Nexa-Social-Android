@@ -263,6 +263,7 @@ fun PostDetailScreen(
     var showReactions by remember { mutableStateOf(false) }
     var showCommentReactions by remember { mutableStateOf(false) }
     var selectedCommentReactionCount by remember { mutableStateOf(0) }
+    var selectedCommentReactionId by remember { mutableStateOf<String?>(null) }
     var showEditPost by remember { mutableStateOf(false) }
     var showMentionSuggestions by remember { mutableStateOf(false) }
     var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
@@ -471,6 +472,7 @@ fun PostDetailScreen(
                             onToggleLike = { emoji -> viewModel.toggleCommentLike(node.comment.id, emoji) },
                             onOpenReactions = {
                                 selectedCommentReactionCount = node.comment.likeCount
+                                selectedCommentReactionId = node.comment.id
                                 showCommentReactions = true
                                 viewModel.loadCommentReactions(node.comment.id)
                             },
@@ -807,7 +809,7 @@ fun PostDetailScreen(
             total = maxOf(selectedCommentReactionCount, commentReactionsState.reactions.size),
             remoteMode = remoteMode,
             onDismiss = { showCommentReactions = false },
-            onRetry = {},
+            onRetry = { selectedCommentReactionId?.let(viewModel::loadCommentReactions) },
             onOpenProfile = { userId ->
                 showCommentReactions = false
                 onOpenProfile(userId)
@@ -1016,7 +1018,6 @@ private fun PostHeader(
     onMenu: () -> Unit
 ) {
     val authorName = post.author.preferredName()
-    val handle = post.author.visibleHandle()
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -1045,15 +1046,6 @@ private fun PostHeader(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (handle != null) {
-                    Text(
-                        text = handle,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
                 Spacer(Modifier.height(NexaSpacing.xs))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
