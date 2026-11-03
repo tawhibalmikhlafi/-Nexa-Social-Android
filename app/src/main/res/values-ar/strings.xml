@@ -292,6 +292,21 @@
 
     <!-- Settings -->
     <string name="settings_title">الإعدادات</string>
+    <string name="settings_section_information">الدعم والمعلومات</string>
+    <string name="settings_section_tools">ميزات نيكسا</string>
+    <string name="settings_friends">الأصدقاء</string>
+    <string name="settings_groups_summary">مجموعاتك وعضوياتك</string>
+    <string name="settings_groups">المجموعات</string>
+    <string name="settings_messages_summary">فتح محادثاتك</string>
+    <string name="settings_messages">الرسائل</string>
+    <string name="settings_section_connections">الرسائل والتواصل</string>
+    <string name="settings_section_activity">نشاطك ومحتواك</string>
+    <string name="settings_section_privacy">الجمهور والسلامة</string>
+    <string name="settings_notifications_device_summary">يتحكم في إشعارات هذا الجهاز</string>
+    <string name="settings_section_preferences">تفضيلاتك</string>
+    <string name="settings_edit_profile_summary">تحديث معلومات ملفك وصورك</string>
+    <string name="settings_edit_profile">تعديل الملف الشخصي</string>
+    <string name="settings_section_account">الحساب</string>
     <string name="settings_appearance">المظهر</string>
     <string name="settings_appearance_summary">السمة والألوان والخلفية</string>
     <string name="settings_language">اللغة</string>
@@ -303,11 +318,11 @@
     <string name="settings_notifications">الإشعارات</string>
     <string name="settings_notifications_enabled">تفعيل الإشعارات المحلية</string>
     <string name="settings_about">حول Nexa</string>
-    <string name="settings_about_body">Nexa 2030 منصة تواصل تتمحور حول العوالم والمجتمعات التفاعلية. هذا الإصدار يعمل بالكامل على جهازك، والميزات الشبكية مهيأة لخادم مستقبلي.</string>
+    <string name="settings_about_body">يستخدم نيكسا سوشيال خدمة Supabase لبيانات الحساب والميزات الاجتماعية المدعومة عند تسجيل الدخول. تُحفظ خيارات المظهر واللغة على هذا الجهاز، وقد تحتفظ بعض الوحدات الاختيارية ببيانات محلية أيضًا.</string>
     <string name="settings_privacy_policy">سياسة الخصوصية</string>
-    <string name="settings_privacy_policy_body">بياناتك المحلية محفوظة على جهازك فقط. لا تخرج أي بيانات شخصية من الجهاز في هذا الإصدار ولا يوجد تتبع أو تحليلات.</string>
+    <string name="settings_privacy_policy_body">يعالج نيكسا بيانات الحساب والتفاعل الاجتماعي عبر خدمات الخادم المهيأة لتقديم الميزات التي تستخدمها. تُحفظ بعض التفضيلات والوحدات الاختيارية محليًا على جهازك. تجنب نشر المعلومات الحساسة علنًا، وتواصل مع الدعم إذا احتجت تفاصيل عن فئة محددة من البيانات.</string>
     <string name="settings_terms">شروط الاستخدام</string>
-    <string name="settings_terms_body">استخدم Nexa باحترام. المحتوى التجريبي المحلي لأغراض التطوير ولا يمثل مستخدمين حقيقيين أو حسابات موثّقة.</string>
+    <string name="settings_terms_body">استخدم نيكسا باحترام، ولا تنشر محتوى ينتهك حقوق الآخرين أو القوانين المعمول بها. يعتمد توفر الميزات وطريقة التعامل مع البيانات على الحساب النشط وإعدادات الخدمات والميزة التي تستخدمها.</string>
     <string name="settings_sign_out">تسجيل الخروج</string>
     <string name="settings_sign_out_confirm">هل تريد تسجيل الخروج من هذه الجلسة المحلية؟</string>
     <string name="settings_sign_out_guest">الخروج من وضع الزائر</string>
