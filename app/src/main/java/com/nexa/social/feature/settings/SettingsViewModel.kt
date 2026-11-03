@@ -9,13 +9,10 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nexa.social.core.common.LocaleManager
 import com.nexa.social.core.storage.PreferenceStorage
 import com.nexa.social.core.ui.nexaApplication
-import com.nexa.social.domain.model.PrivacySettings
 import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -31,13 +28,6 @@ class SettingsViewModel(
     val notificationsEnabled: StateFlow<Boolean> = preferenceStorage.notificationsEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
-    val privacySettings: StateFlow<PrivacySettings> = preferenceStorage.privacySettings
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PrivacySettings())
-
-    val privateAccount: StateFlow<Boolean> = preferenceStorage.privacySettings
-        .map { it.privateAccount }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
-
     val session: StateFlow<SessionState> = authRepository.session
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionState.None)
 
@@ -50,13 +40,6 @@ class SettingsViewModel(
 
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch { preferenceStorage.setNotificationsEnabled(enabled) }
-    }
-
-    fun setPrivateAccount(enabled: Boolean) {
-        viewModelScope.launch {
-            val current = preferenceStorage.privacySettings.first()
-            preferenceStorage.setPrivacySettings(current.copy(privateAccount = enabled))
-        }
     }
 
     fun signOut() {
