@@ -30,6 +30,8 @@ create policy nexa_post_hides_delete on public.post_hides
 
 drop policy if exists nexa_post_pins_select on public.post_pins;
 drop policy if exists nexa_post_pins_insert on public.post_pins;
+create policy nexa_post_pins_select on public.post_pins
+    for select to authenticated using (user_id = auth.uid());
 create policy nexa_post_pins_insert on public.post_pins
     for insert to authenticated with check (
         user_id = auth.uid()
