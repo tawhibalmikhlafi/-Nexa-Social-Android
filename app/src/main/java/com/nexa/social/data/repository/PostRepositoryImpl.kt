@@ -345,7 +345,8 @@ class PostRepositoryImpl(
             // Persist the reaction first; never publish a local override when Supabase rejects it.
             remote?.toggleLike(postId, reaction)
                 ?: throw IllegalStateException("SUPABASE_POST_BACKEND_UNAVAILABLE")
-            prefs.setReactionOverride(postId, newReaction)
+            // Supabase reloads the authoritative reaction and count; don't overlay a local guess.
+            prefs.setReactionOverride(postId, null)
             return
         }
         prefs.setReactionOverride(postId, newReaction)
