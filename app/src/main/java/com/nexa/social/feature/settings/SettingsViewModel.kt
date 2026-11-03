@@ -52,6 +52,9 @@ class SettingsViewModel(
     val reduceMotion: StateFlow<Boolean> = preferenceStorage.reduceMotion
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val fontScale: StateFlow<Float> = preferenceStorage.fontScale
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1.0f)
+
     val session: StateFlow<SessionState> = authRepository.session
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionState.None)
 
@@ -132,6 +135,10 @@ class SettingsViewModel(
 
     fun setReduceMotion(enabled: Boolean) {
         viewModelScope.launch { preferenceStorage.setReduceMotion(enabled) }
+    }
+
+    fun setFontScale(scale: Float) {
+        viewModelScope.launch { preferenceStorage.setFontScale(scale) }
     }
 
     fun signOut() {
