@@ -65,6 +65,18 @@ class PostDetailViewModel(
     private val _reactions = MutableStateFlow(PostReactionsUiState())
     val reactions: StateFlow<PostReactionsUiState> = _reactions.asStateFlow()
     private var reactionsLoaded = false
+    private val _commentReactions = MutableStateFlow(PostReactionsUiState())
+    val commentReactions: StateFlow<PostReactionsUiState> = _commentReactions.asStateFlow()
+
+    fun loadCommentReactions(commentId: String) {
+        viewModelScope.launch {
+            _commentReactions.value = PostReactionsUiState(isLoading = true)
+            runCatching { commentRepository.getCommentReactions(commentId) }
+                .onSuccess { _commentReactions.value = PostReactionsUiState(reactions = it) }
+                .onFailure { _commentReactions.value = PostReactionsUiState(error = FailureReason.NETWORK) }
+        }
+    }
+
 
     fun loadReactions(force: Boolean = false) {
         if (_reactions.value.isLoading) return
@@ -154,8 +166,8 @@ class PostDetailViewModel(
         viewModelScope.launch { onResult(commentRepository.deleteComment(commentId)) }
     }
 
-    fun toggleCommentLike(commentId: String) {
-        viewModelScope.launch { commentRepository.toggleCommentLike(commentId) }
+    fun toggleCommentLike(commentId: String, emoji: String = "❤️") {
+        viewModelScope.launch { runCatching { commentRepository.toggleCommentLike(commentId, emoji) } }
     }
 
     fun unfollowAuthor(authorId: String, onResult: (Boolean) -> Unit = {}) {
