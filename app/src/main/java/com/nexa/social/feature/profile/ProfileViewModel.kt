@@ -98,6 +98,7 @@ class ProfileViewModel(
     val messageError: StateFlow<Boolean> = _messageError.asStateFlow()
 
     private val followingOverride = MutableStateFlow<Boolean?>(null)
+    private val followRequestPending = MutableStateFlow(false)
     private val followersDelta = MutableStateFlow(0)
 
     private val _followBusy = MutableStateFlow(false)
@@ -105,6 +106,9 @@ class ProfileViewModel(
 
     private val _followError = MutableStateFlow(false)
     val followError: StateFlow<Boolean> = _followError.asStateFlow()
+
+    val isFollowRequestPending: StateFlow<Boolean> = followRequestPending
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val isFollowing: StateFlow<Boolean> = followingOverride
         .map { it == true }
@@ -137,6 +141,7 @@ class ProfileViewModel(
             viewModelScope.launch {
                 user.filterNotNull().collect { resolved ->
                     followingOverride.value = userRepository.isFollowing(resolved.id)
+                    followRequestPending.value = userRepository.hasPendingFollowRequest(resolved.id)
                     followersDelta.value = 0
                 }
             }
@@ -154,17 +159,31 @@ class ProfileViewModel(
     fun toggleFollow() {
         val resolved = user.value ?: return
         if (isSelf || resolved.id == currentUserId.value || _followBusy.value) return
-        val follow = !(followingOverride.value ?: false)
+        val cancelOrUnfollow = (followingOverride.value == true) || followRequestPending.value
+        val follow = !cancelOrUnfollow
         viewModelScope.launch {
             _followBusy.value = true
-            val updated = userRepository.setFollowing(resolved.id, follow)
-            if (updated) {
-                followingOverride.value = follow
-                followersDelta.value += if (follow) 1 else -1
-            } else {
+            try {
+                val updated = userRepository.setFollowing(resolved.id, follow)
+                if (updated) {
+                    if (follow) {
+                        val pending = userRepository.hasPendingFollowRequest(resolved.id)
+                        followRequestPending.value = pending
+                        followingOverride.value = !pending
+                        if (!pending) followersDelta.value += 1
+                    } else {
+                        followRequestPending.value = false
+                        if (followingOverride.value == true) followersDelta.value -= 1
+                        followingOverride.value = false
+                    }
+                } else {
+                    _followError.value = true
+                }
+            } catch (_: Exception) {
                 _followError.value = true
+            } finally {
+                _followBusy.value = false
             }
-            _followBusy.value = false
         }
     }
 
