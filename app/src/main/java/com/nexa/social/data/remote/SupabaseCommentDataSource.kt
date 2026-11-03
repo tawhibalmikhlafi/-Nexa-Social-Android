@@ -60,6 +60,19 @@ class SupabaseCommentDataSource(
         }
     }
 
+    suspend fun getCommentPreview(postId: String): List<PostComment> {
+        val uid = currentUid()
+        val rows = fetchRows("comments?select=*,author:profiles!author_id(id,username,display_name,avatar_url,account_origin)&post_id=eq.${encode(postId)}&order=created_at.desc&limit=2").orEmpty()
+        if (rows.isEmpty()) return emptyList()
+        val ids = rows.mapNotNull { it.string("id") }
+        val liked = if (uid == null || ids.isEmpty()) emptySet() else {
+            fetchRows("comment_likes?select=comment_id&user_id=eq.${encode(uid)}&comment_id=in.(${ids.joinToString(",") { encode(it) }})")
+                .orEmpty().mapNotNull { it.string("comment_id") }.toSet()
+        }
+        val postAuthorId = fetchRows("posts?select=author_id&id=eq.${encode(postId)}&limit=1")?.firstOrNull()?.string("author_id")
+        return rows.mapNotNull { parseComment(it, uid, liked, postAuthorId) }.sortedBy { it.createdAt }
+    }
+
     suspend fun addComment(
         postId: String,
         author: UserSummary,
@@ -119,12 +132,15 @@ class SupabaseCommentDataSource(
             addProperty("text", text.trim())
             addProperty("updated_at", Instant.now().toString())
         }
-        execute(
+        val response = execute(
             http.authenticatedRequest("$restUrl/comments?id=eq.${encode(commentId)}", token)
                 .header("Prefer", "return=minimal")
                 .patch(http.jsonBody(body))
                 .build()
         )
+        if (response?.successful != true) {
+            throw IllegalStateException("Comment update failed with HTTP ${response?.code ?: "NETWORK_ERROR"}")
+        }
         notifyChanged()
         return getComment(commentId)
     }
@@ -144,7 +160,7 @@ class SupabaseCommentDataSource(
         val uid = currentUid() ?: return
         val token = accessToken() ?: return
         val liked = fetchRows("comment_likes?select=comment_id&comment_id=eq.${encode(commentId)}&user_id=eq.${encode(uid)}")?.isNotEmpty() == true
-        if (liked) {
+        val response = if (liked) {
             execute(
                 http.authenticatedRequest("$restUrl/comment_likes?comment_id=eq.${encode(commentId)}&user_id=eq.${encode(uid)}", token)
                     .delete().build()
@@ -160,6 +176,9 @@ class SupabaseCommentDataSource(
                     .post(http.jsonBody(body))
                     .build()
             )
+        }
+        if (response?.successful != true) {
+            throw IllegalStateException("Comment reaction failed with HTTP ${response?.code ?: "NETWORK_ERROR"}")
         }
         notifyChanged()
     }

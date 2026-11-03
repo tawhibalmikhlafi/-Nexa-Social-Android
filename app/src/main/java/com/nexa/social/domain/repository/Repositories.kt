@@ -194,6 +194,7 @@ interface PostRepository {
 
 interface CommentRepository {
     fun observeComments(postId: String): Flow<List<PostComment>>
+    suspend fun getCommentPreview(postId: String): List<PostComment>
     fun observeCommentCount(postId: String): Flow<Int>
     suspend fun addComment(
         postId: String,

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.HorizontalDivider
@@ -53,6 +54,7 @@ import com.nexa.social.R
 import com.nexa.social.core.common.TimeUtils
 import com.nexa.social.domain.model.Audience
 import com.nexa.social.domain.model.Post
+import com.nexa.social.domain.model.PostComment
 import com.nexa.social.ui.theme.NexaRadius
 import com.nexa.social.ui.theme.NexaSpacing
 
@@ -74,7 +76,8 @@ fun PostCard(
     onDelete: (() -> Unit)? = null,
     onOpenProfile: (String) -> Unit = {},
     onOpenPost: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    commentPreview: List<PostComment> = emptyList()
 ) {
     var expanded by remember(post.id) { mutableStateOf(false) }
     var textOverflowing by remember(post.id) { mutableStateOf(false) }
@@ -130,15 +133,13 @@ fun PostCard(
                     )
                 }
                 Spacer(Modifier.width(NexaSpacing.sm))
-                if (onDelete != null) {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = stringResource(R.string.post_delete),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                IconButton(onClick = onOpenPost) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.post_menu),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
                 AudienceBadge(post.audience)
             }
@@ -247,6 +248,70 @@ fun PostCard(
                 onClick = onSave,
                 modifier = Modifier.weight(1f)
             )
+        }
+        if (commentPreview.isNotEmpty() || post.commentCount > 0) {
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.xs),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.xs),
+                verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+            ) {
+                commentPreview.take(2).forEach { comment ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f))
+                            .clickable { onOpenPost() }
+                            .padding(NexaSpacing.sm),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        NexaAvatar(
+                            displayName = comment.author.displayName,
+                            avatarUri = comment.author.avatarUri,
+                            size = 30.dp
+                        )
+                        Spacer(Modifier.width(NexaSpacing.sm))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = comment.author.displayName,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = comment.text.ifBlank { stringResource(R.string.comment_image_only) },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        if (comment.likeCount > 0) {
+                            Text(
+                                text = "♥ ${comment.likeCount}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+                Text(
+                    text = stringResource(R.string.post_view_all_comments, maxOf(post.commentCount, commentPreview.size)),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .clickable { onOpenPost() }
+                        .padding(vertical = NexaSpacing.xs)
+                )
+            }
         }
     }
 }

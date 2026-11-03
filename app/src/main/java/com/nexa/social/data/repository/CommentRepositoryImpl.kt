@@ -60,6 +60,16 @@ class CommentRepositoryImpl(
         }
     }
 
+    override suspend fun getCommentPreview(postId: String): List<PostComment> {
+        val session = sessionFlow.first()
+        return if (session is SessionState.RemoteAccount && remote != null) {
+            remote.getCommentPreview(postId)
+        } else {
+            _comments.value.filter { it.postId == postId }
+                .sortedByDescending { it.createdAt }.take(2).reversed()
+        }
+    }
+
     override fun observeCommentCount(postId: String): Flow<Int> =
         observeComments(postId).map { it.size }
 
@@ -91,7 +101,7 @@ class CommentRepositoryImpl(
             }
             return try {
                 val comment = remoteStore.addComment(postId, author, clean, parentId, storedImage)
-                postRepository.adjustCommentCount(postId, 1)
+                // The Supabase comments trigger updates posts.comment_count atomically.
                 achievements.record(CounterKind.COMMENTS_CREATED)
                 Resource.Success(comment)
             } catch (error: Exception) {
@@ -146,7 +156,7 @@ class CommentRepositoryImpl(
             val existing = remoteStore.getComment(commentId) ?: return false
             val deleted = runCatching { remoteStore.deleteComment(commentId) }.getOrDefault(false)
             if (deleted) {
-                postRepository.adjustCommentCount(existing.postId, -1)
+                // The Supabase comments delete trigger decrements posts.comment_count.
                 existing.imageUri?.let { mediaStorage?.deleteByPublicUrl(it) }
             }
             return deleted

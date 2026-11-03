@@ -1,6 +1,7 @@
 package com.nexa.social.feature.home
 
 import com.nexa.social.domain.repository.AuthRepository
+import com.nexa.social.domain.repository.CommentRepository
 import com.nexa.social.domain.repository.FeedRepository
 import com.nexa.social.domain.repository.GatheringRepository
 import com.nexa.social.domain.repository.NotificationRepository
@@ -8,6 +9,7 @@ import com.nexa.social.domain.repository.PostRepository
 import com.nexa.social.domain.repository.StoryRepository
 import com.nexa.social.domain.model.accountUserId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -29,18 +32,22 @@ import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.domain.model.FeedType
 import com.nexa.social.domain.model.Gathering
 import com.nexa.social.domain.model.Post
+import com.nexa.social.domain.model.PostComment
 import com.nexa.social.domain.model.StoryGroup
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val feedRepository: FeedRepository,
     private val postRepository: PostRepository,
+    private val commentRepository: CommentRepository,
     private val preferenceStorage: PreferenceStorage,
     notificationRepository: NotificationRepository,
     storyRepository: StoryRepository,
     gatheringRepository: GatheringRepository,
     authRepository: AuthRepository
 ) : ViewModel() {
+
+    private val commentPreviewFlows = mutableMapOf<String, Flow<List<PostComment>>>()
 
     val userId: StateFlow<String?> = authRepository.session
         .map { it.accountUserId }
@@ -76,6 +83,10 @@ class HomeViewModel(
         viewModelScope.launch { preferenceStorage.setFeedType(type) }
     }
 
+    fun observeCommentPreview(postId: String): Flow<List<PostComment>> = commentPreviewFlows.getOrPut(postId) {
+        flow { emit(commentRepository.getCommentPreview(postId)) }
+    }
+
     fun loadMore() {
         viewModelScope.launch { postRepository.loadMoreFeed() }
     }
@@ -99,6 +110,7 @@ class HomeViewModel(
                 HomeViewModel(
                     feedRepository = container.feedRepository,
                     postRepository = container.postRepository,
+                    commentRepository = container.commentRepository,
                     preferenceStorage = container.preferenceStorage,
                     notificationRepository = container.notificationRepository,
                     storyRepository = container.storyRepository,

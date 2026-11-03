@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -162,13 +163,17 @@ fun HomeScreen(
             )
         }
 
-        nextGathering?.let { gathering ->
-            item {
-                UpcomingGatheringCard(
-                    gathering = gathering,
-                    onOpen = onOpenGatherings,
-                    modifier = Modifier.padding(horizontal = NexaSpacing.lg)
-                )
+        // Gatherings are currently stored locally; do not present them as live server data
+        // to a remote Supabase account until a remote gatherings table/repository is configured.
+        if (!remoteMode) {
+            nextGathering?.let { gathering ->
+                item {
+                    UpcomingGatheringCard(
+                        gathering = gathering,
+                        onOpen = onOpenGatherings,
+                        modifier = Modifier.padding(horizontal = NexaSpacing.lg)
+                    )
+                }
             }
         }
 
@@ -183,8 +188,10 @@ fun HomeScreen(
             }
         } else {
             items(feed, key = { it.id }) { post ->
+                val commentPreview by viewModel.observeCommentPreview(post.id).collectAsStateWithLifecycle(initialValue = emptyList())
                 PostCard(
                     post = post,
+                    commentPreview = commentPreview.take(2),
                     onLike = { viewModel.toggleLike(post.id) },
                     onReaction = { emoji -> viewModel.toggleLike(post.id, emoji) },
                     onComment = { onOpenPost(post.id) },
@@ -371,20 +378,29 @@ private fun CreateStoryBubble(onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(62.dp)
+                .size(66.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-                    shape = CircleShape
-                ),
+                .background(
+                    androidx.compose.ui.graphics.Brush.sweepGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary,
+                            Color(0xFFD946EF),
+                            Color(0xFF8B5CF6),
+                            MaterialTheme.colorScheme.primary
+                        )
+                    )
+                )
+                .padding(3.dp)
+                .background(MaterialTheme.colorScheme.surface, CircleShape)
+                .padding(2.dp)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Filled.Add,
                 contentDescription = stringResource(R.string.story_create_title),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
             )
         }
         Spacer(Modifier.height(NexaSpacing.xs))
@@ -415,10 +431,27 @@ private fun StoryBubble(group: StoryGroup, onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(62.dp)
+                .size(66.dp)
                 .clip(CircleShape)
-                .border(width = 2.dp, color = ringColor, shape = CircleShape)
+                .background(
+                    if (group.hasUnseen) {
+                        androidx.compose.ui.graphics.Brush.sweepGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary,
+                                Color(0xFFD946EF),
+                                Color(0xFF8B5CF6),
+                                MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    } else {
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            listOf(ringColor, ringColor.copy(alpha = 0.55f))
+                        )
+                    }
+                )
                 .padding(3.dp)
+                .background(MaterialTheme.colorScheme.background, CircleShape)
+                .padding(2.dp)
         ) {
             NexaAvatar(
                 displayName = group.author.displayName,

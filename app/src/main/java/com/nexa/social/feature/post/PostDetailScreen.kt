@@ -157,11 +157,14 @@ private data class CommentNode(
     val replyToName: String?
 )
 
-private fun List<PostComment>.toCommentThread(): List<CommentNode> {
+private fun List<PostComment>.toCommentThread(popularFirst: Boolean = false): List<CommentNode> {
     if (isEmpty()) return emptyList()
     val byParent = groupBy { it.parentId }
     val byId = associateBy { it.id }
     val result = mutableListOf<CommentNode>()
+    fun ordered(items: List<PostComment>): List<PostComment> =
+        if (popularFirst) items.sortedWith(compareByDescending<PostComment> { it.likeCount }.thenByDescending { it.createdAt })
+        else items.sortedBy { it.createdAt }
     val visited = mutableSetOf<String>()
 
     fun append(comment: PostComment, depth: Int) {
@@ -173,13 +176,10 @@ private fun List<PostComment>.toCommentThread(): List<CommentNode> {
                 ?.let { byId[it]?.author }
                 ?.preferredName()
         )
-        byParent[comment.id].orEmpty()
-            .sortedBy { it.createdAt }
-            .forEach { append(it, depth + 1) }
+        ordered(byParent[comment.id].orEmpty()).forEach { append(it, depth + 1) }
     }
 
-    filter { it.parentId == null || byId[it.parentId] == null }
-        .sortedBy { it.createdAt }
+    ordered(filter { it.parentId == null || byId[it.parentId] == null })
         .forEach { append(it, 0) }
     sortedBy { it.createdAt }.forEach { if (it.id !in visited) append(it, 0) }
     return result
@@ -256,6 +256,7 @@ fun PostDetailScreen(
 
     var showMenu by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
+    var showBlockConfirm by remember { mutableStateOf(false) }
     var showReport by remember { mutableStateOf(false) }
     var showReactions by remember { mutableStateOf(false) }
     var showEditPost by remember { mutableStateOf(false) }
@@ -287,7 +288,18 @@ fun PostDetailScreen(
     } else {
         suggestedUsers
     }
-    val commentThread = remember(comments) { comments.toCommentThread() }
+    var popularComments by rememberSaveable(postId) { mutableStateOf(false) }
+    val commentThread = remember(comments, popularComments) { comments.toCommentThread(popularComments) }
+    var showAllComments by rememberSaveable(postId) { mutableStateOf(false) }
+    val visibleCommentThread = remember(commentThread, showAllComments) {
+        if (showAllComments) commentThread else {
+            var rootsSeen = 0
+            commentThread.takeWhile { node ->
+                if (node.depth == 0) rootsSeen++
+                rootsSeen <= 2
+            }
+        }
+    }
     var replyingToComment by remember { mutableStateOf<PostComment?>(null) }
     var editingComment by remember { mutableStateOf<PostComment?>(null) }
     var deletingComment by remember { mutableStateOf<PostComment?>(null) }
@@ -423,6 +435,18 @@ fun PostDetailScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
+                    Row(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
+                        FilterChip(
+                            selected = !popularComments,
+                            onClick = { popularComments = false },
+                            label = { Text(stringResource(R.string.comment_sort_newest)) }
+                        )
+                        FilterChip(
+                            selected = popularComments,
+                            onClick = { popularComments = true },
+                            label = { Text(stringResource(R.string.comment_sort_popular)) }
+                        )
+                    }
                 }
                 if (comments.isEmpty()) {
                     item {
@@ -433,7 +457,7 @@ fun PostDetailScreen(
                         )
                     }
                 } else {
-                    items(commentThread, key = { it.comment.id }) { node ->
+                    items(visibleCommentThread, key = { it.comment.id }) { node ->
                         CommentRow(
                             comment = node.comment,
                             depth = node.depth,
@@ -444,6 +468,21 @@ fun PostDetailScreen(
                             onEdit = { editingComment = node.comment },
                             onDelete = { deletingComment = node.comment },
                             onOpenImage = { fullscreenImageUrl = it }
+                        )
+                    }
+                }
+                if (!showAllComments && visibleCommentThread.size < commentThread.size) {
+                    item {
+                        NexaTextButton(
+                            text = stringResource(R.string.comment_show_all, commentThread.size),
+                            onClick = { showAllComments = true }
+                        )
+                    }
+                } else if (showAllComments && commentThread.count { it.depth == 0 } > 2) {
+                    item {
+                        NexaTextButton(
+                            text = stringResource(R.string.comment_show_less),
+                            onClick = { showAllComments = false }
                         )
                     }
                 }
@@ -539,6 +578,27 @@ fun PostDetailScreen(
         )
     }
 
+    if (showBlockConfirm && current != null) {
+        NexaConfirmDialog(
+            title = stringResource(R.string.post_block_author),
+            message = stringResource(R.string.post_block_confirm),
+            destructive = true,
+            confirmLabel = stringResource(R.string.post_block_author),
+            onConfirm = {
+                showBlockConfirm = false
+                viewModel.blockAuthor(current.author) { success ->
+                    scope.launch {
+                        snackbarHost?.showSnackbar(
+                            context.getString(if (success) R.string.post_block_done else R.string.comment_action_failed)
+                        )
+                        if (success) onBack()
+                    }
+                }
+            },
+            onDismiss = { showBlockConfirm = false }
+        )
+    }
+
     deletingComment?.let { comment ->
         NexaConfirmDialog(
             title = stringResource(R.string.comment_delete_confirm_title),
@@ -561,22 +621,67 @@ fun PostDetailScreen(
     if (showMenu) {
         NexaBottomSheet(onDismiss = { showMenu = false }) {
             SheetTitle(stringResource(R.string.post_menu))
+            NexaOptionRow(
+                icon = if (current?.savedByMe == true) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                label = stringResource(if (current?.savedByMe == true) R.string.post_unsave else R.string.post_save),
+                onClick = {
+                    showMenu = false
+                    viewModel.toggleSave()
+                }
+            )
             NexaOptionRow(icon = Icons.Filled.ContentCopy, label = stringResource(R.string.post_copy_link), onClick = {
                 showMenu = false
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Nexa Post", "nexa://post/$postId"))
                 snackbarHost?.let { host -> scope.launch { host.showSnackbar(linkCopiedMessage) } }
             })
-            NexaOptionRow(icon = Icons.Filled.Flag, label = stringResource(R.string.post_report), onClick = {
+            NexaOptionRow(icon = Icons.Filled.Share, label = stringResource(R.string.post_share), onClick = {
                 showMenu = false
-                showReport = true
-            })
-            NexaOptionRow(icon = Icons.Filled.VisibilityOff, label = stringResource(R.string.post_hide), onClick = {
-                showMenu = false
-                viewModel.hide {
-                    snackbarHost?.let { host -> scope.launch { host.showSnackbar(hiddenMessage) } }
+                current?.let {
+                    if (!sharePost(context, postId, it.text)) {
+                        snackbarHost?.let { host -> scope.launch { host.showSnackbar(shareFailedMessage) } }
+                    }
                 }
             })
+            if (!canManage && current != null) {
+                NexaOptionRow(icon = Icons.Filled.Flag, label = stringResource(R.string.post_report), onClick = {
+                    showMenu = false
+                    showReport = true
+                })
+                NexaOptionRow(
+                    icon = Icons.Filled.VisibilityOff,
+                NexaOptionRow(
+                    icon = Icons.Filled.VisibilityOff,
+                    label = stringResource(R.string.post_unfollow_author),
+                    onClick = {
+                        showMenu = false
+                        viewModel.unfollowAuthor(current.author.id) { success ->
+                            scope.launch {
+                                snackbarHost?.showSnackbar(
+                                    context.getString(if (success) R.string.post_unfollow_done else R.string.comment_action_failed)
+                                )
+                            }
+                        }
+                    }
+                )
+                NexaOptionRow(
+                    icon = Icons.Filled.Flag,
+                    label = stringResource(R.string.post_block_author),
+                    destructive = true,
+                    onClick = {
+                        showMenu = false
+                        showBlockConfirm = true
+                    }
+                )
+            }
+            if (!canManage) {
+                NexaOptionRow(icon = Icons.Filled.VisibilityOff, label = stringResource(R.string.post_hide), onClick = {
+                    showMenu = false
+                    viewModel.hide {
+                        snackbarHost?.let { host -> scope.launch { host.showSnackbar(hiddenMessage) } }
+                    }
+                })
+            }
             if (canManage) {
                 NexaOptionRow(
                     icon = Icons.Filled.Edit,
