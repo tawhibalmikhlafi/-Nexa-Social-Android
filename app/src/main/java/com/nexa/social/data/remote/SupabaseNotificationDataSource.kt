@@ -51,8 +51,10 @@ class SupabaseNotificationDataSource(
             ).get().build()
         ) ?: return null
         if (!response.successful) return null
-        val row = runCatching { JsonParser.parseString(response.body).asJsonArray.firstOrNull()?.asJsonObject }.getOrNull()
+        val rows = runCatching { JsonParser.parseString(response.body).asJsonArray }.getOrNull()
             ?: return null
+        val row = rows.firstOrNull()?.takeIf { it.isJsonObject }?.asJsonObject
+            ?: return Pair(true, emptyMap())
         val enabled = row.boolean("notifications_enabled") ?: true
         val json = row.getAsJsonObject("categories")
         val categories = NotificationType.entries.mapNotNull { type ->
