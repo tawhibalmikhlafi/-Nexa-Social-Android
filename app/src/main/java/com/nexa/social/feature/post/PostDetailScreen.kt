@@ -678,12 +678,29 @@ fun PostDetailScreen(
             if (!canManage) {
                 NexaOptionRow(icon = Icons.Filled.VisibilityOff, label = stringResource(R.string.post_hide), onClick = {
                     showMenu = false
-                    viewModel.hide {
-                        snackbarHost?.let { host -> scope.launch { host.showSnackbar(hiddenMessage) } }
+                    viewModel.hide { success ->
+                        snackbarHost?.let { host ->
+                            scope.launch {
+                                host.showSnackbar(context.getString(if (success) R.string.post_hide_done else R.string.comment_action_failed))
+                            }
+                        }
                     }
                 })
             }
             if (canManage) {
+                NexaOptionRow(
+                    icon = Icons.Filled.Bookmark,
+                    label = stringResource(if (current?.pinned == true) R.string.post_unpin else R.string.post_pin),
+                    onClick = {
+                        showMenu = false
+                        viewModel.togglePin { success ->
+                            val message = if (success) {
+                                if (current?.pinned == true) R.string.post_unpin_done else R.string.post_pin_done
+                            } else R.string.comment_action_failed
+                            snackbarHost?.let { host -> scope.launch { host.showSnackbar(context.getString(message)) } }
+                        }
+                    }
+                )
                 NexaOptionRow(
                     icon = Icons.Filled.Edit,
                     label = stringResource(R.string.action_edit),
