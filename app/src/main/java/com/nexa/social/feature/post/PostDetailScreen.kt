@@ -256,6 +256,7 @@ fun PostDetailScreen(
 
     var showMenu by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
+    var showBlockConfirm by remember { mutableStateOf(false) }
     var showReport by remember { mutableStateOf(false) }
     var showReactions by remember { mutableStateOf(false) }
     var showEditPost by remember { mutableStateOf(false) }
@@ -564,6 +565,27 @@ fun PostDetailScreen(
         )
     }
 
+    if (showBlockConfirm && current != null) {
+        NexaConfirmDialog(
+            title = stringResource(R.string.post_block_author),
+            message = stringResource(R.string.post_block_confirm),
+            destructive = true,
+            confirmLabel = stringResource(R.string.post_block_author),
+            onConfirm = {
+                showBlockConfirm = false
+                viewModel.blockAuthor(current.author) { success ->
+                    scope.launch {
+                        snackbarHost?.showSnackbar(
+                            context.getString(if (success) R.string.post_block_done else R.string.comment_action_failed)
+                        )
+                        if (success) onBack()
+                    }
+                }
+            },
+            onDismiss = { showBlockConfirm = false }
+        )
+    }
+
     deletingComment?.let { comment ->
         NexaConfirmDialog(
             title = stringResource(R.string.comment_delete_confirm_title),
@@ -629,14 +651,7 @@ fun PostDetailScreen(
                     destructive = true,
                     onClick = {
                         showMenu = false
-                        viewModel.blockAuthor(current.author) { success ->
-                            scope.launch {
-                                snackbarHost?.showSnackbar(
-                                    context.getString(if (success) R.string.post_block_done else R.string.comment_action_failed)
-                                )
-                                if (success) onBack()
-                            }
-                        }
+                        showBlockConfirm = true
                     }
                 )
             }
