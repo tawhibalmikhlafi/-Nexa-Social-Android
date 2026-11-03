@@ -13,6 +13,7 @@ import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.model.NotificationType
 import com.nexa.social.domain.model.FeedType
 import com.nexa.social.domain.repository.AuthRepository
+import com.nexa.social.domain.repository.NotificationRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +27,7 @@ import java.io.File
 class SettingsViewModel(
     private val preferenceStorage: PreferenceStorage,
     private val authRepository: AuthRepository,
+    private val notificationRepository: NotificationRepository,
     private val appContext: Context
 ) : ViewModel() {
 
@@ -56,7 +58,16 @@ class SettingsViewModel(
     private val _cacheSizeBytes = MutableStateFlow(0L)
     val cacheSizeBytes: StateFlow<Long> = _cacheSizeBytes.asStateFlow()
 
-    init { refreshCacheSize() }
+    init {
+        refreshCacheSize()
+        viewModelScope.launch {
+            authRepository.session.collect { session ->
+                if (session is SessionState.RemoteAccount) {
+                    notificationRepository.syncPreferences()
+                }
+            }
+        }
+    }
 
     fun refreshCacheSize() {
         viewModelScope.launch {
@@ -94,11 +105,17 @@ class SettingsViewModel(
     }
 
     fun setNotificationsEnabled(enabled: Boolean) {
-        viewModelScope.launch { preferenceStorage.setNotificationsEnabled(enabled) }
+        viewModelScope.launch {
+            preferenceStorage.setNotificationsEnabled(enabled)
+            notificationRepository.persistPreferences()
+        }
     }
 
     fun setNotificationCategory(type: NotificationType, enabled: Boolean) {
-        viewModelScope.launch { preferenceStorage.setNotificationTypeEnabled(type, enabled) }
+        viewModelScope.launch {
+            preferenceStorage.setNotificationTypeEnabled(type, enabled)
+            notificationRepository.persistPreferences()
+        }
     }
 
     fun setFeedType(type: FeedType) {
@@ -128,6 +145,7 @@ class SettingsViewModel(
                 SettingsViewModel(
                     preferenceStorage = app.container.preferenceStorage,
                     authRepository = app.container.authRepository,
+                    notificationRepository = app.container.notificationRepository,
                     appContext = app.applicationContext
                 )
             }
