@@ -351,6 +351,7 @@
     <string name="post_delete_confirm">حذف هذا المنشور؟ لا يمكن التراجع.</string>
     <string name="post_unfollow_author">إلغاء متابعة صاحب المنشور</string>
     <string name="post_unfollow_done">تم إلغاء المتابعة</string>
+    <string name="post_block_confirm">لن تتمكن من رؤية منشورات هذا المستخدم أو التفاعل معه بعد حظره. هل تريد المتابعة؟</string>
     <string name="post_block_author">حظر صاحب المنشور</string>
     <string name="post_block_done">تم حظر المستخدم</string>
     <string name="post_hide">إخفاء المنشور</string>
