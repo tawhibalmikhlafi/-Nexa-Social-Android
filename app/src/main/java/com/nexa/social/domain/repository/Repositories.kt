@@ -130,7 +130,8 @@ interface UserRepository {
         avatarUri: String?,
         coverUri: String?,
         city: String? = null,
-        website: String? = null
+        website: String? = null,
+        username: String? = null
     ): Resource<User>
 
     // Local follow graph. Following a sample account is a local preference, not a server relationship.
