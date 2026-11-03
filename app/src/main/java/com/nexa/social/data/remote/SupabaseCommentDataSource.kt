@@ -119,12 +119,15 @@ class SupabaseCommentDataSource(
             addProperty("text", text.trim())
             addProperty("updated_at", Instant.now().toString())
         }
-        execute(
+        val response = execute(
             http.authenticatedRequest("$restUrl/comments?id=eq.${encode(commentId)}", token)
                 .header("Prefer", "return=minimal")
                 .patch(http.jsonBody(body))
                 .build()
         )
+        if (response?.successful != true) {
+            throw IllegalStateException("Comment update failed with HTTP ${response?.code ?: "NETWORK_ERROR"}")
+        }
         notifyChanged()
         return getComment(commentId)
     }
@@ -144,7 +147,7 @@ class SupabaseCommentDataSource(
         val uid = currentUid() ?: return
         val token = accessToken() ?: return
         val liked = fetchRows("comment_likes?select=comment_id&comment_id=eq.${encode(commentId)}&user_id=eq.${encode(uid)}")?.isNotEmpty() == true
-        if (liked) {
+        val response = if (liked) {
             execute(
                 http.authenticatedRequest("$restUrl/comment_likes?comment_id=eq.${encode(commentId)}&user_id=eq.${encode(uid)}", token)
                     .delete().build()
@@ -160,6 +163,9 @@ class SupabaseCommentDataSource(
                     .post(http.jsonBody(body))
                     .build()
             )
+        }
+        if (response?.successful != true) {
+            throw IllegalStateException("Comment reaction failed with HTTP ${response?.code ?: "NETWORK_ERROR"}")
         }
         notifyChanged()
     }
