@@ -47,6 +47,7 @@ fun CommunityPostCard(
     modifier: Modifier = Modifier
 ) {
     var showPicker by remember(post.id) { mutableStateOf(false) }
+    val authorName = post.author.displayName.trim().takeIf { it.isNotBlank() } ?: post.author.username
     NexaCard(modifier = modifier) {
         Row(
             modifier = Modifier
@@ -57,14 +58,14 @@ fun CommunityPostCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             NexaAvatar(
-                displayName = post.author.displayName,
+                displayName = authorName,
                 avatarUri = post.author.avatarUri,
                 size = 38.dp
             )
             Spacer(Modifier.width(NexaSpacing.sm))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = post.author.displayName,
+                    text = authorName,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
