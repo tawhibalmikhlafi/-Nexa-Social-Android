@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.HorizontalDivider
@@ -130,15 +131,13 @@ fun PostCard(
                     )
                 }
                 Spacer(Modifier.width(NexaSpacing.sm))
-                if (onDelete != null) {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = stringResource(R.string.post_delete),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                IconButton(onClick = onOpenPost) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.post_menu),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
                 AudienceBadge(post.audience)
             }
