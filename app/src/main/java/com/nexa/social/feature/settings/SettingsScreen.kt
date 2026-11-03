@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Bookmark
@@ -60,6 +61,7 @@ import com.nexa.social.core.common.LocaleManager
 import com.nexa.social.core.ui.rememberRemoteMode
 import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.model.NotificationType
+import com.nexa.social.domain.model.FeedType
 import com.nexa.social.domain.model.isAccount
 import com.nexa.social.ui.components.AccountRequiredBanner
 import com.nexa.social.ui.components.LocalDataBanner
@@ -92,12 +94,14 @@ fun SettingsScreen(
     val dataSaver by viewModel.dataSaver.collectAsStateWithLifecycle()
     val reduceMotion by viewModel.reduceMotion.collectAsStateWithLifecycle()
     val cacheSizeBytes by viewModel.cacheSizeBytes.collectAsStateWithLifecycle()
+    val feedType by viewModel.feedType.collectAsStateWithLifecycle()
     val session by viewModel.session.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val remoteMode = rememberRemoteMode()
 
     var dialog by remember { mutableStateOf<String?>(null) }
     var showLanguage by remember { mutableStateOf(false) }
+    var showFeedType by remember { mutableStateOf(false) }
     var showSignOut by remember { mutableStateOf(false) }
     var showClearCache by remember { mutableStateOf(false) }
 
@@ -240,6 +244,12 @@ fun SettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = NexaSpacing.xs))
             SettingsSectionHeader(stringResource(R.string.settings_section_activity))
             SettingsRow(
+                icon = Icons.Filled.FilterList,
+                title = stringResource(R.string.settings_feed_preference),
+                subtitle = feedTypeLabel(feedType),
+                onClick = { showFeedType = true }
+            )
+            SettingsRow(
                 icon = Icons.Filled.Bookmark,
                 title = stringResource(R.string.saved_title),
                 onClick = onSaved
@@ -332,6 +342,32 @@ fun SettingsScreen(
             }
             Spacer(Modifier.height(NexaSpacing.xxxl))
         }
+    }
+
+    if (showFeedType) {
+        AlertDialog(
+            onDismissRequest = { showFeedType = false },
+            title = { Text(stringResource(R.string.settings_feed_preference)) },
+            text = {
+                Column {
+                    FeedTypeOption(stringResource(R.string.settings_feed_latest), feedType == FeedType.LATEST) {
+                        viewModel.setFeedType(FeedType.LATEST); showFeedType = false
+                    }
+                    FeedTypeOption(stringResource(R.string.settings_feed_engaging), feedType == FeedType.ENGAGING) {
+                        viewModel.setFeedType(FeedType.ENGAGING); showFeedType = false
+                    }
+                    FeedTypeOption(stringResource(R.string.settings_feed_following), feedType == FeedType.FOLLOWING) {
+                        viewModel.setFeedType(FeedType.FOLLOWING); showFeedType = false
+                    }
+                    FeedTypeOption(stringResource(R.string.settings_feed_worlds), feedType == FeedType.WORLDS) {
+                        viewModel.setFeedType(FeedType.WORLDS); showFeedType = false
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFeedType = false }) { Text(stringResource(R.string.action_close)) }
+            }
+        )
     }
 
     if (showLanguage) {
@@ -431,6 +467,25 @@ fun SettingsScreen(
     }
 }
 
+
+@Composable
+private fun feedTypeLabel(type: FeedType): String = when (type) {
+    FeedType.LATEST -> stringResource(R.string.settings_feed_latest)
+    FeedType.ENGAGING -> stringResource(R.string.settings_feed_engaging)
+    FeedType.FOLLOWING -> stringResource(R.string.settings_feed_following)
+    FeedType.WORLDS -> stringResource(R.string.settings_feed_worlds)
+}
+
+@Composable
+private fun FeedTypeOption(label: String, selected: Boolean, onSelect: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onSelect() }.padding(vertical = NexaSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+    }
+}
 
 private fun formatBytes(bytes: Long): String = when {
     bytes < 1024L -> "${bytes} B"
