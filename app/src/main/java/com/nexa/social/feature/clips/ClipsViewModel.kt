@@ -30,6 +30,9 @@ class ClipsViewModel(
     val dataSaver: StateFlow<Boolean> = preferenceStorage.dataSaver
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val reduceMotion: StateFlow<Boolean> = preferenceStorage.reduceMotion
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     fun toggleLike(clipId: String) = viewModelScope.launch { clipRepository.toggleLike(clipId) }
 
     fun toggleSave(clipId: String) = viewModelScope.launch { clipRepository.toggleSave(clipId) }
