@@ -83,9 +83,19 @@ class PostDetailViewModel(
         }
     }
 
-    fun toggleLike(reaction: String? = null) = viewModelScope.launch { postRepository.toggleLike(postId, reaction) }
+    fun toggleLike(reaction: String? = null) = viewModelScope.launch {
+        runCatching { postRepository.toggleLike(postId, reaction) }
+    }
 
-    fun toggleSave() = viewModelScope.launch { postRepository.toggleSave(postId) }
+    fun toggleSave() = viewModelScope.launch {
+        runCatching { postRepository.toggleSave(postId) }
+    }
+
+    fun togglePin(onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            onResult(runCatching { postRepository.togglePin(postId) }.isSuccess)
+        }
+    }
 
     fun recordShare() {
         viewModelScope.launch {
@@ -167,10 +177,9 @@ class PostDetailViewModel(
         }
     }
 
-    fun hide(onDone: () -> Unit) {
+    fun hide(onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            postRepository.hidePost(postId)
-            onDone()
+            onResult(runCatching { postRepository.hidePost(postId) }.isSuccess)
         }
     }
 
