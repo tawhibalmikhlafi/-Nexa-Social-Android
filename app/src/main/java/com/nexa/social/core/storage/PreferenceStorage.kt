@@ -335,6 +335,33 @@ class PreferenceStorage(private val context: Context) {
         }
     }
 
+    suspend fun applyNotificationPreferences(
+        notificationsEnabled: Boolean,
+        categories: Map<NotificationType, Boolean>
+    ) {
+        context.nexaDataStore.edit { prefs ->
+            prefs[Keys.notificationsEnabled] = notificationsEnabled
+            categories.forEach { (type, enabled) ->
+                val key = when (type) {
+                    NotificationType.LIKE, NotificationType.COMMENT_LIKE -> Keys.notifLike
+                    NotificationType.COMMENT -> Keys.notifComment
+                    NotificationType.REPLY -> Keys.notifReply
+                    NotificationType.FOLLOW -> Keys.notifFollow
+                    NotificationType.COMMUNITY -> Keys.notifCommunity
+                    NotificationType.SPACE -> Keys.notifSpace
+                    NotificationType.MESSAGE -> Keys.notifMessages
+                    NotificationType.GROUP_JOIN_REQUEST,
+                    NotificationType.GROUP_JOIN_APPROVED,
+                    NotificationType.GROUP_JOIN_REJECTED -> Keys.notifGroups
+                    NotificationType.STORY_REPLY -> Keys.notifStories
+                    NotificationType.MENTION -> Keys.notifMentions
+                    NotificationType.WELCOME, NotificationType.SYSTEM -> Keys.notifSystem
+                }
+                prefs[key] = enabled
+            }
+        }
+    }
+
     suspend fun setNotificationTypeEnabled(type: NotificationType, enabled: Boolean) {
         val key = when (type) {
             NotificationType.LIKE, NotificationType.COMMENT_LIKE -> Keys.notifLike
