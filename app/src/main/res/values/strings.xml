@@ -353,7 +353,7 @@
     <string name="settings_privacy_policy">Privacy policy</string>
     <string name="settings_privacy_policy_body">Nexa processes account and social data through its configured backend services to provide the features you use. Some preferences and optional modules are stored locally on your device. Avoid sharing sensitive information publicly, and contact support if you need details about a specific data category.</string>
     <string name="settings_terms">Terms of use</string>
-    <string name="settings_terms_body">Use Nexa respectfully and do not publish content that violates others' rights or applicable law. Feature availability and data handling depend on the active account, service configuration, and the feature you use.</string>
+    <string name="settings_terms_body">Use Nexa respectfully. Do not publish content that violates others rights or applicable law. Feature availability and data handling depend on your account and the services you use.</string>
     <string name="settings_sign_out">Sign out</string>
     <string name="settings_sign_out_confirm">Sign out from this local session?</string>
     <string name="settings_sign_out_guest">Exit guest mode</string>
