@@ -159,10 +159,11 @@ class PostRepositoryImpl(
             combine(
                 remoteStore.observePost(postId),
                 userRepository.observeFollowingIds(),
-                prefs.reactionOverrides
-            ) { post, following, overrides ->
+                prefs.reactionOverrides,
+                remoteStore.observePinnedPostIds()
+            ) { post, following, overrides, pinned ->
                 post?.takeIf { canView(it, uid, following) }
-                    ?.let { applyReactionOverrides(listOf(it), overrides).first() }
+                    ?.let { applyReactionOverrides(listOf(it), overrides).first().copy(pinned = it.id in pinned) }
             }
         } else {
             _posts.asStateFlow().map { posts -> posts.firstOrNull { it.id == postId } }
