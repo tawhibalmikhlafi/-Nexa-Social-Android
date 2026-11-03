@@ -360,6 +360,8 @@
     <string name="post_report_sent">تم حفظ الإبلاغ محليًا</string>
     <string name="post_report_local_notice">تُحفظ الإبلاغات على جهازك فقط في هذا الإصدار.</string>
     <string name="post_comments_title">التعليقات</string>
+    <string name="post_view_all_comments">عرض كل التعليقات (%1$d)</string>
+    <string name="comment_image_only">صورة</string>
     <string name="post_comment_hint">اكتب تعليقًا…</string>
     <string name="post_comment_empty">لا توجد تعليقات بعد</string>
     <string name="post_comment_empty_body">كن أول من يعلّق.</string>
