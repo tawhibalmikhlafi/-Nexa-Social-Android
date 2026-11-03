@@ -281,6 +281,7 @@
     <string name="edit_profile_title">تعديل الملف الشخصي</string>
     <string name="edit_profile_bio">النبذة</string>
     <string name="edit_profile_username_locked">لا يمكن تغيير اسم المستخدم محليًا</string>
+    <string name="edit_profile_username_hint">من 3 إلى 20 حرفًا. ابدأ بحرف إنجليزي واستخدم الأحرف الإنجليزية والأرقام والشرطة السفلية فقط.</string>
     <string name="edit_profile_saved">تم تحديث الملف الشخصي</string>
     <string name="edit_profile_photo_saved">تم حفظ الصورة الشخصية</string>
     <string name="edit_profile_cover_saved">تم حفظ صورة الغلاف</string>
