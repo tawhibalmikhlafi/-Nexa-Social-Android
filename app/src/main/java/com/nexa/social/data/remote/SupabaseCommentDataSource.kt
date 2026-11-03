@@ -172,24 +172,35 @@ class SupabaseCommentDataSource(
     suspend fun toggleLike(commentId: String, emoji: String = "❤️") {
         val uid = currentUid() ?: return
         val token = accessToken() ?: return
-        val liked = fetchRows("comment_likes?select=comment_id&comment_id=eq.${encode(commentId)}&user_id=eq.${encode(uid)}")?.isNotEmpty() == true
-        val response = if (liked) {
-            execute(
-                http.authenticatedRequest("$restUrl/comment_likes?comment_id=eq.${encode(commentId)}&user_id=eq.${encode(uid)}", token)
-                    .delete().build()
-            )
-        } else {
-            val body = JsonObject().apply {
-                addProperty("comment_id", commentId)
-                addProperty("user_id", uid)
-                addProperty("emoji", emoji)
+        val existing = fetchRows("comment_likes?select=comment_id,emoji&comment_id=eq.${encode(commentId)}&user_id=eq.${encode(uid)}")
+            ?.firstOrNull()
+        val url = "$restUrl/comment_likes?comment_id=eq.${encode(commentId)}&user_id=eq.${encode(uid)}"
+        val response = when {
+            existing == null -> {
+                val body = JsonObject().apply {
+                    addProperty("comment_id", commentId)
+                    addProperty("user_id", uid)
+                    addProperty("emoji", emoji)
+                }
+                execute(
+                    http.authenticatedRequest("$restUrl/comment_likes", token)
+                        .header("Prefer", "return=minimal")
+                        .post(http.jsonBody(body))
+                        .build()
+                )
             }
-            execute(
-                http.authenticatedRequest("$restUrl/comment_likes", token)
-                    .header("Prefer", "return=minimal")
-                    .post(http.jsonBody(body))
-                    .build()
-            )
+            (existing.string("emoji") ?: "❤️") == emoji -> {
+                execute(http.authenticatedRequest(url, token).delete().build())
+            }
+            else -> {
+                val body = JsonObject().apply { addProperty("emoji", emoji) }
+                execute(
+                    http.authenticatedRequest(url, token)
+                        .header("Prefer", "return=minimal")
+                        .patch(http.jsonBody(body))
+                        .build()
+                )
+            }
         }
         if (response?.successful != true) {
             throw IllegalStateException("Comment reaction failed with HTTP ${response?.code ?: "NETWORK_ERROR"}")
