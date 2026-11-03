@@ -1,9 +1,8 @@
 package com.nexa.social.domain.model
 
 /**
- * Safety controls. Blocks are mirrored to Supabase when signed in and kept on this device
- * otherwise. Muting, hiding and reporting stay on this device; a report does NOT reach any
- * moderation team until a report backend exists.
+ * Safety controls. Blocks and reports sync to Supabase for remote accounts. Local accounts keep
+ * their safety state on-device; muting and hiding remain device-local preferences.
  */
 data class BlockedUser(
     val userId: String,
