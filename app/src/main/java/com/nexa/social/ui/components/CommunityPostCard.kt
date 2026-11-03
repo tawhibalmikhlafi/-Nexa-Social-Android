@@ -70,7 +70,7 @@ fun CommunityPostCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "@${post.author.username} · ${TimeUtils.relativeFromNow(post.createdAt)}",
+                    text = TimeUtils.relativeFromNow(post.createdAt),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
