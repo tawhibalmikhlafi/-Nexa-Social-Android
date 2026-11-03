@@ -358,7 +358,7 @@
     <string name="post_hide_done">Post hidden from your feeds</string>
     <string name="post_report">Report</string>
     <string name="post_report_title">Report post</string>
-    <string name="post_report_sent">Report saved locally</string>
+    <string name="post_report_sent">Report submitted successfully</string>
     <string name="post_report_local_notice">Reports are stored on your device only in this build.</string>
     <string name="post_comments_title">Comments</string>
     <string name="post_view_all_comments">View all comments (%1$d)</string>
