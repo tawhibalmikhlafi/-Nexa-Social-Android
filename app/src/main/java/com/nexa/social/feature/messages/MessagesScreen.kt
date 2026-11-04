@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -42,6 +44,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -65,6 +68,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.nexa.social.core.common.TimeUtils
 import com.nexa.social.domain.model.Conversation
+import com.nexa.social.data.remote.UserNote
 import com.nexa.social.feature.presence.PresenceViewModel
 import com.nexa.social.ui.components.OnlineAvatar
 import com.nexa.social.ui.components.initialsOf
@@ -104,9 +108,59 @@ fun MessagesScreen(
     val search by viewModel.search.collectAsStateWithLifecycle()
     val conversations by viewModel.conversations.collectAsStateWithLifecycle()
     val unreadNotifications by viewModel.unreadNotificationsCount.collectAsStateWithLifecycle()
+    val notes by viewModel.notes.collectAsStateWithLifecycle()
+    val myNote by viewModel.myNote.collectAsStateWithLifecycle()
+    val noteSaving by viewModel.noteSaving.collectAsStateWithLifecycle()
+    val noteError by viewModel.noteError.collectAsStateWithLifecycle()
+    var showNotesEditor by rememberSaveable { mutableStateOf(false) }
+    var noteDraft by rememberSaveable { mutableStateOf("") }
     var showBanner by rememberSaveable { mutableStateOf(true) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        if (showNotesEditor) {
+            AlertDialog(
+                onDismissRequest = { if (!noteSaving) { showNotesEditor = false; viewModel.clearNoteError() } },
+                title = { Text("ملاحظتك") },
+                text = {
+                    Column {
+                        Text("شارك فكرة قصيرة تظهر لأصدقائك في شاشة الرسائل لمدة 24 ساعة.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = noteDraft,
+                            onValueChange = { noteDraft = it.take(60) },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("بماذا تفكر؟") },
+                            supportingText = { Text("${noteDraft.length}/60") },
+                            maxLines = 3,
+                            enabled = !noteSaving
+                        )
+                        if (noteError != null) {
+                            Text(noteError.orEmpty(), color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !noteSaving,
+                        onClick = {
+                            viewModel.saveNote(noteDraft) { success ->
+                                if (success) showNotesEditor = false
+                            }
+                        }
+                    ) { Text(if (noteSaving) "جارٍ الحفظ..." else "مشاركة") }
+                },
+                dismissButton = {
+                    Row {
+                        if (myNote.isNotBlank()) {
+                            TextButton(enabled = !noteSaving, onClick = {
+                                viewModel.saveNote("") { success -> if (success) { noteDraft = ""; showNotesEditor = false } }
+                            }) { Text("حذف") }
+                        }
+                        TextButton(onClick = { showNotesEditor = false; viewModel.clearNoteError() }, enabled = !noteSaving) { Text("إلغاء") }
+                    }
+                }
+            )
+        }
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             floatingActionButton = {
@@ -146,6 +200,17 @@ fun MessagesScreen(
                         onOpenFriends = onOpenFriends,
                         onOpenSaved = onOpenSaved,
                         onOpenGroups = onOpenGroups
+                    )
+                }
+                item {
+                    NotesSection(
+                        notes = notes,
+                        currentUserId = viewModel.currentUserId,
+                        onMyNoteClick = {
+                            noteDraft = myNote
+                            viewModel.clearNoteError()
+                            showNotesEditor = true
+                        }
                     )
                 }
                 if (showBanner) {
@@ -457,5 +522,117 @@ fun ChatListItem(
                 }
             }
         }
+    }
+}
+
+
+@Composable
+private fun NotesSection(
+    notes: List<UserNote>,
+    currentUserId: String?,
+    onMyNoteClick: () -> Unit
+) {
+    val ordered = notes.filterNot { it.userId == currentUserId } 
+        .let { others -> listOfNotNull(notes.firstOrNull { it.userId == currentUserId }) + others }
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("الملاحظات", color = MaterialTheme.colorScheme.onSurface, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text("تختفي بعد 24 ساعة", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+        }
+        Spacer(Modifier.height(10.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            item(key = "my-note") {
+                NoteAvatar(
+                    title = ordered.firstOrNull { it.userId == currentUserId }?.displayName ?: "ملاحظتك",
+                    note = ordered.firstOrNull { it.userId == currentUserId }?.note.orEmpty(),
+                    avatarUrl = ordered.firstOrNull { it.userId == currentUserId }?.avatarUrl,
+                    isMine = true,
+                    onClick = onMyNoteClick
+                )
+            }
+            items(ordered.filterNot { it.userId == currentUserId }, key = { it.userId }) { entry ->
+                NoteAvatar(
+                    title = entry.displayName,
+                    note = entry.note,
+                    avatarUrl = entry.avatarUrl,
+                    isMine = false,
+                    onClick = {}
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoteAvatar(
+    title: String,
+    note: String,
+    avatarUrl: String?,
+    isMine: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.width(76.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(modifier = Modifier.height(66.dp).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+            if (note.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(43.dp)
+                        .clip(RoundedCornerShape(13.dp))
+                        .background(if (isMine) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 5.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = note,
+                        color = if (isMine) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                        fontSize = 10.sp,
+                        lineHeight = 12.sp,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            } else if (isMine) {
+                Box(
+                    modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().height(40.dp)
+                        .clip(RoundedCornerShape(13.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f), RoundedCornerShape(13.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("+ اكتب ملاحظة", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+            }
+            Box(
+                modifier = Modifier.size(42.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(if (isMine) 2.dp else 1.dp, if (isMine) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!avatarUrl.isNullOrBlank()) {
+                    AsyncImage(model = avatarUrl, contentDescription = title, modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                } else {
+                    Text(title.take(1).ifBlank { "N" }, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        Spacer(Modifier.height(5.dp))
+        Text(
+            text = if (isMine) "ملاحظتك" else title,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 11.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
