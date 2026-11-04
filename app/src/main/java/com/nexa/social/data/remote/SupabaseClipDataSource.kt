@@ -73,6 +73,31 @@ class SupabaseClipDataSource(
     suspend fun toggleLike(clipId: String): Boolean = toggleRelation("clip_likes", clipId)
     suspend fun toggleSave(clipId: String): Boolean = toggleRelation("clip_saves", clipId)
 
+    /** Applies an explicit desired state so an offline retry cannot invert a newer action. */
+    suspend fun setLike(clipId: String, enabled: Boolean): Boolean =
+        setRelation("clip_likes", clipId, enabled)
+
+    suspend fun setSave(clipId: String, enabled: Boolean): Boolean =
+        setRelation("clip_saves", clipId, enabled)
+
+    private suspend fun setRelation(table: String, clipId: String, enabled: Boolean): Boolean {
+        if (table != "clip_likes" && table != "clip_saves") return false
+        val uid = currentUid() ?: return false
+        val token = accessToken() ?: return false
+        val url = "$restUrl/$table?clip_id=eq.${encode(clipId)}&user_id=eq.${encode(uid)}"
+        val request = if (enabled) {
+            val body = JsonObject().apply { addProperty("clip_id", clipId); addProperty("user_id", uid) }
+            http.authenticatedRequest("$restUrl/$table", token)
+                .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+                .post(http.jsonBody(body)).build()
+        } else {
+            http.authenticatedRequest(url, token).delete().build()
+        }
+        val response = http.execute(request).getOrNull() ?: return false
+        if (response.successful) notifyChanged()
+        return response.successful
+    }
+
     private suspend fun toggleRelation(table: String, clipId: String): Boolean {
         if (table != "clip_likes" && table != "clip_saves") return false
         val uid = currentUid() ?: return false
