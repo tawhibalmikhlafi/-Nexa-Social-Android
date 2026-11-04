@@ -127,24 +127,6 @@ class MessageRepositoryImpl(
                             archivedLocally = conversation.id in archived
                         )
                     }.toMutableList()
-                    queuedConversations.filter { it.userId == remoteUid }.forEach { queued ->
-                        if (mergedList.none { it.id == queued.id }) {
-                            val messages = pending[queued.id].orEmpty()
-                            val last = messages.maxByOrNull { it.timestamp }
-                            mergedList += Conversation(
-                                id = queued.id,
-                                participant = queued.participant,
-                                lastMessagePreview = last?.text.orEmpty(),
-                                lastTimestamp = last?.timestamp ?: queued.createdAt,
-                                unreadCount = 0,
-                                messages = messages,
-                                isLocalSample = false,
-                                pinnedLocally = queued.id in pinned,
-                                mutedLocally = queued.id in muted,
-                                archivedLocally = queued.id in archived
-                            )
-                        }
-                    }
                     mergedList.sortedWith(
                         compareByDescending<Conversation> { it.pinnedLocally }
                             .thenByDescending { it.lastTimestamp }
