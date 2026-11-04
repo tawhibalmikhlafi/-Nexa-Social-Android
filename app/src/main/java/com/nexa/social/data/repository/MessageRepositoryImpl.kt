@@ -9,6 +9,7 @@ import com.nexa.social.core.storage.PreferenceStorage
 import com.nexa.social.data.local.MessageLocalDataSource
 import com.nexa.social.data.local.PendingMessage
 import com.nexa.social.data.local.PendingMessageAction
+import com.nexa.social.data.local.PendingConversation
 import com.nexa.social.data.media.MediaBucket
 import com.nexa.social.data.media.MediaStorage
 import com.nexa.social.data.media.StoredMedia
@@ -54,6 +55,8 @@ class MessageRepositoryImpl(
     private val actionOutboxLock = kotlinx.coroutines.sync.Mutex()
     private val outbox = MutableStateFlow(local.readOutbox())
     private val actionOutbox = MutableStateFlow(local.readActionOutbox())
+    private val conversationOutboxLock = kotlinx.coroutines.sync.Mutex()
+    private val conversationOutbox = MutableStateFlow(local.readConversationOutbox())
     private var lastRemoteUid: String? = null
     init {
         val restored = outbox.value
@@ -105,9 +108,10 @@ class MessageRepositoryImpl(
                     pendingMessages,
                     prefs.pinnedConversationIds,
                     prefs.mutedConversationIds,
-                    prefs.archivedConversationIds
-                ) { list, pending, pinned, muted, archived ->
-                    list.map { conversation ->
+                    prefs.archivedConversationIds,
+                    conversationOutbox
+                ) { list, pending, pinned, muted, archived, queuedConversations ->
+                    val mergedList = list.map { conversation ->
                         val extras = pending[conversation.id].orEmpty()
                         val known = conversation.messages.mapTo(HashSet()) { it.id }
                         val merged = conversation.messages + extras.filterNot { it.id in known }
@@ -123,7 +127,26 @@ class MessageRepositoryImpl(
                             mutedLocally = conversation.id in muted,
                             archivedLocally = conversation.id in archived
                         )
-                    }.sortedWith(
+                    }.toMutableList()
+                    queuedConversations.filter { it.userId == remoteUid }.forEach { queued ->
+                        if (mergedList.none { it.id == queued.id }) {
+                            val messages = pending[queued.id].orEmpty()
+                            val last = messages.maxByOrNull { it.timestamp }
+                            mergedList += Conversation(
+                                id = queued.id,
+                                participant = queued.participant,
+                                lastMessagePreview = last?.text.orEmpty(),
+                                lastTimestamp = last?.timestamp ?: queued.createdAt,
+                                unreadCount = 0,
+                                messages = messages,
+                                isLocalSample = false,
+                                pinnedLocally = queued.id in pinned,
+                                mutedLocally = queued.id in muted,
+                                archivedLocally = queued.id in archived
+                            )
+                        }
+                    }
+                    mergedList.sortedWith(
                         compareByDescending<Conversation> { it.pinnedLocally }
                             .thenByDescending { it.lastTimestamp }
                     )
@@ -391,47 +414,39 @@ class MessageRepositoryImpl(
         text: String
     ): Resource<Unit> {
         if (text.isBlank()) return Resource.Failure(FailureReason.REQUIRED)
-        val session = prefs.session.first()
-        val senderId = when (session) {
-            is SessionState.LocalAccount -> session.userId
-            is SessionState.RemoteAccount -> session.userId
-            else -> return Resource.Failure(FailureReason.REQUIRES_ACCOUNT)
-        }
+        val session = prefs.session.first() as? SessionState.RemoteAccount
+            ?: return Resource.Failure(FailureReason.REQUIRES_ACCOUNT)
+        val conversation = startConversation(recipientId)
+            ?: return Resource.Failure(FailureReason.GENERIC)
         val body = buildString {
-            if (storyPreview.isNotBlank()) {
-                append("↩ ")
-                append(storyPreview.trim().take(80))
-                append('\n')
-            }
+            if (storyPreview.isNotBlank()) { append("↩ "); append(storyPreview.trim().take(80)); append('\n') }
             append(text.trim().take(3900))
         }
-        val remoteStore = remote
-        if (isRemote(session) && remoteStore != null) {
-            val conversationId = remoteStore.startConversation(senderId, recipientId)
-                ?: return Resource.Failure(FailureReason.NETWORK)
-            val sent = remoteStore.sendMessage(
-                conversationId = conversationId,
-                senderId = senderId,
-                text = body,
-                attachmentPath = null,
-                attachmentMime = null,
-                attachmentName = null,
+        val id = Ids.newId()
+        val sent = remote?.sendMessage(
+            conversationId = conversation.id, senderId = session.userId, text = body,
+            attachmentPath = null, attachmentMime = null, attachmentName = null,
+            replyToStoryId = storyId, messageId = id
+        )
+        if (sent == null) {
+            val queued = PendingMessage(
+                id, conversation.id, session.userId, body, System.currentTimeMillis(),
                 replyToStoryId = storyId
-            ) ?: return Resource.Failure(FailureReason.NETWORK)
-            pendingMessages.update { pending ->
-                val current = pending[conversationId].orEmpty()
-                pending + (conversationId to (current + sent).takeLast(20))
+            )
+            enqueue(queued)
+            val optimistic = Message(
+                id, conversation.id, session.userId, body, queued.createdAt, true, true, true,
+                replyToStoryId = storyId
+            )
+            pendingMessages.update { current ->
+                current + (conversation.id to (current[conversation.id].orEmpty() + optimistic).takeLast(50))
             }
-            return Resource.Success(Unit)
+        } else {
+            pendingMessages.update { current ->
+                current + (conversation.id to (current[conversation.id].orEmpty() + sent).takeLast(50))
+            }
         }
-        val conversation = _conversations.value.firstOrNull { it.participant.id == recipientId }
-            ?: startConversation(recipientId)
-            ?: return Resource.Failure(FailureReason.GENERIC)
-        return when (sendMessage(conversation.id, body)) {
-            is Resource.Success -> Resource.Success(Unit)
-            is Resource.Failure -> Resource.Failure(FailureReason.NETWORK)
-            Resource.Loading -> Resource.Loading
-        }
+        return Resource.Success(Unit)
     }
 
     private suspend fun removeLocalMessage(
@@ -524,37 +539,50 @@ class MessageRepositoryImpl(
 
     override suspend fun startConversation(participantId: String): Conversation? {
         val session = prefs.session.first()
-        val remoteStore = remote
-        if (isRemote(session) && remoteStore != null) {
+        val existing = observeConversations().first().firstOrNull { it.participant.id == participantId }
+        if (existing != null) return existing
+        val user = userRepository.getUser(participantId) ?: return null
+        val participant = UserSummary.from(user)
+        if (isRemote(session) && remote != null) {
             val uid = (session as SessionState.RemoteAccount).userId
-            val conversationId = remoteStore.startConversation(uid, participantId) ?: return null
-            val participant = userRepository.getUser(participantId)?.let { UserSummary.from(it) }
-                ?: return null
+            val localId = Ids.newId()
+            val conversationId = remote.startConversation(uid, participantId, localId)
+            val id = conversationId ?: localId
+            if (conversationId == null) enqueueConversation(PendingConversation(id, uid, participant, System.currentTimeMillis()))
             return Conversation(
-                id = conversationId,
-                participant = participant,
-                lastMessagePreview = "",
-                lastTimestamp = System.currentTimeMillis(),
-                unreadCount = 0,
-                messages = emptyList(),
-                isLocalSample = false
+                id = id, participant = participant, lastMessagePreview = "",
+                lastTimestamp = System.currentTimeMillis(), unreadCount = 0,
+                messages = emptyList(), isLocalSample = false
             )
         }
-        _conversations.value.firstOrNull { it.participant.id == participantId }?.let { return it }
-        val user = userRepository.getUser(participantId) ?: return null
         val conversation = Conversation(
-            id = Ids.newId(),
-            participant = UserSummary.from(user),
-            lastMessagePreview = "",
-            lastTimestamp = System.currentTimeMillis(),
-            unreadCount = 0,
-            messages = emptyList(),
-            isLocalSample = false
+            id = Ids.newId(), participant = participant, lastMessagePreview = "",
+            lastTimestamp = System.currentTimeMillis(), unreadCount = 0,
+            messages = emptyList(), isLocalSample = false
         )
         _conversations.value = listOf(conversation) + _conversations.value
         persist()
         return conversation
     }
+
+    private suspend fun enqueueConversation(item: PendingConversation) {
+        conversationOutboxLock.lock()
+        try {
+            val next = conversationOutbox.value.filterNot { it.userId == item.userId && it.participant.id == item.participant.id } + item
+            conversationOutbox.value = next
+            withContext(Dispatchers.IO) { local.writeConversationOutbox(next) }
+        } finally { conversationOutboxLock.unlock() }
+    }
+
+    private suspend fun removeQueuedConversation(id: String) {
+        conversationOutboxLock.lock()
+        try {
+            val next = conversationOutbox.value.filterNot { it.id == id }
+            conversationOutbox.value = next
+            withContext(Dispatchers.IO) { local.writeConversationOutbox(next) }
+        } finally { conversationOutboxLock.unlock() }
+    }
+
 
     private val acceptedRequestIds = MutableStateFlow<Set<String>>(emptySet())
 
@@ -597,8 +625,8 @@ class MessageRepositoryImpl(
     }
 
     override suspend fun refresh() {
-        remote?.refresh()
         drainOutbox()
+        remote?.refresh()
     }
 
     private suspend fun enqueue(item: PendingMessage) {
@@ -615,6 +643,11 @@ class MessageRepositoryImpl(
     private suspend fun drainOutbox() {
         val store = remote ?: return
         val session = prefs.session.first() as? SessionState.RemoteAccount ?: return
+        for (item in conversationOutbox.value.filter { it.userId == session.userId }) {
+            val created = store.startConversation(session.userId, item.participant.id, item.id)
+            if (created == null) break
+            removeQueuedConversation(item.id)
+        }
         drainMessageActions(store, session.userId)
         for (item in outbox.value.filter { it.senderId == session.userId }) {
             var queued = item
@@ -636,7 +669,7 @@ class MessageRepositoryImpl(
                 store.sendMessage(
                     conversationId = queued.conversationId, senderId = queued.senderId,
                     text = queued.text, attachmentPath = queued.attachmentPath, attachmentMime = queued.attachmentMime,
-                    attachmentName = queued.attachmentName, messageId = queued.id
+                    attachmentName = queued.attachmentName, replyToStoryId = queued.replyToStoryId, messageId = queued.id
                 )
             }.getOrNull() ?: continue
             outboxLock.lock()
