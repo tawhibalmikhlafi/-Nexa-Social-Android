@@ -1,11 +1,16 @@
 package com.nexa.social.data.repository
 
+import android.content.Context
+import android.net.Uri
+import java.io.File
+
 import com.nexa.social.core.common.FailureReason
 import com.nexa.social.core.common.Ids
 import com.nexa.social.core.common.Resource
 import com.nexa.social.data.local.ClipLocalDataSource
 import com.nexa.social.data.local.PendingClipAction
 import com.nexa.social.data.local.PendingClipComment
+import com.nexa.social.data.local.PendingClipUpload
 import com.nexa.social.data.media.MediaBucket
 import com.nexa.social.data.media.MediaStorage
 import com.nexa.social.data.remote.SupabaseClipDataSource
@@ -36,7 +41,8 @@ class ClipRepositoryImpl(
     private val sessionFlow: Flow<SessionState>,
     private val achievements: AchievementRepository,
     private val mediaStorage: MediaStorage? = null,
-    private val remote: SupabaseClipDataSource? = null
+    private val remote: SupabaseClipDataSource? = null,
+    private val appContext: Context? = null
 ) : ClipRepository {
 
     private val _clips = MutableStateFlow(local.readClips())
@@ -44,6 +50,8 @@ class ClipRepositoryImpl(
     private val pendingActions = MutableStateFlow(local.readOutbox())
     private val commentOutboxLock = kotlinx.coroutines.sync.Mutex()
     private val pendingComments = MutableStateFlow(local.readCommentOutbox())
+    private val uploadOutboxLock = kotlinx.coroutines.sync.Mutex()
+    private val pendingUploads = MutableStateFlow(local.readUploadOutbox())
 
     override fun observeClips(): Flow<List<Clip>> = sessionFlow.flatMapLatest { session ->
         if (session is SessionState.RemoteAccount && remote != null) {
@@ -68,27 +76,42 @@ class ClipRepositoryImpl(
             return Resource.Failure(FailureReason.REQUIRES_ACCOUNT)
         }
         val user = userRepository.currentUser.first() ?: return Resource.Failure(FailureReason.GENERIC)
+        val author = UserSummary.from(user)
         if (session is SessionState.RemoteAccount) {
             val storage = mediaStorage ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
             val remoteStore = remote ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
             val clipId = Ids.newId()
+            val backup = copyPendingVideo(videoUri, clipId) ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
             val path = "${session.userId}/$clipId.mp4"
-            val videoUrl = when (val upload = storage.uploadVideo(videoUri, path)) {
-                is Resource.Success -> upload.data
-                is Resource.Failure -> return upload
+            when (val upload = storage.uploadVideo(backup, path)) {
+                is Resource.Success -> {
+                    val created = remoteStore.createClip(author, path, upload.data, caption, clipId)
+                    if (created != null) {
+                        File(Uri.parse(backup).path.orEmpty()).delete()
+                        achievements.record(CounterKind.CLIPS_CREATED)
+                        remoteStore.notifyChanged()
+                        return Resource.Success(created)
+                    }
+                    // Keep the source and stable clip ID; the retry is safe if the first insert committed.
+                    enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis()))
+                    return Resource.Success(Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true))
+                }
+                is Resource.Failure -> {
+                    if (upload.reason != FailureReason.NETWORK) {
+                        File(Uri.parse(backup).path.orEmpty()).delete()
+                        return upload
+                    }
+                    enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis()))
+                    val pending = Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true)
+                    _clips.value = listOf(pending) + _clips.value.filterNot { it.id == clipId }
+                    persist()
+                    return Resource.Success(pending)
+                }
                 Resource.Loading -> return Resource.Failure(FailureReason.GENERIC)
             }
-            val created = remoteStore.createClip(UserSummary.from(user), path, videoUrl, caption)
-            if (created == null) {
-                storage.deleteObject(MediaBucket.CLIPS, path)
-                return Resource.Failure(FailureReason.GENERIC)
-            }
-            achievements.record(CounterKind.CLIPS_CREATED)
-            remoteStore.notifyChanged()
-            return Resource.Success(created)
         }
         val clip = Clip(
-            id = Ids.newId(), author = UserSummary.from(user), videoUri = videoUri,
+            id = Ids.newId(), author = author, videoUri = videoUri,
             caption = caption.trim(), createdAt = System.currentTimeMillis(),
             likeCount = 0, commentCount = 0, likedByMe = false, savedByMe = false, isLocal = true
         )
@@ -96,6 +119,60 @@ class ClipRepositoryImpl(
         persist()
         achievements.record(CounterKind.CLIPS_CREATED)
         return Resource.Success(clip)
+    }
+
+    private suspend fun copyPendingVideo(source: String, id: String): String? {
+        val context = appContext ?: return null
+        return runCatching {
+            withContext(Dispatchers.IO) {
+                val directory = File(context.filesDir, "pending_clips")
+                if (!directory.exists() && !directory.mkdirs()) return@withContext null
+                val target = File(directory, "$id.mp4")
+                val uri = Uri.parse(source)
+                val input = if (uri.scheme == "file") File(uri.path.orEmpty()).inputStream()
+                    else context.contentResolver.openInputStream(uri) ?: return@withContext null
+                input.use { stream -> target.outputStream().use { sink -> stream.copyTo(sink) } }
+                Uri.fromFile(target).toString()
+            }
+        }.getOrNull()
+    }
+
+    private suspend fun enqueueUpload(item: PendingClipUpload) {
+        uploadOutboxLock.lock()
+        try {
+            val next = pendingUploads.value.filterNot { it.id == item.id } + item
+            pendingUploads.value = next
+            withContext(Dispatchers.IO) { local.writeUploadOutbox(next) }
+        } finally { uploadOutboxLock.unlock() }
+    }
+
+    private suspend fun removeUpload(id: String) {
+        uploadOutboxLock.lock()
+        try {
+            val next = pendingUploads.value.filterNot { it.id == id }
+            pendingUploads.value = next
+            withContext(Dispatchers.IO) { local.writeUploadOutbox(next) }
+        } finally { uploadOutboxLock.unlock() }
+    }
+
+    private suspend fun drainUploadOutbox() {
+        val session = sessionFlow.first() as? SessionState.RemoteAccount ?: return
+        val storage = mediaStorage ?: return
+        val store = remote ?: return
+        val user = userRepository.currentUser.first() ?: return
+        for (item in pendingUploads.value.filter { it.userId == session.userId }.sortedBy { it.createdAt }) {
+            val path = "${session.userId}/${item.id}.mp4"
+            val uploaded = storage.uploadVideo(item.localVideoPath, path)
+            if (uploaded !is Resource.Success) break
+            val clip = store.createClip(UserSummary.from(user), path, uploaded.data, item.caption, item.id)
+                ?: break
+            File(Uri.parse(item.localVideoPath).path.orEmpty()).delete()
+            removeUpload(item.id)
+            _clips.value = listOf(clip) + _clips.value.filterNot { it.id == clip.id }
+            achievements.record(CounterKind.CLIPS_CREATED)
+        }
+        store.notifyChanged()
+        persist()
     }
 
     override suspend fun toggleLike(clipId: String) {
@@ -228,6 +305,7 @@ class ClipRepositoryImpl(
     }
 
     override suspend fun refresh() {
+        drainUploadOutbox()
         drainOutbox()
         drainCommentOutbox()
         remote?.notifyChanged()
