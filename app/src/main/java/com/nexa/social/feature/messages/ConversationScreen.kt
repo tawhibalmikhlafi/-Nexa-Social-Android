@@ -368,20 +368,21 @@ fun ConversationScreen(
                 }
                 Row(verticalAlignment = Alignment.Bottom) {
                     IconButton(
+                        onClick = pickAttachment,
+                        enabled = canSend && editing == null && !isRecording,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(Icons.Filled.AttachFile, contentDescription = stringResource(R.string.message_attachment_add), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    IconButton(
                         onClick = {
-                            if (input.isBlank() && editing == null && !isRecording) {
-                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startVoiceRecording()
-                                else audioPermission.launch(Manifest.permission.RECORD_AUDIO)
-                            } else pickAttachment()
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startVoiceRecording()
+                            else audioPermission.launch(Manifest.permission.RECORD_AUDIO)
                         },
                         enabled = canSend && editing == null && !isRecording,
-                        modifier = Modifier.size(44.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
-                        Icon(
-                            imageVector = if (input.isBlank() && editing == null) Icons.Filled.Mic else Icons.Filled.AttachFile,
-                            contentDescription = stringResource(R.string.message_attachment_add),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Icon(Icons.Filled.Mic, contentDescription = "Record voice message", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     IconButton(
                         onClick = { pickVideo.launch("video/*") },
