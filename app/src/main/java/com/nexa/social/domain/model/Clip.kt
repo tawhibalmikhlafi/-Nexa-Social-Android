@@ -13,7 +13,9 @@ data class Clip(
     val savedByMe: Boolean,
     val isLocal: Boolean,
     val viewCount: Long = 0L,
-    val coverUrl: String? = null
+    val coverUrl: String? = null,
+    val uploadProgress: Float? = null,
+    val uploadState: String? = null
 )
 
 data class ClipComment(
