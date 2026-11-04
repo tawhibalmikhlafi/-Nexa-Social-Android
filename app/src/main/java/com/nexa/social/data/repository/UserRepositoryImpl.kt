@@ -266,6 +266,17 @@ class UserRepositoryImpl(
     private fun isLocalTarget(userId: String): Boolean =
         allUsers(accounts.records.value).any { it.id == userId }
 
+    override suspend fun removeFollower(followerId: String): Boolean {
+        val session = prefs.session.first()
+        val remoteStore = remote
+        if (session !is SessionState.RemoteAccount || remoteStore == null ||
+            followerId.isBlank()
+        ) return false
+        return runCatching {
+            remoteStore.removeFollower(session.userId, followerId)
+        }.getOrDefault(false)
+    }
+
     override suspend fun setFollowing(userId: String, following: Boolean): Boolean {
         val session = prefs.session.first()
         val remoteStore = remote
