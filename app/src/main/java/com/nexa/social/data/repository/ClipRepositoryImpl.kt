@@ -5,6 +5,7 @@ import com.nexa.social.core.common.Ids
 import com.nexa.social.core.common.Resource
 import com.nexa.social.data.local.ClipLocalDataSource
 import com.nexa.social.data.local.PendingClipAction
+import com.nexa.social.data.local.PendingClipComment
 import com.nexa.social.data.media.MediaBucket
 import com.nexa.social.data.media.MediaStorage
 import com.nexa.social.data.remote.SupabaseClipDataSource
@@ -41,6 +42,8 @@ class ClipRepositoryImpl(
     private val _clips = MutableStateFlow(local.readClips())
     private val outboxLock = kotlinx.coroutines.sync.Mutex()
     private val pendingActions = MutableStateFlow(local.readOutbox())
+    private val commentOutboxLock = kotlinx.coroutines.sync.Mutex()
+    private val pendingComments = MutableStateFlow(local.readCommentOutbox())
 
     override fun observeClips(): Flow<List<Clip>> = sessionFlow.flatMapLatest { session ->
         if (session is SessionState.RemoteAccount && remote != null) {
@@ -135,19 +138,52 @@ class ClipRepositoryImpl(
     }
 
     override suspend fun getComments(clipId: String): Resource<List<ClipComment>> {
-        val session = sessionFlow.first()
-        if (session !is SessionState.RemoteAccount || remote == null) return Resource.Failure(FailureReason.NOT_CONFIGURED)
-        val rows = remote.getComments(clipId) ?: return Resource.Failure(FailureReason.NETWORK)
-        return Resource.Success(rows)
+        val session = sessionFlow.first() as? SessionState.RemoteAccount ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
+        val remoteRows = remote?.getComments(clipId)
+        val queued = pendingComments.value.filter { it.userId == session.userId && it.clipId == clipId }.map { item ->
+            ClipComment(item.id, item.clipId, item.userId, item.authorName, item.authorAvatarUrl, item.content, item.createdAt, true)
+        }
+        if (remoteRows == null && queued.isEmpty()) return Resource.Failure(FailureReason.NETWORK)
+        return Resource.Success((remoteRows.orEmpty() + queued).distinctBy { it.id }.sortedBy { it.createdAt })
     }
 
     override suspend fun addComment(clipId: String, content: String): Resource<ClipComment> {
         if (content.isBlank()) return Resource.Failure(FailureReason.REQUIRED)
-        val session = sessionFlow.first()
-        if (session !is SessionState.RemoteAccount || remote == null) return Resource.Failure(FailureReason.NOT_CONFIGURED)
-        val comment = remote.addComment(clipId, content) ?: return Resource.Failure(FailureReason.NETWORK)
-        remote.notifyChanged()
-        return Resource.Success(comment)
+        val session = sessionFlow.first() as? SessionState.RemoteAccount ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
+        val user = userRepository.currentUser.first() ?: return Resource.Failure(FailureReason.GENERIC)
+        val id = Ids.newId()
+        val comment = remote?.addComment(clipId, content, id)
+        if (comment != null) return Resource.Success(comment)
+        val item = PendingClipComment(id, session.userId, clipId, user.displayName, user.avatarUri, content.trim(), System.currentTimeMillis())
+        enqueueComment(item)
+        return Resource.Success(ClipComment(id, clipId, session.userId, user.displayName, user.avatarUri, content.trim(), item.createdAt, true))
+    }
+
+    private suspend fun enqueueComment(item: PendingClipComment) {
+        commentOutboxLock.lock()
+        try {
+            val next = pendingComments.value.filterNot { it.id == item.id } + item
+            pendingComments.value = next
+            withContext(Dispatchers.IO) { local.writeCommentOutbox(next) }
+        } finally { commentOutboxLock.unlock() }
+    }
+
+    private suspend fun removeQueuedComment(id: String) {
+        commentOutboxLock.lock()
+        try {
+            val next = pendingComments.value.filterNot { it.id == id }
+            pendingComments.value = next
+            withContext(Dispatchers.IO) { local.writeCommentOutbox(next) }
+        } finally { commentOutboxLock.unlock() }
+    }
+
+    private suspend fun drainCommentOutbox() {
+        val session = sessionFlow.first() as? SessionState.RemoteAccount ?: return
+        val store = remote ?: return
+        for (item in pendingComments.value.filter { it.userId == session.userId }) {
+            if (store.addComment(item.clipId, item.content, item.id) == null) break
+            removeQueuedComment(item.id)
+        }
     }
 
     override suspend fun deleteComment(commentId: String): Boolean {
@@ -185,6 +221,7 @@ class ClipRepositoryImpl(
 
     override suspend fun refresh() {
         drainOutbox()
+        drainCommentOutbox()
         remote?.notifyChanged()
     }
 
