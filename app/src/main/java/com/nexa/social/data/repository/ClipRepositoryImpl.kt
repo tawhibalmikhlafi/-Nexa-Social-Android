@@ -4,6 +4,7 @@ import com.nexa.social.core.common.FailureReason
 import com.nexa.social.core.common.Ids
 import com.nexa.social.core.common.Resource
 import com.nexa.social.data.local.ClipLocalDataSource
+import com.nexa.social.data.local.PendingClipAction
 import com.nexa.social.data.media.MediaBucket
 import com.nexa.social.data.media.MediaStorage
 import com.nexa.social.data.remote.SupabaseClipDataSource
@@ -37,13 +38,15 @@ class ClipRepositoryImpl(
 ) : ClipRepository {
 
     private val _clips = MutableStateFlow(local.readClips())
+    private val outboxLock = kotlinx.coroutines.sync.Mutex()
+    private val pendingActions = MutableStateFlow(local.readOutbox())
 
     override fun observeClips(): Flow<List<Clip>> = sessionFlow.flatMapLatest { session ->
         if (session is SessionState.RemoteAccount && remote != null) {
             remote.observeClips()
                 .onStart { emit(_clips.value) }
                 .onEach { fresh ->
-                    _clips.value = fresh
+                    _clips.value = applyPending(fresh, pendingActions.value)
                     persist()
                 }
         } else {
@@ -93,27 +96,39 @@ class ClipRepositoryImpl(
 
     override suspend fun toggleLike(clipId: String) {
         val session = sessionFlow.first()
+        val current = _clips.value.firstOrNull { it.id == clipId } ?: return
+        val desired = !current.likedByMe
         if (session is SessionState.RemoteAccount && remote != null) {
-            if (remote.toggleLike(clipId)) remote.notifyChanged()
+            applyLocalDesiredState(clipId, "like", desired)
+            if (remote.setLike(clipId, desired)) {
+                removePending(clipId, "like")
+                remote.notifyChanged()
+            } else enqueueAction(session.userId, clipId, "like", desired)
             return
         }
         _clips.value = _clips.value.map { clip ->
-            if (clip.id != clipId) clip else {
-                val liked = !clip.likedByMe
-                clip.copy(likedByMe = liked, likeCount = (clip.likeCount + if (liked) 1 else -1).coerceAtLeast(0))
-            }
+            if (clip.id != clipId) clip else clip.copy(
+                likedByMe = desired,
+                likeCount = (clip.likeCount + if (desired) 1 else -1).coerceAtLeast(0)
+            )
         }
         persist()
     }
 
     override suspend fun toggleSave(clipId: String) {
         val session = sessionFlow.first()
+        val current = _clips.value.firstOrNull { it.id == clipId } ?: return
+        val desired = !current.savedByMe
         if (session is SessionState.RemoteAccount && remote != null) {
-            if (remote.toggleSave(clipId)) remote.notifyChanged()
+            applyLocalDesiredState(clipId, "save", desired)
+            if (remote.setSave(clipId, desired)) {
+                removePending(clipId, "save")
+                remote.notifyChanged()
+            } else enqueueAction(session.userId, clipId, "save", desired)
             return
         }
         _clips.value = _clips.value.map { clip ->
-            if (clip.id == clipId) clip.copy(savedByMe = !clip.savedByMe) else clip
+            if (clip.id == clipId) clip.copy(savedByMe = desired) else clip
         }
         persist()
     }
@@ -135,7 +150,85 @@ class ClipRepositoryImpl(
     }
 
     override suspend fun refresh() {
+        drainOutbox()
         remote?.notifyChanged()
+    }
+
+    private suspend fun enqueueAction(userId: String, clipId: String, relation: String, enabled: Boolean) {
+        outboxLock.lock()
+        try {
+            val next = pendingActions.value
+                .filterNot { it.userId == userId && it.clipId == clipId && it.relation == relation } +
+                PendingClipAction(
+                    id = Ids.newId(), clipId = clipId, userId = userId,
+                    relation = relation, enabled = enabled, createdAt = System.currentTimeMillis()
+                )
+            pendingActions.value = next
+            withContext(Dispatchers.IO) { local.writeOutbox(next) }
+        } finally {
+            outboxLock.unlock()
+        }
+    }
+
+    private suspend fun removePending(clipId: String, relation: String) {
+        outboxLock.lock()
+        try {
+            val next = pendingActions.value.filterNot { it.clipId == clipId && it.relation == relation }
+            pendingActions.value = next
+            withContext(Dispatchers.IO) { local.writeOutbox(next) }
+        } finally {
+            outboxLock.unlock()
+        }
+    }
+
+    private suspend fun applyLocalDesiredState(clipId: String, relation: String, enabled: Boolean) {
+        _clips.value = _clips.value.map { clip ->
+            if (clip.id != clipId) clip else when (relation) {
+                "like" -> {
+                    val delta = when {
+                        enabled && !clip.likedByMe -> 1
+                        !enabled && clip.likedByMe -> -1
+                        else -> 0
+                    }
+                    clip.copy(likedByMe = enabled, likeCount = (clip.likeCount + delta).coerceAtLeast(0))
+                }
+                else -> clip.copy(savedByMe = enabled)
+            }
+        }
+        persist()
+    }
+
+    private fun applyPending(clips: List<Clip>, actions: List<PendingClipAction>): List<Clip> =
+        clips.map { original ->
+            actions.filter { it.clipId == original.id }
+                .fold(original) { clip, action ->
+                    when (action.relation) {
+                        "like" -> {
+                            val delta = when {
+                                action.enabled && !clip.likedByMe -> 1
+                                !action.enabled && clip.likedByMe -> -1
+                                else -> 0
+                            }
+                            clip.copy(likedByMe = action.enabled, likeCount = (clip.likeCount + delta).coerceAtLeast(0))
+                        }
+                        "save" -> clip.copy(savedByMe = action.enabled)
+                        else -> clip
+                    }
+                }
+        }
+
+    private suspend fun drainOutbox() {
+        val session = sessionFlow.first() as? SessionState.RemoteAccount ?: return
+        val store = remote ?: return
+        val actions = pendingActions.value.filter { it.userId == session.userId }
+        for (action in actions) {
+            val success = when (action.relation) {
+                "like" -> store.setLike(action.clipId, action.enabled)
+                "save" -> store.setSave(action.clipId, action.enabled)
+                else -> true
+            }
+            if (success) removePending(action.clipId, action.relation) else break
+        }
     }
 
     private suspend fun persist() {
