@@ -591,7 +591,7 @@ private fun MessageBubble(
                                 modifier = Modifier.size(24.dp),
                                 color = if (mine) contentColor else MaterialTheme.colorScheme.primary
                             )
-                        } else if (message.attachmentMime?.startsWith("video/") == true) {
+                        } else if (message.attachmentMime?.let { it.startsWith("video/") || it.startsWith("audio/") } == true) {
                             AndroidView(
                                 modifier = Modifier.fillMaxSize(),
                                 factory = { context ->
