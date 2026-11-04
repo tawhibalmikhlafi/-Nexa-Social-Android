@@ -169,14 +169,14 @@ class SupabaseDailyPulseRepository(
     suspend fun deleteEntry(entryId: String): Boolean {
         val uid = currentUid() ?: return false
         val token = accessToken() ?: return false
+        val imagePath = getRows(
+            "pulse_entries?select=image_path&id=eq.${enc(entryId)}&user_id=eq.${enc(uid)}&limit=1", token
+        )?.firstOrNull()?.string("image_path")
         val request = http.authenticatedRequest(
             "$rest/pulse_entries?id=eq.${enc(entryId)}&user_id=eq.${enc(uid)}", token
         ).delete().build()
         val ok = http.execute(request).getOrNull()?.successful == true
-        if (ok) {
-            val rows = getRows("pulse_entries?select=image_path&id=eq.${enc(entryId)}&limit=1", token)
-            rows?.firstOrNull()?.string("image_path")?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
-        }
+        if (ok) imagePath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
         return ok
     }
 
