@@ -1131,4 +1131,5 @@
     <string name="notifications_filter_all">All</string>
     <string name="notifications_filter_unread">Unread</string>
     <string name="action_refresh">Refresh</string>
+    <string name="action_remove_follower">Remove follower</string>
 </resources>
