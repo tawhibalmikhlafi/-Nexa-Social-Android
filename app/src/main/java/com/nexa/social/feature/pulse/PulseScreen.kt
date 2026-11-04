@@ -321,6 +321,36 @@ fun PulseScreen(
             }
         }
     }
+    selectedEntry?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { selectedEntry = null },
+            title = { Text("مشاركة ${entry.displayName}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)) {
+                    Text("@${entry.username}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (entry.body.isNotBlank()) Text(entry.body)
+                    entry.imageUrl?.let { image ->
+                        AsyncImage(model = image, contentDescription = "صورة المشاركة",
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)))
+                    }
+                    Text("❤ ${entry.reactions} إعجاب", style = MaterialTheme.typography.labelMedium)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val shareText = buildString {
+                        append("مشاركة من نبض Nexa بواسطة ${entry.displayName}")
+                        if (entry.body.isNotBlank()) append("\n${entry.body}")
+                        entry.imageUrl?.let { append("\n${it}") }
+                    }
+                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"; putExtra(Intent.EXTRA_TEXT, shareText)
+                    }, "مشاركة نبض Nexa"))
+                }) { Text("مشاركة") }
+            },
+            dismissButton = { TextButton(onClick = { selectedEntry = null }) { Text("إغلاق") } }
+        )
+    }
 }
 
 @Composable
@@ -403,35 +433,6 @@ private fun WorldRow(
             )
         }
 
-    selectedEntry?.let { entry ->
-        AlertDialog(
-            onDismissRequest = { selectedEntry = null },
-            title = { Text("مشاركة ${entry.displayName}") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)) {
-                    Text("@${entry.username}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (entry.body.isNotBlank()) Text(entry.body)
-                    entry.imageUrl?.let { image ->
-                        AsyncImage(model = image, contentDescription = "صورة المشاركة",
-                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)))
-                    }
-                    Text("❤ ${entry.reactions} إعجاب", style = MaterialTheme.typography.labelMedium)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val shareText = buildString {
-                        append("مشاركة من نبض Nexa بواسطة ${entry.displayName}")
-                        if (entry.body.isNotBlank()) append("\n${entry.body}")
-                        entry.imageUrl?.let { append("\n${it}") }
-                    }
-                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"; putExtra(Intent.EXTRA_TEXT, shareText)
-                    }, "مشاركة نبض Nexa"))
-                }) { Text("مشاركة") }
-            },
-            dismissButton = { TextButton(onClick = { selectedEntry = null }) { Text("إغلاق") } }
-        )
-    }
+
     }
 }
