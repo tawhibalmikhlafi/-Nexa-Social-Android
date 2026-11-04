@@ -65,8 +65,16 @@ class SupabaseClipDataSource(
         }
         val response = http.execute(http.authenticatedRequest("$restUrl/clips", token)
             .header("Prefer", "return=minimal").post(http.jsonBody(body)).build()).getOrNull()
-            ?: return null
-        if (!response.successful) return null
+        if (response?.successful != true) {
+            // A timed-out request may already have committed; recognize the same stable ID on retry.
+            val existing = fetchRows(
+                "clips?select=*,author:profiles!author_id(id,username,display_name,avatar_url,account_origin)&id=eq.${encode(id)}&author_id=eq.${encode(uid)}&limit=1",
+                token
+            )?.firstOrNull()
+            val restored = existing?.let { parseClip(it, emptySet(), emptySet(), uid) } ?: return null
+            notifyChanged()
+            return restored
+        }
         notifyChanged()
         return Clip(id, author, videoUrl, caption.trim(), now.toEpochMilli(), 0, 0, false, false, false, coverUrl = coverUrl)
     }
