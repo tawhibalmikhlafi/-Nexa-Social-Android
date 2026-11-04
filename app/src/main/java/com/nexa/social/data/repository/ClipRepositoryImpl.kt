@@ -46,7 +46,7 @@ class ClipRepositoryImpl(
             remote.observeClips()
                 .onStart { emit(_clips.value) }
                 .onEach { fresh ->
-                    _clips.value = applyPending(fresh, pendingActions.value)
+                    _clips.value = applyPending(fresh, pendingActions.value, session.userId)
                     persist()
                 }
         } else {
@@ -101,7 +101,7 @@ class ClipRepositoryImpl(
         if (session is SessionState.RemoteAccount && remote != null) {
             applyLocalDesiredState(clipId, "like", desired)
             if (remote.setLike(clipId, desired)) {
-                removePending(clipId, "like")
+                removePending(session.userId, clipId, "like")
                 remote.notifyChanged()
             } else enqueueAction(session.userId, clipId, "like", desired)
             return
@@ -122,7 +122,7 @@ class ClipRepositoryImpl(
         if (session is SessionState.RemoteAccount && remote != null) {
             applyLocalDesiredState(clipId, "save", desired)
             if (remote.setSave(clipId, desired)) {
-                removePending(clipId, "save")
+                removePending(session.userId, clipId, "save")
                 remote.notifyChanged()
             } else enqueueAction(session.userId, clipId, "save", desired)
             return
@@ -170,10 +170,10 @@ class ClipRepositoryImpl(
         }
     }
 
-    private suspend fun removePending(clipId: String, relation: String) {
+    private suspend fun removePending(userId: String, clipId: String, relation: String) {
         outboxLock.lock()
         try {
-            val next = pendingActions.value.filterNot { it.clipId == clipId && it.relation == relation }
+            val next = pendingActions.value.filterNot { it.userId == userId && it.clipId == clipId && it.relation == relation }
             pendingActions.value = next
             withContext(Dispatchers.IO) { local.writeOutbox(next) }
         } finally {
@@ -198,9 +198,9 @@ class ClipRepositoryImpl(
         persist()
     }
 
-    private fun applyPending(clips: List<Clip>, actions: List<PendingClipAction>): List<Clip> =
+    private fun applyPending(clips: List<Clip>, actions: List<PendingClipAction>, userId: String): List<Clip> =
         clips.map { original ->
-            actions.filter { it.clipId == original.id }
+            actions.filter { it.userId == userId && it.clipId == original.id }
                 .fold(original) { clip, action ->
                     when (action.relation) {
                         "like" -> {
@@ -227,7 +227,7 @@ class ClipRepositoryImpl(
                 "save" -> store.setSave(action.clipId, action.enabled)
                 else -> true
             }
-            if (success) removePending(action.clipId, action.relation) else break
+            if (success) removePending(session.userId, action.clipId, action.relation) else break
         }
     }
 
