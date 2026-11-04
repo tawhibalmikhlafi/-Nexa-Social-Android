@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -737,7 +738,20 @@ fun ProfileScreen(
                     }
                 }
                 
-                if (posts.isEmpty()) {
+                val isLockedPrivateProfile = !showOwnerTools && current.isPrivateAccount && !isFollowing
+                if (isLockedPrivateProfile) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = NexaSpacing.xl, horizontal = NexaSpacing.lg),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+                        ) {
+                            Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("هذا الحساب خاص", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("تابع هذا الحساب وأرسل طلب متابعة لعرض منشوراته بعد الموافقة.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                        }
+                    }
+                } else if (posts.isEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Box(modifier = Modifier.padding(vertical = NexaSpacing.xl)) {
                             NexaEmptyState(
