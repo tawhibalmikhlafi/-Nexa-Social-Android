@@ -277,7 +277,7 @@ interface SpaceRepository {
 interface ClipRepository {
     fun observeClips(): Flow<List<Clip>>
     fun observeClip(id: String): Flow<Clip?>
-    suspend fun addClip(videoUri: String, caption: String): Resource<Clip>
+    suspend fun addClip(videoUri: String, caption: String, coverUri: String? = null): Resource<Clip>
     suspend fun toggleLike(clipId: String)
     suspend fun toggleSave(clipId: String)
     suspend fun getComments(clipId: String): Resource<List<ClipComment>> = Resource.Success(emptyList())
