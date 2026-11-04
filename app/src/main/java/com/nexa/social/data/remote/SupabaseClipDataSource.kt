@@ -52,11 +52,11 @@ class SupabaseClipDataSource(
         }
     }
 
-    suspend fun createClip(author: UserSummary, videoPath: String, videoUrl: String, caption: String): Clip? {
+    suspend fun createClip(author: UserSummary, videoPath: String, videoUrl: String, caption: String, clipId: String = Ids.newId()): Clip? {
         val uid = currentUid() ?: return null
         val token = accessToken() ?: return null
         if (uid != author.id) return null
-        val id = Ids.newId()
+        val id = clipId
         val now = Instant.now()
         val body = JsonObject().apply {
             addProperty("id", id); addProperty("author_id", uid)
