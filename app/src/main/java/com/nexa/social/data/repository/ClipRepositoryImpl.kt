@@ -3,6 +3,7 @@ package com.nexa.social.data.repository
 import android.content.Context
 import android.net.Uri
 import java.io.File
+import java.io.IOException
 
 import com.nexa.social.core.common.FailureReason
 import com.nexa.social.core.common.Ids
@@ -245,6 +246,9 @@ class ClipRepositoryImpl(
             removeUpload(item.id)
             _clips.value = listOf(clip) + _clips.value.filterNot { it.id == clip.id }
             achievements.record(CounterKind.CLIPS_CREATED)
+        }
+        if (pendingUploads.value.any { it.userId == session.userId }) {
+            throw IOException("Reel upload queue still has pending items")
         }
         store.notifyChanged()
         persist()
