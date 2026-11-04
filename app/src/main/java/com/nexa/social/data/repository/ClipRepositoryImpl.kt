@@ -25,6 +25,7 @@ import com.nexa.social.domain.repository.UserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -55,10 +56,11 @@ class ClipRepositoryImpl(
 
     override fun observeClips(): Flow<List<Clip>> = sessionFlow.flatMapLatest { session ->
         if (session is SessionState.RemoteAccount && remote != null) {
-            remote.observeClips()
-                .onStart { emit(_clips.value) }
-                .onEach { fresh ->
-                    _clips.value = applyPending(fresh, pendingActions.value, pendingUploads.value, session.userId)
+            combine(remote.observeClips(), pendingActions, pendingUploads) { fresh, actions, uploads ->
+                applyPending(fresh, actions, uploads, session.userId)
+            }.onStart { emit(_clips.value) }
+                .onEach { merged ->
+                    _clips.value = merged
                     persist()
                 }
         } else {
