@@ -84,7 +84,7 @@ fun ClipsScreen(
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         pendingVideo = uri?.toString()
         val duration = uri?.let { ClipVideoEditor.durationMs(context, it.toString()).toFloat() } ?: 0f
-        durationMs = duration.coerceAtLeast(1f)
+        durationMs = duration.coerceAtLeast(1000f)
         trimStartMs = 0f
         trimEndMs = durationMs
         coverPositionMs = 0f
