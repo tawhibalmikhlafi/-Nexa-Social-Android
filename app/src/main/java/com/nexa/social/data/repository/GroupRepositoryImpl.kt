@@ -756,10 +756,8 @@ class GroupRepositoryImpl(
         if (token != null && sendGroupComment(uid, id, postId, content, parentId, token)) {
             return@withContext Resource.Success(id)
         }
-        if (token == null || token.isNotBlank()) {
-            queueGroupComment(PendingGroupComment(id, uid, postId, content.trim(), parentId, System.currentTimeMillis()))
-            Resource.Success(id)
-        } else Resource.Failure(FailureReason.NETWORK)
+        queueGroupComment(PendingGroupComment(id, uid, postId, content.trim(), parentId, System.currentTimeMillis()))
+        Resource.Success(id)
     }
 
     private suspend fun sendGroupComment(uid: String, id: String, postId: String, content: String, parentId: String?, token: String): Boolean {
