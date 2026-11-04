@@ -1,5 +1,14 @@
 package com.nexa.social.feature.messages
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.media.MediaRecorder
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import java.io.File
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -30,6 +39,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -66,6 +79,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -158,11 +172,64 @@ fun ConversationScreen(
     var editing by remember { mutableStateOf<Message?>(null) }
     val listState = rememberLazyListState()
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    var isRecording by rememberSaveable { mutableStateOf(false) }
+    var isRecordingPaused by rememberSaveable { mutableStateOf(false) }
+    var recordingSeconds by rememberSaveable { mutableStateOf(0) }
+    val recorderState = remember { mutableStateOf<MediaRecorder?>(null) }
+    val recordingFile = remember { mutableStateOf<File?>(null) }
+
+    fun startVoiceRecording() {
+        val file = File(context.cacheDir, "nexa-voice-\u0024{System.currentTimeMillis()}.m4a")
+        runCatching {
+            MediaRecorder().apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setAudioSamplingRate(44_100)
+                setAudioEncodingBitRate(96_000)
+                setOutputFile(file.absolutePath)
+                prepare()
+                start()
+            }
+        }.onSuccess { recorder ->
+            recorderState.value = recorder
+            recordingFile.value = file
+            recordingSeconds = 0
+            isRecordingPaused = false
+            isRecording = true
+        }.onFailure { file.delete() }
+    }
+
+    fun finishVoiceRecording(send: Boolean) {
+        val file = recordingFile.value
+        runCatching { recorderState.value?.stop() }
+        runCatching { recorderState.value?.release() }
+        recorderState.value = null
+        recordingFile.value = null
+        isRecording = false
+        isRecordingPaused = false
+        recordingSeconds = 0
+        if (send && file != null && file.exists() && file.length() > 0L) {
+            viewModel.send("", Uri.fromFile(file).toString())
+        } else file?.delete()
+    }
+
+    val audioPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) startVoiceRecording() }
     val pickAttachment = rememberImagePicker { uri ->
         if (uri != null) attachmentUri = uri.toString()
     }
 
     val messages = conversation?.messages.orEmpty()
+
+    LaunchedEffect(isRecording, isRecordingPaused) {
+        while (isRecording && !isRecordingPaused) {
+            delay(1_000)
+            recordingSeconds += 1
+        }
+    }
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
@@ -247,6 +314,21 @@ fun ConversationScreen(
                     AccountRequiredBanner(text = stringResource(R.string.messages_send_requires_account))
                     Spacer(Modifier.height(NexaSpacing.sm))
                 }
+                if (isRecording) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = NexaSpacing.sm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(Modifier.size(9.dp).clip(CircleShape).background(if (isRecordingPaused) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error))
+                        Spacer(Modifier.width(NexaSpacing.sm))
+                        Text(String.format("%02d:%02d", recordingSeconds / 60, recordingSeconds % 60), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { if (isRecordingPaused) { runCatching { recorderState.value?.resume() }; isRecordingPaused = false } else { runCatching { recorderState.value?.pause() }; isRecordingPaused = true } }) {
+                            Icon(if (isRecordingPaused) Icons.Filled.PlayArrow else Icons.Filled.Pause, contentDescription = null)
+                        }
+                        IconButton(onClick = { finishVoiceRecording(false) }) { Icon(Icons.Filled.Close, contentDescription = null) }
+                        FilledIconButton(onClick = { finishVoiceRecording(true) }) { Icon(Icons.Filled.Send, contentDescription = null) }
+                    }
+                }
                 if (editing != null || attachmentUri != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -281,12 +363,17 @@ fun ConversationScreen(
                 }
                 Row(verticalAlignment = Alignment.Bottom) {
                     IconButton(
-                        onClick = pickAttachment,
-                        enabled = canSend && editing == null,
+                        onClick = {
+                            if (input.isBlank() && editing == null && !isRecording) {
+                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startVoiceRecording()
+                                else audioPermission.launch(Manifest.permission.RECORD_AUDIO)
+                            } else pickAttachment()
+                        },
+                        enabled = canSend && editing == null && !isRecording,
                         modifier = Modifier.size(44.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.AttachFile,
+                            imageVector = if (input.isBlank() && editing == null) Icons.Filled.Mic else Icons.Filled.AttachFile,
                             contentDescription = stringResource(R.string.message_attachment_add),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -295,7 +382,7 @@ fun ConversationScreen(
                         value = input,
                         onValueChange = { input = it },
                         placeholder = { Text(stringResource(R.string.conversation_hint_send)) },
-                        enabled = canSend,
+                        enabled = canSend && !isRecording,
                         maxLines = 5,
                         shape = RoundedCornerShape(NexaRadius.pill),
                         modifier = Modifier.weight(1f)
@@ -313,7 +400,7 @@ fun ConversationScreen(
                             }
                             input = ""
                         },
-                        enabled = canSend && input.isNotBlank(),
+                        enabled = canSend && input.isNotBlank() && !isRecording,
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
