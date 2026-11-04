@@ -12,6 +12,7 @@ import androidx.work.WorkerParameters
 import com.nexa.social.NexaApplication
 import com.nexa.social.core.common.Resource
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 
 /** Runs durable Supabase outboxes even when the app is not in the foreground. */
 class NexaOfflineSyncWorker(
@@ -24,6 +25,8 @@ class NexaOfflineSyncWorker(
         var shouldRetry = false
         try {
             app.container.messageRepository.refresh()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             shouldRetry = true
         }
