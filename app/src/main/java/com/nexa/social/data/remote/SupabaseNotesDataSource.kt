@@ -150,8 +150,9 @@ class SupabaseNotesDataSource(
         if (rows.isEmpty()) return@withContext emptyList()
         val ids = rows.mapNotNull { it.string("actor_id") }.distinct()
         val profiles = runCatching {
-            val pr = http.execute(http.authenticatedRequest("$restUrl/profiles?select=id,display_name&id=in.(${ids.joinToString(",") { encode(it) }})", token).get().build())
-            if (!pr.successful) emptyMap() else JsonParser.parseString(pr.body.orEmpty()).asJsonArray.associate { row ->
+            val pr = http.execute(http.authenticatedRequest("$restUrl/profiles?select=id,display_name&id=in.(${ids.joinToString(",") { encode(it) }})", token).get().build()).getOrNull()
+                ?: return@runCatching emptyMap<String, String>()
+            if (!pr.successful) emptyMap() else JsonParser.parseString(pr.body).asJsonArray.associate { row ->
                 row.asJsonObject.string("id").orEmpty() to (row.asJsonObject.string("display_name") ?: "مستخدم")
             }
         }.getOrDefault(emptyMap())
