@@ -211,11 +211,11 @@ class SupabaseMessageDataSource(
                 .header("Prefer", "resolution=merge-duplicates,return=minimal")
                 .post(http.jsonBody(body)).build()
         )
-        return response.getOrNull()?.successful == true
+        return response?.successful == true
     }
 
     suspend fun getAcceptedMessageRequestIds(uid: String): Set<String>? {
-        val token = accessToken() ?: return null
+        if (accessToken() == null) return null
         val rows = fetchRows(
             "message_request_decisions?select=conversation_id&user_id=eq.${encode(uid)}&status=eq.accepted"
         ) ?: return null
