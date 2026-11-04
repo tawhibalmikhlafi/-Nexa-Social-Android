@@ -197,6 +197,30 @@ class SupabaseMessageDataSource(
         return recheck?.firstOrNull()?.string("id")
     }
 
+    suspend fun setMessageRequestStatus(conversationId: String, uid: String, status: String): Boolean {
+        if (status !in setOf("accepted", "rejected")) return false
+        val token = accessToken() ?: return false
+        val body = JsonObject().apply {
+            addProperty("user_id", uid)
+            addProperty("conversation_id", conversationId)
+            addProperty("status", status)
+            addProperty("updated_at", Instant.now().toString())
+        }
+        val response = execute(
+            http.authenticatedRequest("$restUrl/message_request_decisions?on_conflict=user_id,conversation_id", token)
+                .header("Prefer", "resolution=merge-duplicates,return=minimal")
+                .post(http.jsonBody(body)).build()
+        )
+        return response.getOrNull()?.successful == true
+    }
+
+    suspend fun getAcceptedMessageRequestIds(uid: String): Set<String> {
+        val token = accessToken() ?: return emptySet()
+        return fetchRows(
+            "message_request_decisions?select=conversation_id&user_id=eq.${encode(uid)}&status=eq.accepted"
+        )?.mapNotNull { it.string("conversation_id") }?.toSet().orEmpty()
+    }
+
     suspend fun markRead(conversationId: String, uid: String): Boolean {
         val token = accessToken() ?: return false
         val body = JsonObject().apply { addProperty("read_at", Instant.now().toString()) }
