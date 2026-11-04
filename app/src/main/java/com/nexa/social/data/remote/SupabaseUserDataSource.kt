@@ -313,11 +313,22 @@ class SupabaseUserDataSource(
 
     override suspend fun isFollowing(uid: String, targetId: String): Boolean {
         if (uid == targetId) return false
-        val rows = fetchRows(
-            "follows?select=follower_id&follower_id=eq.${encode(uid)}" +
-                "&following_id=eq.${encode(targetId)}&limit=1"
+        val token = accessToken() ?: return false
+        val body = JsonObject().apply {
+            addProperty("p_follower_id", uid)
+            addProperty("p_following_id", targetId)
+        }
+        val response = execute(
+            http.authenticatedRequest("$restUrl/rpc/nexa_is_following", token)
+                .post(http.jsonBody(body)).build()
         ) ?: return false
-        return rows.isNotEmpty()
+        if (!response.successful) {
+            Log.w(TAG, "RPC nexa_is_following failed with HTTP ${response.code}")
+            return false
+        }
+        return runCatching {
+            JsonParser.parseString(response.body.orEmpty()).asBoolean
+        }.getOrDefault(false)
     }
 
     override suspend fun hasPendingFollowRequest(uid: String, targetId: String): Boolean? {
@@ -417,30 +428,42 @@ class SupabaseUserDataSource(
         selectColumn: String,
         filterColumn: String
     ): Flow<Set<String>> = flow {
+        val listType = if (selectColumn == "follower_id") "followers" else "following"
         var emitted = false
         while (currentCoroutineContext().isActive) {
-            val rows = fetchRows(
-                "follows?select=$selectColumn&$filterColumn=eq.${encode(uid)}&limit=$MAX_FOLLOW_PAGE"
-            )
-            if (rows != null || !emitted) {
-                emit(rows.orEmpty().mapNotNull { it.string(selectColumn) }.toSet())
+            val ids = fetchFollowIds(uid, listType)
+            if (ids != null || !emitted) {
+                emit(ids.orEmpty().toSet())
                 emitted = true
             }
             awaitNextPoll()
         }
     }
 
+    private suspend fun fetchFollowIds(targetUserId: String, listType: String): List<String>? {
+        val token = accessToken() ?: return null
+        val body = JsonObject().apply {
+            addProperty("p_target_user_id", targetUserId)
+            addProperty("p_list_type", listType)
+        }
+        val response = execute(
+            http.authenticatedRequest("$restUrl/rpc/nexa_get_follow_list", token)
+                .post(http.jsonBody(body)).build()
+        ) ?: return null
+        if (!response.successful) {
+            Log.w(TAG, "RPC nexa_get_follow_list($listType) failed with HTTP ${response.code}")
+            return null
+        }
+        return parseArray(response.body)?.mapNotNull { it.string("user_id") }
+    }
+
     private suspend fun followingUsers(uid: String): List<User>? {
-        val ids = fetchRows("follows?select=following_id&follower_id=eq.${encode(uid)}&limit=$MAX_FOLLOW_PAGE")
-            ?.mapNotNull { it.string("following_id") }
-            ?: return null
+        val ids = fetchFollowIds(uid, "following") ?: return null
         return fetchProfilesByIds(ids)
     }
 
     private suspend fun followerUsers(uid: String): List<User>? {
-        val ids = fetchRows("follows?select=follower_id&following_id=eq.${encode(uid)}&limit=$MAX_FOLLOW_PAGE")
-            ?.mapNotNull { it.string("follower_id") }
-            ?: return null
+        val ids = fetchFollowIds(uid, "followers") ?: return null
         return fetchProfilesByIds(ids)
     }
 
