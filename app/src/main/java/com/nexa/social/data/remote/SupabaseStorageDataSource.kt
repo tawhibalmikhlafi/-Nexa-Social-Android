@@ -99,7 +99,7 @@ class SupabaseStorageDataSource(
         val info = readFileInfo(localUri) ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
         if (!info.mimeType.startsWith("video/")) return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
         if (info.size <= 0L || info.size > MAX_CLIP_BYTES) return Resource.Failure(FailureReason.FILE_TOO_LARGE)
-        return when (val result = upload(localUri, MediaBucket.CLIPS, path, info, {})) {
+        return when (val result = upload(localUri, MediaBucket.CLIPS, path, info, {}, upsert = true)) {
             is Resource.Success -> Resource.Success(config.normalizedUrl + "/storage/v1/object/public/${MediaBucket.CLIPS.id}/${encodePath(path)}")
             is Resource.Failure -> result
             Resource.Loading -> Resource.Loading
@@ -139,7 +139,8 @@ class SupabaseStorageDataSource(
         bucket: MediaBucket,
         path: String,
         info: FileInfo,
-        onProgress: (Float) -> Unit
+        onProgress: (Float) -> Unit,
+        upsert: Boolean = false
     ): Resource<Unit> {
         val token = accessToken() ?: return Resource.Failure(FailureReason.NOT_AUTHENTICATED)
         val uri = Uri.parse(localUri)
@@ -147,7 +148,7 @@ class SupabaseStorageDataSource(
             ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
         val url = "${config.storageUrl}/object/${bucket.id}/${encodePath(path)}"
         val request = http.authenticatedRequest(url, token)
-            .header("x-upsert", "false")
+            .header("x-upsert", upsert.toString())
             .post(body)
             .build()
         val response = http.execute(request).getOrElse { error ->
