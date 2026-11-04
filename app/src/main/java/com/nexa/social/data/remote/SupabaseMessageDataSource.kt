@@ -197,17 +197,13 @@ class SupabaseMessageDataSource(
         return recheck?.firstOrNull()?.string("id")
     }
 
-    suspend fun markRead(conversationId: String, uid: String) {
-        val token = accessToken() ?: return
-        val body = JsonObject().apply {
-            addProperty("read_at", Instant.now().toString())
-        }
-        execute(
+    suspend fun markRead(conversationId: String, uid: String): Boolean {
+        val token = accessToken() ?: return false
+        val body = JsonObject().apply { addProperty("read_at", Instant.now().toString()) }
+        return execute(
             http.authenticatedRequest("$restUrl/messages?conversation_id=eq.${encode(conversationId)}&sender_id=neq.${encode(uid)}&read_at=is.null", token)
-                .header("Prefer", "return=minimal")
-                .patch(http.jsonBody(body))
-                .build()
-        )
+                .header("Prefer", "return=minimal").patch(http.jsonBody(body)).build()
+        )?.successful == true
     }
 
     suspend fun deleteMessage(messageId: String): Boolean {
