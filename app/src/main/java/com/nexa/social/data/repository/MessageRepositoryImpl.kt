@@ -149,29 +149,29 @@ class MessageRepositoryImpl(
             is SessionState.RemoteAccount -> session.userId
             else -> return Resource.Failure(FailureReason.REQUIRES_ACCOUNT)
         }
+        val clientMessageId = Ids.newId()
         val storedAttachment = if (!attachmentUri.isNullOrBlank()) {
             when (session) {
                 is SessionState.RemoteAccount -> {
-                    val storage = mediaStorage
-                        ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
-                    when (val upload = storage.uploadAttachment(
-                        localUri = attachmentUri,
-                        path = "$senderId/${Ids.newId()}"
-                    )) {
-                        is Resource.Success -> upload.data
-                        is Resource.Failure -> return upload
-                        Resource.Loading -> null
+                    val storage = mediaStorage ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
+                    val backup = copyLocalAttachment(attachmentUri) ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
+                    when (val upload = storage.uploadAttachment(localUri = backup.path, path = "$senderId/$clientMessageId")) {
+                        is Resource.Success -> { deleteLocalAttachment(backup.path); upload.data }
+                        is Resource.Failure -> {
+                            val item = PendingMessage(clientMessageId, conversationId, senderId, text.trim(), System.currentTimeMillis(), localAttachmentUri = backup.path, attachmentMime = backup.mimeType, attachmentName = backup.displayName)
+                            enqueue(item)
+                            val optimistic = Message(clientMessageId, conversationId, senderId, text.trim(), item.createdAt, true, true, true, backup.path, backup.mimeType, backup.displayName)
+                            pendingMessages.update { current -> current + (conversationId to (current[conversationId].orEmpty() + optimistic).takeLast(50)) }
+                            return Resource.Success(optimistic)
+                        }
+                        Resource.Loading -> return Resource.Failure(FailureReason.GENERIC)
                     }
                 }
-                else -> copyLocalAttachment(attachmentUri)
-                    ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
+                else -> copyLocalAttachment(attachmentUri) ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
             }
-        } else {
-            null
-        }
+        } else null
         val remoteStore = remote
         if (isRemote(session) && remoteStore != null) {
-            val clientMessageId = Ids.newId()
             val sent = remoteStore.sendMessage(
                 conversationId = conversationId,
                 senderId = senderId,
@@ -182,21 +182,11 @@ class MessageRepositoryImpl(
                 messageId = clientMessageId
             )
             if (sent == null) {
-                // Queue text only. An external attachment URI may no longer be readable after process death.
-                if (attachmentUri.isNullOrBlank()) {
-                    val item = PendingMessage(clientMessageId, conversationId, senderId, text.trim(), System.currentTimeMillis())
-                    enqueue(item)
-                    val optimistic = Message(
-                        id = item.id, conversationId = conversationId, senderId = senderId,
-                        text = item.text, timestamp = item.createdAt, isRead = true,
-                        isMine = true, isLocal = true
-                    )
-                    pendingMessages.update { current ->
-                        current + (conversationId to (current[conversationId].orEmpty() + optimistic).takeLast(50))
-                    }
-                    return Resource.Success(optimistic)
-                }
-                return Resource.Failure(FailureReason.NETWORK)
+                val item = PendingMessage(clientMessageId, conversationId, senderId, text.trim(), System.currentTimeMillis(), attachmentPath = storedAttachment?.path, attachmentMime = storedAttachment?.mimeType, attachmentName = storedAttachment?.displayName)
+                enqueue(item)
+                val optimistic = Message(clientMessageId, conversationId, senderId, text.trim(), item.createdAt, true, true, true, storedAttachment?.path, storedAttachment?.mimeType, storedAttachment?.displayName)
+                pendingMessages.update { current -> current + (conversationId to (current[conversationId].orEmpty() + optimistic).takeLast(50)) }
+                return Resource.Success(optimistic)
             }
             pendingMessages.update { pending ->
                 val current = pending[conversationId].orEmpty()
