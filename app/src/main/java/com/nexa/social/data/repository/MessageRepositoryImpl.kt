@@ -641,7 +641,7 @@ class MessageRepositoryImpl(
     private suspend fun enqueueAction(userId: String, messageId: String, action: String, value: String?) {
         actionOutboxLock.lock()
         try {
-            val next = actionOutbox.value.filterNot { it.userId == userId && it.messageId == messageId && (it.action == action || action == "delete_all" || (action in setOf("react", "unreact", "star", "unstar") && it.action in setOf("react", "unreact", "star", "unstar"))) } +
+            val next = actionOutbox.value.filterNot { it.userId == userId && it.messageId == messageId && (it.action == action || action == "delete_all" || ((action in setOf("react", "unreact") && it.action in setOf("react", "unreact")) || (action in setOf("star", "unstar") && it.action in setOf("star", "unstar")) )) } +
                 PendingMessageAction(Ids.newId(), userId, "", messageId, action, value, System.currentTimeMillis())
             actionOutbox.value = next
             withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
@@ -651,7 +651,7 @@ class MessageRepositoryImpl(
     private suspend fun removeQueuedAction(userId: String, messageId: String, action: String) {
         actionOutboxLock.lock()
         try {
-            val next = actionOutbox.value.filterNot { it.userId == userId && it.messageId == messageId && (it.action == action || (action in setOf("react", "unreact") && it.action in setOf("react", "unreact")) || action == "delete_all") }
+            val next = actionOutbox.value.filterNot { it.userId == userId && it.messageId == messageId && (it.action == action || ((action in setOf("react", "unreact") && it.action in setOf("react", "unreact")) || (action in setOf("star", "unstar") && it.action in setOf("star", "unstar"))) || action == "delete_all") }
             actionOutbox.value = next
             withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
         } finally { actionOutboxLock.unlock() }
