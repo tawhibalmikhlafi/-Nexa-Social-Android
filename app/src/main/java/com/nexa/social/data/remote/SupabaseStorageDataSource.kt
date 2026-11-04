@@ -19,6 +19,10 @@ import com.nexa.social.data.media.StoredMedia
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.OkHttpClient
+import java.util.Base64
 import okhttp3.RequestBody
 import okio.BufferedSink
 import okio.Buffer
@@ -103,6 +107,149 @@ class SupabaseStorageDataSource(
             is Resource.Success -> Resource.Success(config.normalizedUrl + "/storage/v1/object/public/${MediaBucket.CLIPS.id}/${encodePath(path)}")
             is Resource.Failure -> result
             Resource.Loading -> Resource.Loading
+        }
+    }
+
+    override suspend fun uploadVideoResumable(
+        localUri: String,
+        path: String,
+        uploadUrl: String?,
+        offset: Long,
+        onCheckpoint: suspend (String?, Long) -> Unit
+    ): Resource<String> {
+        val info = readFileInfo(localUri) ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
+        if (!info.mimeType.startsWith("video/")) return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
+        if (info.size <= 0L || info.size > MAX_CLIP_BYTES) return Resource.Failure(FailureReason.FILE_TOO_LARGE)
+        val token = accessToken() ?: return Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val host = Uri.parse(config.normalizedUrl).host ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
+        val projectRef = host.substringBefore(".supabase.co")
+        val endpoint = if (host.endsWith(".supabase.co")) {
+            "https://" + projectRef + ".storage.supabase.co/storage/v1/upload/resumable"
+        } else {
+            config.storageUrl + "/upload/resumable"
+        }
+        return withContext(Dispatchers.IO) {
+            val client = OkHttpClient.Builder().callTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS).build()
+            val commonHeaders = mapOf(
+                "Authorization" to "Bearer " + token,
+                "apikey" to config.anonKey,
+                "Tus-Resumable" to "1.0.0"
+            )
+            var currentUrl = uploadUrl
+            var currentOffset = offset.coerceIn(0L, info.size)
+
+            if (!currentUrl.isNullOrBlank()) {
+                val head = Request.Builder().url(currentUrl).head().apply {
+                    commonHeaders.forEach { (key, value) -> header(key, value) }
+                }.build()
+                val headResult = runCatching { client.newCall(head).execute() }.getOrNull()
+                if (headResult != null) {
+                    headResult.use { response ->
+                        if (response.isSuccessful) {
+                            currentOffset = response.header("Upload-Offset")?.toLongOrNull() ?: currentOffset
+                        } else if (response.code == 404 || response.code == 410) {
+                            currentUrl = null
+                            currentOffset = 0L
+                        } else {
+                            return@withContext Resource.Failure(if (response.code == 401 || response.code == 403) FailureReason.NOT_AUTHENTICATED else FailureReason.NETWORK)
+                        }
+                    }
+                } else {
+                    return@withContext Resource.Failure(FailureReason.NETWORK)
+                }
+            }
+
+            if (currentUrl.isNullOrBlank()) {
+                val metadata = listOf(
+                    "bucketName" to MediaBucket.CLIPS.id,
+                    "objectName" to path,
+                    "contentType" to info.mimeType,
+                    "cacheControl" to "3600"
+                ).joinToString(",") { (key, value) ->
+                    key + " " + Base64.getEncoder().encodeToString(value.toByteArray(Charsets.UTF_8))
+                }
+                val create = Request.Builder().url(endpoint)
+                    .post(ByteArray(0).toRequestBody(null))
+                    .header("Upload-Length", info.size.toString())
+                    .header("Upload-Metadata", metadata)
+                    .header("x-upsert", "true")
+                    .apply { commonHeaders.forEach { (key, value) -> header(key, value) } }
+                    .build()
+                val created = runCatching { client.newCall(create).execute() }.getOrNull()
+                    ?: return@withContext Resource.Failure(FailureReason.NETWORK)
+                created.use { response ->
+                    if (response.code != 201) {
+                        return@withContext Resource.Failure(
+                            if (response.code == 401 || response.code == 403) FailureReason.NOT_AUTHENTICATED
+                            else if (response.code == 413) FailureReason.FILE_TOO_LARGE
+                            else if (response.code >= 500 || response.code == 408) FailureReason.NETWORK
+                            else FailureReason.UPLOAD_FAILED
+                        )
+                    }
+                    val location = response.header("Location")
+                        ?: return@withContext Resource.Failure(FailureReason.UPLOAD_FAILED)
+                    currentUrl = java.net.URI(endpoint).resolve(location).toString()
+                    currentOffset = response.header("Upload-Offset")?.toLongOrNull() ?: 0L
+                    onCheckpoint(currentUrl, currentOffset)
+                }
+            }
+
+            val chunkSize = 6 * 1024 * 1024
+            while (currentOffset < info.size) {
+                val length = minOf(chunkSize.toLong(), info.size - currentOffset).toInt()
+                val bytes = runCatching {
+                    resolver.openInputStream(Uri.parse(localUri))?.use { input ->
+                        var skipped = 0L
+                        while (skipped < currentOffset) {
+                            val count = input.skip(currentOffset - skipped)
+                            if (count <= 0L) {
+                                if (input.read() == -1) break else skipped++
+                            } else skipped += count
+                        }
+                        val chunk = ByteArray(length)
+                        var read = 0
+                        while (read < length) {
+                            val count = input.read(chunk, read, length - read)
+                            if (count < 0) break
+                            read += count
+                        }
+                        if (read == length) chunk else chunk.copyOf(read)
+                    }
+                }.getOrNull() ?: return@withContext Resource.Failure(FailureReason.UNSUPPORTED_FILE)
+                if (bytes.isEmpty()) return@withContext Resource.Failure(FailureReason.UPLOAD_FAILED)
+                val patch = Request.Builder().url(currentUrl!!)
+                    .patch(bytes.toRequestBody("application/offset+octet-stream".toMediaType()))
+                    .header("Upload-Offset", currentOffset.toString())
+                    .apply { commonHeaders.forEach { (key, value) -> header(key, value) } }
+                    .build()
+                val result = runCatching { client.newCall(patch).execute() }.getOrNull()
+                    ?: return@withContext Resource.Failure(FailureReason.NETWORK)
+                result.use { response ->
+                    if (response.code == 204) {
+                        currentOffset = response.header("Upload-Offset")?.toLongOrNull()
+                            ?: (currentOffset + bytes.size)
+                        onCheckpoint(currentUrl, currentOffset)
+                    } else if (response.code == 409) {
+                        val head = Request.Builder().url(currentUrl!!).head()
+                            .apply { commonHeaders.forEach { (key, value) -> header(key, value) } }.build()
+                        val refreshed = runCatching { client.newCall(head).execute() }.getOrNull()
+                            ?: return@withContext Resource.Failure(FailureReason.NETWORK)
+                        refreshed.use { headResponse ->
+                            if (!headResponse.isSuccessful) return@withContext Resource.Failure(FailureReason.NETWORK)
+                            currentOffset = headResponse.header("Upload-Offset")?.toLongOrNull() ?: currentOffset
+                            onCheckpoint(currentUrl, currentOffset)
+                        }
+                    } else {
+                        return@withContext Resource.Failure(
+                            if (response.code == 401 || response.code == 403) FailureReason.NOT_AUTHENTICATED
+                            else if (response.code >= 500 || response.code == 408) FailureReason.NETWORK
+                            else FailureReason.UPLOAD_FAILED
+                        )
+                    }
+                }
+            }
+            onCheckpoint(null, 0L)
+            Resource.Success(config.normalizedUrl + "/storage/v1/object/public/" + MediaBucket.CLIPS.id + "/" + encodePath(path))
         }
     }
 
