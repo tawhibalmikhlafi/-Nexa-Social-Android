@@ -58,6 +58,8 @@ class GroupRepositoryImpl(
     private val membershipOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupMembership>("group_membership_outbox.json").orEmpty())
     private val deleteOutboxLock = kotlinx.coroutines.sync.Mutex()
     private val deleteOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupDelete>("group_delete_outbox.json").orEmpty())
+    private val adminOutboxLock = kotlinx.coroutines.sync.Mutex()
+    private val adminOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupAdminOperation>("group_admin_outbox.json").orEmpty())
 
     override fun observeMyGroups(): Flow<List<Group>> = _myGroups.asStateFlow()
 
@@ -66,6 +68,7 @@ class GroupRepositoryImpl(
         val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
         val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
         drainMembershipOutbox(uid, token)
+        drainAdminOutbox(uid, token)
         val url = "$base/group_members?user_id=eq.${encode(uid)}&status=eq.active" +
             "&select=role,status,group:groups(*)&order=joined_at.desc"
         when (val result = executeJsonArray(http.authenticatedRequest(url, token).get().build())) {
@@ -248,7 +251,7 @@ class GroupRepositoryImpl(
         allowMemberInvites: Boolean?,
         requireJoinApproval: Boolean?,
     ): Resource<Unit> = withContext(Dispatchers.IO) {
-        val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
         val body = JsonObject().apply {
             addProperty("p_group_id", groupId)
             name?.let { addProperty("p_name", it) }
@@ -262,17 +265,9 @@ class GroupRepositoryImpl(
             allowMemberInvites?.let { addProperty("p_allow_member_invites", it) }
             requireJoinApproval?.let { addProperty("p_require_join_approval", it) }
         }
-        val request = http.authenticatedRequest("$base/rpc/update_group_details", token)
-            .post(http.jsonBody(body))
-            .build()
-        when (val result = execute(request)) {
-            is Resource.Success -> {
-                refreshMyGroups()
-                Resource.Success(Unit)
-            }
-            is Resource.Failure -> Resource.Failure(result.reason)
-            Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
-        }
+        val result = submitAdminOperation(uid, "update_group_details", body, accessToken.token())
+        if (result is Resource.Success && accessToken.token() != null) refreshMyGroups()
+        result
     }
 
     override suspend fun deleteGroup(groupId: String): Resource<Unit> = withContext(Dispatchers.IO) {
@@ -327,6 +322,80 @@ class GroupRepositoryImpl(
             bucket = MediaBucket.GROUPS,
             path = path,
         )
+    }
+
+
+    /** Admin mutations are stored as desired RPC calls and replayed in order after reconnect. */
+    private suspend fun submitAdminOperation(
+        uid: String,
+        rpc: String,
+        payload: JsonObject,
+        token: String?
+    ): Resource<Unit> {
+        if (token != null) {
+            when (val sent = sendAdminOperation(rpc, payload, token)) {
+                is Resource.Success -> return Resource.Success(Unit)
+                is Resource.Failure -> if (sent.reason != FailureReason.NETWORK) return sent
+                Resource.Loading -> Unit
+            }
+        }
+        queueAdminOperation(PendingGroupAdminOperation(
+            id = java.util.UUID.randomUUID().toString(),
+            userId = uid,
+            rpc = rpc,
+            payload = payload.toString(),
+            createdAt = System.currentTimeMillis()
+        ))
+        return Resource.Success(Unit)
+    }
+
+    private suspend fun sendAdminOperation(rpc: String, payload: JsonObject, token: String): Resource<Unit> {
+        val request = http.authenticatedRequest("$base/rpc/$rpc", token)
+            .post(http.jsonBody(payload)).build()
+        return when (val result = execute(request)) {
+            is Resource.Success -> Resource.Success(Unit)
+            is Resource.Failure -> Resource.Failure(result.reason)
+            Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
+        }
+    }
+
+    private suspend fun queueAdminOperation(item: PendingGroupAdminOperation) {
+        adminOutboxLock.lock()
+        try {
+            // Coalesce replaceable desired-state operations so the last offline choice wins.
+            val key = runCatching { JsonParser.parseString(item.payload).asJsonObject }.getOrNull()
+            val groupId = key?.string("p_group_id")
+            val userId = key?.string("p_user_id")
+            val next = adminOutbox.value.filterNot { old ->
+                if (old.userId != item.userId || old.rpc != item.rpc) false
+                else {
+                    val oldPayload = runCatching { JsonParser.parseString(old.payload).asJsonObject }.getOrNull()
+                    oldPayload?.string("p_group_id") == groupId &&
+                        (userId == null || oldPayload.string("p_user_id") == userId)
+                }
+            } + item
+            adminOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_admin_outbox.json", next) }
+        } finally { adminOutboxLock.unlock() }
+    }
+
+    private suspend fun removeAdminOperation(id: String) {
+        adminOutboxLock.lock()
+        try {
+            val next = adminOutbox.value.filterNot { it.id == id }
+            adminOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_admin_outbox.json", next) }
+        } finally { adminOutboxLock.unlock() }
+    }
+
+    private suspend fun drainAdminOutbox(uid: String, token: String) {
+        for (item in adminOutbox.value.filter { it.userId == uid }.sortedBy { it.createdAt }) {
+            val payload = runCatching { JsonParser.parseString(item.payload).asJsonObject }.getOrNull() ?: run {
+                removeAdminOperation(item.id); continue
+            }
+            if (sendAdminOperation(item.rpc, payload, token) !is Resource.Success) break
+            removeAdminOperation(item.id)
+        }
     }
 
     // ── Join / leave / requests ────────────────────────────────────────────
@@ -440,19 +509,9 @@ class GroupRepositoryImpl(
 
     override suspend fun approveJoinRequest(requestId: String, approve: Boolean): Resource<Unit> =
         withContext(Dispatchers.IO) {
-            val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-            val body = JsonObject().apply {
-                addProperty("p_request_id", requestId)
-                addProperty("p_approve", approve)
-            }
-            val request = http.authenticatedRequest("$base/rpc/approve_join_request", token)
-                .post(http.jsonBody(body))
-                .build()
-            when (val result = execute(request)) {
-                is Resource.Success -> Resource.Success(Unit)
-                is Resource.Failure -> Resource.Failure(result.reason)
-                Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
-            }
+            val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+            val body = JsonObject().apply { addProperty("p_request_id", requestId); addProperty("p_approve", approve) }
+            submitAdminOperation(uid, "approve_join_request", body, accessToken.token())
         }
 
     // ── Members ────────────────────────────────────────────────────────────
@@ -482,63 +541,26 @@ class GroupRepositoryImpl(
             }
         }
 
-    override suspend fun setMemberRole(
-        groupId: String,
-        userId: String,
-        role: String,
-    ): Resource<Unit> = withContext(Dispatchers.IO) {
-        val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-        val body = JsonObject().apply {
-            addProperty("p_group_id", groupId)
-            addProperty("p_user_id", userId)
-            addProperty("p_role", role)
+    override suspend fun setMemberRole(groupId: String, userId: String, role: String): Resource<Unit> =
+        withContext(Dispatchers.IO) {
+            if (role !in setOf("admin", "member")) return@withContext Resource.Failure(FailureReason.INVALID_INPUT)
+            val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+            val body = JsonObject().apply { addProperty("p_group_id", groupId); addProperty("p_user_id", userId); addProperty("p_role", role) }
+            submitAdminOperation(uid, "set_member_role", body, accessToken.token())
         }
-        val request = http.authenticatedRequest("$base/rpc/set_member_role", token)
-            .post(http.jsonBody(body))
-            .build()
-        when (val result = execute(request)) {
-            is Resource.Success -> Resource.Success(Unit)
-            is Resource.Failure -> Resource.Failure(result.reason)
-            Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
-        }
-    }
 
-    override suspend fun removeMember(
-        groupId: String,
-        userId: String,
-        ban: Boolean,
-    ): Resource<Unit> = withContext(Dispatchers.IO) {
-        val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-        val body = JsonObject().apply {
-            addProperty("p_group_id", groupId)
-            addProperty("p_user_id", userId)
-            addProperty("p_ban", ban)
+    override suspend fun removeMember(groupId: String, userId: String, ban: Boolean): Resource<Unit> =
+        withContext(Dispatchers.IO) {
+            val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+            val body = JsonObject().apply { addProperty("p_group_id", groupId); addProperty("p_user_id", userId); addProperty("p_ban", ban) }
+            submitAdminOperation(uid, "remove_member", body, accessToken.token())
         }
-        val request = http.authenticatedRequest("$base/rpc/remove_member", token)
-            .post(http.jsonBody(body))
-            .build()
-        when (val result = execute(request)) {
-            is Resource.Success -> Resource.Success(Unit)
-            is Resource.Failure -> Resource.Failure(result.reason)
-            Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
-        }
-    }
 
     override suspend fun unbanMember(groupId: String, userId: String): Resource<Unit> =
         withContext(Dispatchers.IO) {
-            val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-            val body = JsonObject().apply {
-                addProperty("p_group_id", groupId)
-                addProperty("p_user_id", userId)
-            }
-            val request = http.authenticatedRequest("$base/rpc/unban_member", token)
-                .post(http.jsonBody(body))
-                .build()
-            when (val result = execute(request)) {
-                is Resource.Success -> Resource.Success(Unit)
-                is Resource.Failure -> Resource.Failure(result.reason)
-                Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
-            }
+            val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+            val body = JsonObject().apply { addProperty("p_group_id", groupId); addProperty("p_user_id", userId) }
+            submitAdminOperation(uid, "unban_member", body, accessToken.token())
         }
 
     // ── Posts ──────────────────────────────────────────────────────────────
@@ -899,19 +921,9 @@ class GroupRepositoryImpl(
     // ── Invites ────────────────────────────────────────────────────────────
     override suspend fun inviteUser(groupId: String, userId: String): Resource<Unit> =
         withContext(Dispatchers.IO) {
-            val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-            val body = JsonObject().apply {
-                addProperty("p_group_id", groupId)
-                addProperty("p_invitee_id", userId)
-            }
-            val request = http.authenticatedRequest("$base/rpc/invite_to_group", token)
-                .post(http.jsonBody(body))
-                .build()
-            when (val result = execute(request)) {
-                is Resource.Success -> Resource.Success(Unit)
-                is Resource.Failure -> Resource.Failure(result.reason)
-                Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
-            }
+            val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+            val body = JsonObject().apply { addProperty("p_group_id", groupId); addProperty("p_invitee_id", userId) }
+            submitAdminOperation(uid, "invite_to_group", body, accessToken.token())
         }
 
     override suspend fun getMyInvites(): Resource<List<GroupInvite>> = withContext(Dispatchers.IO) {
@@ -946,22 +958,9 @@ class GroupRepositoryImpl(
 
     override suspend fun respondToInvite(inviteId: String, accept: Boolean): Resource<Unit> =
         withContext(Dispatchers.IO) {
-            val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-            val body = JsonObject().apply {
-                addProperty("p_invite_id", inviteId)
-                addProperty("p_accept", accept)
-            }
-            val request = http.authenticatedRequest("$base/rpc/respond_to_invite", token)
-                .post(http.jsonBody(body))
-                .build()
-            when (val result = execute(request)) {
-                is Resource.Success -> {
-                    refreshMyGroups()
-                    Resource.Success(Unit)
-                }
-                is Resource.Failure -> Resource.Failure(result.reason)
-                Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
-            }
+            val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+            val body = JsonObject().apply { addProperty("p_invite_id", inviteId); addProperty("p_accept", accept) }
+            submitAdminOperation(uid, "respond_to_invite", body, accessToken.token())
         }
 
     // ── Helpers ────────────────────────────────────────────────────────────
@@ -1086,5 +1085,14 @@ data class PendingGroupDelete(
     val userId: String,
     val kind: String,
     val targetId: String,
+    val createdAt: Long
+)
+
+
+data class PendingGroupAdminOperation(
+    val id: String,
+    val userId: String,
+    val rpc: String,
+    val payload: String,
     val createdAt: Long
 )
