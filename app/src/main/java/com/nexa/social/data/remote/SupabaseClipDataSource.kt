@@ -95,6 +95,31 @@ class SupabaseClipDataSource(
             ClipComment(row.string("id") ?: return@mapNotNull null, clipId, authorId, author.string("display_name") ?: username, author.string("avatar_url"), row.string("content").orEmpty(), parseMillis(row.string("created_at")), authorId == uid)
         }
     }
+    suspend fun addComment(clipId: String, content: String): ClipComment? {
+        val uid = currentUid() ?: return null
+        val token = accessToken() ?: return null
+        val clean = content.trim()
+        if (clean.isEmpty() || clean.length > 2000) return null
+        val body = JsonObject().apply { addProperty("clip_id", clipId); addProperty("author_id", uid); addProperty("content", clean) }
+        val request = http.authenticatedRequest("$restUrl/clip_comments", token)
+            .header("Prefer", "return=representation").post(http.jsonBody(body)).build()
+        val response = http.execute(request).getOrNull() ?: return null
+        if (!response.successful) return null
+        notifyChanged()
+        val created = runCatching { JsonParser.parseString(response.body).asJsonArray.firstOrNull()?.asJsonObject }.getOrNull() ?: return null
+        val profile = fetchRows("profiles?select=id,display_name,username,avatar_url&id=eq." + encode(uid) + "&limit=1", token)?.firstOrNull()
+        val username = profile?.string("username") ?: "user"
+        return ClipComment(created.string("id") ?: return null, clipId, uid, profile?.string("display_name") ?: username, profile?.string("avatar_url"), clean, parseMillis(created.string("created_at")), true)
+    }
+
+    suspend fun deleteComment(commentId: String): Boolean {
+        val token = accessToken() ?: return false
+        val uid = currentUid() ?: return false
+        val request = http.authenticatedRequest("$restUrl/clip_comments?id=eq." + encode(commentId) + "&author_id=eq." + encode(uid), token).delete().build()
+        val response = http.execute(request).getOrNull() ?: return false
+        if (response.successful) notifyChanged()
+        return response.successful
+    }
     suspend fun toggleLike(clipId: String): Boolean = toggleRelation("clip_likes", clipId)
     suspend fun toggleSave(clipId: String): Boolean = toggleRelation("clip_saves", clipId)
 
