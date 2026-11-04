@@ -119,7 +119,7 @@ class ProfileViewModel(
             flowOf(0)
         } else {
             userRepository.observeFollowingOf(resolved.id).map { list ->
-                maxOf(resolved.followingCount, list.size)
+                list.size
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
@@ -132,8 +132,7 @@ class ProfileViewModel(
         },
         followersDelta
     ) { resolved, followersList, delta ->
-        val base = maxOf(resolved?.followersCount ?: 0, followersList.size)
-        (base + delta).coerceAtLeast(0)
+        (followersList.size + delta).coerceAtLeast(0)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     init {
