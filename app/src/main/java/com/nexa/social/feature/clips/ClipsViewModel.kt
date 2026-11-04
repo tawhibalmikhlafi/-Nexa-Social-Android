@@ -30,6 +30,10 @@ class ClipsViewModel(
     val clips: StateFlow<List<Clip>> = clipRepository.observeClips()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val currentUserId: StateFlow<String?> = preferenceStorage.session
+        .map { session -> when (session) { is SessionState.RemoteAccount -> session.userId; is SessionState.LocalAccount -> session.userId; else -> null } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     val isRemote: StateFlow<Boolean> = preferenceStorage.session
         .map { it is SessionState.RemoteAccount }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -77,7 +81,11 @@ class ClipsViewModel(
 
     fun toggleSave(clipId: String) = viewModelScope.launch { clipRepository.toggleSave(clipId) }
 
-    fun deleteClip(clipId: String) = viewModelScope.launch { clipRepository.deleteClip(clipId) }
+    fun deleteClip(clipId: String, onResult: (Boolean) -> Unit = {}) = viewModelScope.launch { onResult(clipRepository.deleteClip(clipId)) }
+
+    fun updateCaption(clipId: String, caption: String, onResult: (Boolean) -> Unit = {}) = viewModelScope.launch {
+        onResult(clipRepository.updateCaption(clipId, caption))
+    }
 
     fun addClip(videoUri: String, caption: String, onResult: (FailureReason?) -> Unit) {
         viewModelScope.launch {
