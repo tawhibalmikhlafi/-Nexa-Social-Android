@@ -83,6 +83,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -588,6 +589,17 @@ private fun MessageBubble(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
                                 color = if (mine) contentColor else MaterialTheme.colorScheme.primary
+                            )
+                        } else if (message.attachmentMime?.startsWith("video/") == true) {
+                            AndroidView(
+                                modifier = Modifier.fillMaxSize(),
+                                factory = { context ->
+                                    VideoView(context).apply {
+                                        setMediaController(MediaController(context).also { it.setAnchorView(this) })
+                                        setVideoURI(Uri.parse(attachmentUrl))
+                                        setOnPreparedListener { player -> player.isLooping = false; start() }
+                                    }
+                                }
                             )
                         } else {
                             AsyncImage(
