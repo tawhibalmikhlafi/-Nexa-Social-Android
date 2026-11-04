@@ -362,6 +362,7 @@ fun PulseScreen(
                     Text("التعليقات", style = MaterialTheme.typography.titleSmall)
                     when {
                         commentsState.entryId != entry.id || commentsState.loading -> Text("جارٍ تحميل التعليقات…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        commentsState.comments.isEmpty() && commentsState.message != null -> Text(commentsState.message!!, color = MaterialTheme.colorScheme.error)
                         commentsState.comments.isEmpty() -> Text("كن أول من يعلّق", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         else -> commentsState.comments.takeLast(8).forEach { comment ->
                             Column(modifier = Modifier.fillMaxWidth().padding(top = NexaSpacing.xs)) {
