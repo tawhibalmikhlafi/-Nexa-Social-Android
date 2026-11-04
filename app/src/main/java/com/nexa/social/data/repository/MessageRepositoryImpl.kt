@@ -8,6 +8,7 @@ import com.nexa.social.core.common.Resource
 import com.nexa.social.core.storage.PreferenceStorage
 import com.nexa.social.data.local.MessageLocalDataSource
 import com.nexa.social.data.local.PendingMessage
+import com.nexa.social.data.local.PendingMessageAction
 import com.nexa.social.data.media.MediaBucket
 import com.nexa.social.data.media.MediaStorage
 import com.nexa.social.data.media.StoredMedia
@@ -50,7 +51,9 @@ class MessageRepositoryImpl(
 
     private val pendingMessages = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
     private val outboxLock = kotlinx.coroutines.sync.Mutex()
+    private val actionOutboxLock = kotlinx.coroutines.sync.Mutex()
     private val outbox = MutableStateFlow(local.readOutbox())
+    private val actionOutbox = MutableStateFlow(local.readActionOutbox())
     private var lastRemoteUid: String? = null
     init {
         val restored = outbox.value
@@ -275,7 +278,10 @@ class MessageRepositoryImpl(
         val remoteStore = remote
         if (isRemote(session) && remoteStore != null) {
             val updated = runCatching { remoteStore.editMessage(messageId, text) }.getOrDefault(false)
-            if (!updated) return Resource.Failure(FailureReason.NETWORK)
+            if (!updated) {
+                enqueueAction(session.userId, messageId, "edit", text.trim())
+                return Resource.Success(Unit)
+            }
             pendingMessages.update { pending ->
                 pending.mapValues { (_, list) ->
                     list.map { if (it.id == messageId) it.copy(text = text.trim()) else it }
@@ -313,7 +319,10 @@ class MessageRepositoryImpl(
             val uid = (session as SessionState.RemoteAccount).userId
             val deleted = runCatching { remoteStore.deleteForMe(messageId, uid) }
                 .getOrDefault(false)
-            if (!deleted) return Resource.Failure(FailureReason.NETWORK)
+            if (!deleted) {
+                enqueueAction(uid, messageId, "delete_me", null)
+                return Resource.Success(Unit)
+            }
             pendingMessages.update { pending ->
                 pending.mapValues { (_, list) -> list.filterNot { it.id == messageId } }
             }
@@ -332,7 +341,10 @@ class MessageRepositoryImpl(
         if (isRemote(session) && remoteStore != null) {
             val deleted = runCatching { remoteStore.deleteForEveryone(messageId) }
                 .getOrDefault(false)
-            if (!deleted) return Resource.Failure(FailureReason.NETWORK)
+            if (!deleted) {
+                enqueueAction((session as SessionState.RemoteAccount).userId, messageId, "delete_all", null)
+                return Resource.Success(Unit)
+            }
             pendingMessages.update { pending ->
                 pending.mapValues { (_, list) -> list.filterNot { it.id == messageId } }
             }
@@ -350,7 +362,8 @@ class MessageRepositoryImpl(
             val uid = (session as SessionState.RemoteAccount).userId
             val reacted = runCatching { remoteStore.reactToMessage(messageId, uid, emoji) }
                 .getOrDefault(false)
-            return if (reacted) Resource.Success(Unit) else Resource.Failure(FailureReason.NETWORK)
+            if (!reacted) enqueueAction(uid, messageId, "react", emoji)
+            return Resource.Success(Unit)
         }
         return Resource.Failure(FailureReason.NOT_CONFIGURED)
     }
@@ -362,7 +375,8 @@ class MessageRepositoryImpl(
             val uid = (session as SessionState.RemoteAccount).userId
             val removed = runCatching { remoteStore.unreactToMessage(messageId, uid) }
                 .getOrDefault(false)
-            return if (removed) Resource.Success(Unit) else Resource.Failure(FailureReason.NETWORK)
+            if (!removed) enqueueAction(uid, messageId, "unreact", null)
+            return Resource.Success(Unit)
         }
         return Resource.Failure(FailureReason.NOT_CONFIGURED)
     }
@@ -593,6 +607,7 @@ class MessageRepositoryImpl(
     private suspend fun drainOutbox() {
         val store = remote ?: return
         val session = prefs.session.first() as? SessionState.RemoteAccount ?: return
+        drainMessageActions(store, session.userId)
         for (item in outbox.value.filter { it.senderId == session.userId }) {
             val sent = runCatching {
                 store.sendMessage(
@@ -616,6 +631,35 @@ class MessageRepositoryImpl(
         }
     }
 
+    private suspend fun enqueueAction(userId: String, messageId: String, action: String, value: String?) {
+        actionOutboxLock.lock()
+        try {
+            val next = actionOutbox.value.filterNot { it.userId == userId && it.messageId == messageId && it.action in setOf("edit", "react", "unreact", "delete_me", "delete_all") } +
+                PendingMessageAction(Ids.newId(), userId, "", messageId, action, value, System.currentTimeMillis())
+            actionOutbox.value = next
+            withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
+        } finally { actionOutboxLock.unlock() }
+    }
+
+    private suspend fun drainMessageActions(store: SupabaseMessageDataSource, userId: String) {
+        for (item in actionOutbox.value.filter { it.userId == userId }) {
+            val success = when (item.action) {
+                "edit" -> store.editMessage(item.messageId, item.value.orEmpty())
+                "delete_me" -> store.deleteForMe(item.messageId, userId)
+                "delete_all" -> store.deleteForEveryone(item.messageId)
+                "react" -> store.reactToMessage(item.messageId, userId, item.value.orEmpty())
+                "unreact" -> store.unreactToMessage(item.messageId, userId)
+                else -> true
+            }
+            if (!success) break
+            actionOutboxLock.lock()
+            try {
+                val next = actionOutbox.value.filterNot { it.id == item.id }
+                actionOutbox.value = next
+                withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
+            } finally { actionOutboxLock.unlock() }
+        }
+    }
     private suspend fun copyLocalAttachment(localUri: String): StoredMedia? {
         val context = appContext ?: return null
         val uri = Uri.parse(localUri)
