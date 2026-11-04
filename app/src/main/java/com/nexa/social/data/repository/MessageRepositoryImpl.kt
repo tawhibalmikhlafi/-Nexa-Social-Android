@@ -655,10 +655,23 @@ class MessageRepositoryImpl(
         return Resource.Success(Unit)
     }
 
+    override suspend fun rejectMessageRequest(conversationId: String): Resource<Unit> {
+        val session = prefs.session.first()
+        acceptedRequestIds.update { it + conversationId }
+        if (session is SessionState.RemoteAccount && remote != null) {
+            if (remote.setMessageRequestStatus(conversationId, session.userId, "rejected")) {
+                removeQueuedConversationAction(session.userId, conversationId, "reject_request")
+            } else {
+                enqueueConversationAction(session.userId, conversationId, "reject_request")
+            }
+        }
+        return Resource.Success(Unit)
+    }
+
     override suspend fun refresh() {
         val session = prefs.session.first()
         if (session is SessionState.RemoteAccount && remote != null) {
-            remote.getAcceptedMessageRequestIds(session.userId)?.let { acceptedRequestIds.value = it }
+            remote.getResolvedMessageRequestIds(session.userId)?.let { acceptedRequestIds.value = it }
         }
         drainOutbox()
         remote?.refresh()
@@ -776,10 +789,11 @@ class MessageRepositoryImpl(
                 "unstar" -> store.setStarred(item.messageId, userId, false)
                 "read" -> store.markRead(item.conversationId, userId)
                 "accept_request" -> store.setMessageRequestStatus(item.conversationId, userId, "accepted")
+                "reject_request" -> store.setMessageRequestStatus(item.conversationId, userId, "rejected")
                 else -> true
             }
             if (!success) break
-            if (item.action == "accept_request") acceptedRequestIds.update { it + item.conversationId }
+            if (item.action == "accept_request" || item.action == "reject_request") acceptedRequestIds.update { it + item.conversationId }
             actionOutboxLock.lock()
             try {
                 val next = actionOutbox.value.filterNot { it.id == item.id }
