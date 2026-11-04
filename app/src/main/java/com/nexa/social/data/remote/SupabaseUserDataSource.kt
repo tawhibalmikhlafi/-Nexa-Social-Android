@@ -282,10 +282,10 @@ class SupabaseUserDataSource(
     }
 
     override fun observeFollowingIds(uid: String): Flow<Set<String>> =
-        observeIds(uid, selectColumn = "following_id", filterColumn = "follower_id")
+        observeIds(uid, selectColumn = "following_id")
 
     override fun observeFollowerIds(uid: String): Flow<Set<String>> =
-        observeIds(uid, selectColumn = "follower_id", filterColumn = "following_id")
+        observeIds(uid, selectColumn = "follower_id")
 
     override fun observeFollowing(uid: String): Flow<List<User>> = flow {
         var emitted = false
@@ -425,8 +425,7 @@ class SupabaseUserDataSource(
 
     private fun observeIds(
         uid: String,
-        selectColumn: String,
-        filterColumn: String
+        selectColumn: String
     ): Flow<Set<String>> = flow {
         val listType = if (selectColumn == "follower_id") "followers" else "following"
         var emitted = false
