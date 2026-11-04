@@ -11,6 +11,7 @@ class MessageLocalDataSource(private val store: JsonFileStore) {
     private companion object {
         const val FILE = "conversations.json"
         const val OUTBOX_FILE = "message_outbox.json"
+        const val ACTION_OUTBOX_FILE = "message_action_outbox.json"
     }
 
     fun seedIfEmpty() {
@@ -29,6 +30,10 @@ class MessageLocalDataSource(private val store: JsonFileStore) {
     fun readOutbox(): List<PendingMessage> = store.readList(OUTBOX_FILE)
 
     fun writeOutbox(messages: List<PendingMessage>) = store.writeList(OUTBOX_FILE, messages)
+
+    fun readActionOutbox(): List<PendingMessageAction> = store.readList(ACTION_OUTBOX_FILE)
+
+    fun writeActionOutbox(actions: List<PendingMessageAction>) = store.writeList(ACTION_OUTBOX_FILE, actions)
 }
 
 
@@ -38,5 +43,17 @@ data class PendingMessage(
     val conversationId: String,
     val senderId: String,
     val text: String,
+    val createdAt: Long
+)
+
+
+/** Durable, idempotent message mutation waiting for Supabase. */
+data class PendingMessageAction(
+    val id: String,
+    val userId: String,
+    val conversationId: String,
+    val messageId: String,
+    val action: String,
+    val value: String?,
     val createdAt: Long
 )
