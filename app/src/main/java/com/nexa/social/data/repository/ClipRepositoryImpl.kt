@@ -84,11 +84,18 @@ class ClipRepositoryImpl(
             val backup = copyPendingVideo(videoUri, clipId) ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
             val coverBackup = coverUri?.let { copyPendingAsset(it, "${clipId}-cover", "jpg") }
             val path = "${session.userId}/$clipId.mp4"
-            when (val upload = storage.uploadVideo(backup, path)) {
+            enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis(), author, coverBackup))
+            when (val upload = storage.uploadVideoResumable(backup, path, null, 0L) { url, offset ->
+                updateUploadCheckpoint(clipId, url, offset)
+            }) {
                 is Resource.Success -> {
+                    updateUploadCheckpoint(clipId, null, 0L, uploadedVideoUrl = upload.data)
                     val coverUrl = if (coverBackup != null) {
                         when (val coverUpload = storage.uploadImage(coverBackup, MediaBucket.CLIP_COVERS, "${session.userId}/$clipId.jpg")) {
-                            is Resource.Success -> coverUpload.data
+                            is Resource.Success -> {
+                                updateUploadCheckpoint(clipId, null, 0L, uploadedCoverUrl = coverUpload.data)
+                                coverUpload.data
+                            }
                             is Resource.Failure -> {
                                 if (coverUpload.reason == FailureReason.NETWORK) {
                                     val pending = Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true, coverUrl = coverBackup)
@@ -97,6 +104,7 @@ class ClipRepositoryImpl(
                                     persist()
                                     return Resource.Success(pending)
                                 }
+                                removeUpload(clipId)
                                 File(Uri.parse(backup).path.orEmpty()).delete()
                                 File(Uri.parse(coverBackup).path.orEmpty()).delete()
                                 return coverUpload
@@ -106,6 +114,7 @@ class ClipRepositoryImpl(
                     } else null
                     val created = remoteStore.createClip(author, path, upload.data, caption, clipId, coverUrl)
                     if (created != null) {
+                        removeUpload(clipId)
                         File(Uri.parse(backup).path.orEmpty()).delete()
                         coverBackup?.let { File(Uri.parse(it).path.orEmpty()).delete() }
                         achievements.record(CounterKind.CLIPS_CREATED)
@@ -121,6 +130,7 @@ class ClipRepositoryImpl(
                 }
                 is Resource.Failure -> {
                     if (upload.reason != FailureReason.NETWORK) {
+                        removeUpload(clipId)
                         File(Uri.parse(backup).path.orEmpty()).delete()
                         coverBackup?.let { File(Uri.parse(it).path.orEmpty()).delete() }
                         return upload
@@ -176,6 +186,17 @@ class ClipRepositoryImpl(
         uploadOutboxLock.lock()
         try {
             val next = pendingUploads.value.filterNot { it.id == id }
+            pendingUploads.value = next
+            withContext(Dispatchers.IO) { local.writeUploadOutbox(next) }
+        } finally { uploadOutboxLock.unlock() }
+    }
+
+    private suspend fun updateUploadCheckpoint(id: String, uploadUrl: String?, offset: Long, uploadedVideoUrl: String? = null, uploadedCoverUrl: String? = null) {
+        uploadOutboxLock.lock()
+        try {
+            val next = pendingUploads.value.map { item ->
+                if (item.id == id) item.copy(uploadUrl = uploadUrl, uploadOffset = offset, uploadedVideoUrl = uploadedVideoUrl ?: item.uploadedVideoUrl, uploadedCoverUrl = uploadedCoverUrl ?: item.uploadedCoverUrl) else item
+            }
             pendingUploads.value = next
             withContext(Dispatchers.IO) { local.writeUploadOutbox(next) }
         } finally { uploadOutboxLock.unlock() }
