@@ -245,6 +245,7 @@ fun ConversationScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .imePadding()
     ) {
         val peer = conversation?.participant
