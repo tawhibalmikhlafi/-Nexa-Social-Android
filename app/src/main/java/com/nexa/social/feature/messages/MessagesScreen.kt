@@ -49,6 +49,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -115,7 +116,7 @@ fun MessagesScreen(
     var showNotesEditor by rememberSaveable { mutableStateOf(false) }
     var noteDraft by rememberSaveable { mutableStateOf("") }
     var noteVisibility by rememberSaveable { mutableStateOf("FOLLOWING") }
-    var noteDuration by rememberSaveable { mutableIntStateOf(24) }
+    var noteDuration by rememberSaveable { mutableStateOf(24) }
     var selectedNote by remember { mutableStateOf<UserNote?>(null) }
     var noteReply by rememberSaveable { mutableStateOf("") }
     var showBanner by rememberSaveable { mutableStateOf(true) }
