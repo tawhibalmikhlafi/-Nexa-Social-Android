@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -90,6 +91,8 @@ fun NotificationsScreen(
     val typeEnabled by viewModel.typeEnabled.collectAsStateWithLifecycle()
     val isRemote by viewModel.isRemote.collectAsStateWithLifecycle()
     var showTypes by remember { mutableStateOf(false) }
+    var unreadOnly by remember { mutableStateOf(false) }
+    val visibleNotifications = if (unreadOnly) notifications.filter { !it.isRead } else notifications
 
     Column(modifier = Modifier.fillMaxSize()) {
         NexaTopBar(
@@ -112,6 +115,21 @@ fun NotificationsScreen(
                 }
             }
         )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+        ) {
+            FilterChip(
+                selected = !unreadOnly,
+                onClick = { unreadOnly = false },
+                label = { Text(stringResource(R.string.notifications_filter_all)) }
+            )
+            FilterChip(
+                selected = unreadOnly,
+                onClick = { unreadOnly = true },
+                label = { Text(stringResource(R.string.notifications_filter_unread) + " (" + notifications.count { !it.isRead } + ")") }
+            )
+        }
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -127,7 +145,7 @@ fun NotificationsScreen(
                     )
                 }
             }
-            if (notifications.isEmpty()) {
+            if (visibleNotifications.isEmpty()) {
                 item {
                     NexaEmptyState(
                         icon = Icons.Filled.Notifications,
@@ -136,7 +154,7 @@ fun NotificationsScreen(
                     )
                 }
             } else {
-                items(notifications, key = { it.id }) { notification ->
+                items(visibleNotifications, key = { it.id }) { notification ->
                     NotificationRow(
                         notification = notification,
                         onClick = {
