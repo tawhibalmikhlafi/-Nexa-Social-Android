@@ -146,7 +146,7 @@ class ClipRepositoryImpl(
         val clip = Clip(
             id = Ids.newId(), author = author, videoUri = videoUri,
             caption = caption.trim(), createdAt = System.currentTimeMillis(),
-            likeCount = 0, commentCount = 0, likedByMe = false, savedByMe = false, isLocal = true
+            likeCount = 0, commentCount = 0, likedByMe = false, savedByMe = false, isLocal = true, coverUrl = coverUri
         )
         _clips.value = listOf(clip) + _clips.value
         persist()
