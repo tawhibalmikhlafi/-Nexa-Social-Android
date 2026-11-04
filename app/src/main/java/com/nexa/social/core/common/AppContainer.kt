@@ -58,6 +58,7 @@ import com.nexa.social.core.supabase.SupabaseTokenStore
 import com.nexa.social.data.media.MediaStorage
 import com.nexa.social.data.remote.SupabaseAuthDataSource
 import com.nexa.social.data.remote.SupabaseCommentDataSource
+import com.nexa.social.data.remote.SupabaseClipDataSource
 import com.nexa.social.data.remote.SupabaseMessageDataSource
 import com.nexa.social.data.remote.SupabaseNotificationDataSource
 import com.nexa.social.data.remote.SupabasePostDataSource
@@ -279,6 +280,16 @@ class DefaultAppContainer(context: Context) : AppContainer {
     } else {
         null
     }
+    private val remoteClips = if (supabaseHttp != null && supabaseTokens != null) {
+        SupabaseClipDataSource(
+            config = supabaseConfig,
+            http = supabaseHttp,
+            accessToken = { supabaseTokens.currentSession()?.accessToken },
+            currentUid = { supabaseTokens.currentSession()?.userId }
+        )
+    } else {
+        null
+    }
     private val remoteComments = if (supabaseHttp != null && supabaseTokens != null) {
         SupabaseCommentDataSource(
             config = supabaseConfig,
@@ -368,7 +379,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val spaceRepository: SpaceRepository =
         SpaceRepositoryImpl(spaceLocal, userRepository, preferenceStorage.session)
     override val clipRepository: ClipRepository =
-        ClipRepositoryImpl(clipLocal, userRepository, preferenceStorage.session, achievementRepository)
+        ClipRepositoryImpl(clipLocal, userRepository, preferenceStorage.session, achievementRepository, mediaStorage, remoteClips)
     override val messageRepository: MessageRepository =
         MessageRepositoryImpl(
             preferenceStorage,
