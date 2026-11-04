@@ -99,7 +99,6 @@ class ProfileViewModel(
 
     private val followingOverride = MutableStateFlow<Boolean?>(null)
     private val followRequestPending = MutableStateFlow(false)
-    private val followersDelta = MutableStateFlow(0)
 
     private val _followBusy = MutableStateFlow(false)
     val followBusy: StateFlow<Boolean> = _followBusy.asStateFlow()
@@ -114,24 +113,24 @@ class ProfileViewModel(
         .map { it == true }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    val followingCount: StateFlow<Int> = user.flatMapLatest { resolved ->
-        if (resolved == null) {
-            flowOf(0)
-        } else {
-            userRepository.observeFollowingOf(resolved.id).map { list ->
-                list.size
-            }
-        }
+    private val followingList: StateFlow<List<User>> = user.flatMapLatest { resolved ->
+        if (resolved == null) flowOf(emptyList())
+        else userRepository.observeFollowingOf(resolved.id)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val followersList: StateFlow<List<User>> = user.flatMapLatest { resolved ->
+        if (resolved == null) flowOf(emptyList())
+        else userRepository.observeFollowersOf(resolved.id)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val followingCount: StateFlow<Int> = combine(user, currentUserId, followingList) { resolved, viewerId, list ->
+        if (resolved != null && resolved.id == viewerId) maxOf(resolved.followingCount, list.size)
+        else list.size
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
-    val followersCount: StateFlow<Int> = combine(
-        user.flatMapLatest { resolved ->
-            if (resolved == null) flowOf(emptyList())
-            else userRepository.observeFollowersOf(resolved.id)
-        },
-        followersDelta
-    ) { followersList, delta ->
-        (followersList.size + delta).coerceAtLeast(0)
+    val followersCount: StateFlow<Int> = combine(user, currentUserId, followersList) { resolved, viewerId, list ->
+        if (resolved != null && resolved.id == viewerId) maxOf(resolved.followersCount, list.size)
+        else list.size
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     init {
@@ -142,7 +141,6 @@ class ProfileViewModel(
                     userRepository.hasPendingFollowRequest(resolved.id)?.let { pending ->
                         followRequestPending.value = pending
                     }
-                    followersDelta.value = 0
                 }
             }
         }
@@ -173,11 +171,9 @@ class ProfileViewModel(
                         } else {
                             followRequestPending.value = pending
                             followingOverride.value = !pending
-                            if (!pending) followersDelta.value += 1
                         }
                     } else {
                         followRequestPending.value = false
-                        if (followingOverride.value == true) followersDelta.value -= 1
                         followingOverride.value = false
                     }
                 } else {
