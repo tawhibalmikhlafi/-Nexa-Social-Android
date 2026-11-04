@@ -2,6 +2,9 @@ name: Android Debug Build
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/nexa-pulse-mvp
 
 permissions:
   contents: read
