@@ -40,7 +40,7 @@ alter table public.pulse_reactions enable row level security;
 
 revoke all on public.pulse_prompts, public.pulse_entries, public.pulse_reactions from anon, authenticated;
 grant select on public.pulse_prompts to authenticated;
-grant select, insert, update, delete on public.pulse_entries to authenticated;
+grant select, insert, delete on public.pulse_entries to authenticated;
 grant select, insert, delete on public.pulse_reactions to authenticated;
 
 drop policy if exists "pulse published prompts readable" on public.pulse_prompts;
@@ -57,17 +57,6 @@ for select to authenticated using (
 drop policy if exists "pulse users create own active entry" on public.pulse_entries;
 create policy "pulse users create own active entry" on public.pulse_entries
 for insert to authenticated with check (
-  user_id = (select auth.uid())
-  and exists (select 1 from public.pulse_prompts p
-    where p.id = prompt_id and p.is_published = true
-      and now() >= p.starts_at and now() < p.ends_at)
-);
-
-drop policy if exists "pulse users update own entry" on public.pulse_entries;
-create policy "pulse users update own entry" on public.pulse_entries
-for update to authenticated
-using (user_id = (select auth.uid()))
-with check (
   user_id = (select auth.uid())
   and exists (select 1 from public.pulse_prompts p
     where p.id = prompt_id and p.is_published = true
