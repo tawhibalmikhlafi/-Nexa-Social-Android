@@ -141,7 +141,7 @@ class ProfileViewModel(
 
     val followersCount: StateFlow<Int> = combine(user, currentUserId, followersList) { resolved, viewerId, list ->
         if (resolved != null && resolved.id == viewerId) maxOf(resolved.followersCount, list.size)
-        else list.size
+        else resolved?.followingCount ?: 0
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     init {
