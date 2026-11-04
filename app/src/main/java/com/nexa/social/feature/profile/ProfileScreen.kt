@@ -517,8 +517,8 @@ fun ProfileScreen(
                     .padding(horizontal = NexaSpacing.lg),
                 horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
             ) {
-                StatBox(icon = Icons.Filled.Person, value = followersCount.toString(), label = stringResource(R.string.profile_followers), iconColor = neonBlue, modifier = Modifier.weight(1f), onClick = { onOpenFollowers(current.id) })
-                StatBox(icon = Icons.Filled.Person, value = followingCount.toString(), label = stringResource(R.string.profile_following), iconColor = neonPurple, modifier = Modifier.weight(1f), onClick = { onOpenFollowing(current.id) })
+                StatBox(icon = Icons.Filled.Person, value = if (!isOwnProfile && followersCount == 0 && current.followersCount > 0) "—" else followersCount.toString(), label = stringResource(R.string.profile_followers), iconColor = neonBlue, modifier = Modifier.weight(1f), onClick = { onOpenFollowers(current.id) })
+                StatBox(icon = Icons.Filled.Person, value = if (!isOwnProfile && followingCount == 0 && current.followingCount > 0) "—" else followingCount.toString(), label = stringResource(R.string.profile_following), iconColor = neonPurple, modifier = Modifier.weight(1f), onClick = { onOpenFollowing(current.id) })
                 StatBox(icon = Icons.Filled.GridView, value = posts.size.toString(), label = stringResource(R.string.profile_posts), iconColor = neonPurple, modifier = Modifier.weight(1f))
                 StatBox(icon = Icons.Filled.Favorite, value = totalLikes.toString(), label = stringResource(R.string.profile_stats_likes), iconColor = Color(0xFFF72585), modifier = Modifier.weight(1f))
             }
