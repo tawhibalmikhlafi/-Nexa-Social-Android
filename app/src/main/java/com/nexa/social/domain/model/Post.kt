@@ -20,7 +20,8 @@ data class Post(
     val communityId: String?,
     val isLocal: Boolean,
     val isHiddenLocally: Boolean = false,
-    val pinned: Boolean = false
+    val pinned: Boolean = false,
+    val commentPermission: CommentPermission = CommentPermission.EVERYONE
 ) {
     /** All attached images, tolerating the legacy single-image field. */
     fun allImages(): List<String> = imageUris.ifEmpty { listOfNotNull(imageUri) }
@@ -58,3 +59,7 @@ data class PostReaction(
     val emoji: String = "❤️",
     val createdAt: Long = System.currentTimeMillis()
 )
+
+enum class CommentPermission {
+    FOLLOWING, FOLLOWERS, EVERYONE, NO_ONE
+}
