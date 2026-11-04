@@ -169,6 +169,20 @@ class SupabasePostDataSource(
         setPostPreference("post_hides", postId, hidden)
     }
 
+    suspend fun updateCommentPermission(postId: String, permission: com.nexa.social.domain.model.CommentPermission): Boolean {
+        val token = accessToken() ?: return false
+        val body = JsonObject().apply { addProperty("comment_permission", permission.name) }
+        val response = execute(
+            http.authenticatedRequest("$restUrl/posts?id=eq.${encode(postId)}&author_id=eq.${encode(currentUid().orEmpty())}", token)
+                .header("Prefer", "return=minimal")
+                .patch(http.jsonBody(body))
+                .build()
+        ) ?: return false
+        if (!response.successful) return false
+        notifyChanged()
+        return true
+    }
+
     suspend fun togglePin(postId: String) {
         val uid = currentUid() ?: throw IllegalStateException("NOT_AUTHENTICATED")
         val exists = fetchRows(
@@ -711,7 +725,8 @@ class SupabasePostDataSource(
             myReaction = reactions[id],
             savedByMe = forcedSaved || id in saved,
             communityId = row.string("community_id"),
-            isLocal = false
+            isLocal = false,
+            commentPermission = enumOrDefault(row.string("comment_permission"), com.nexa.social.domain.model.CommentPermission.EVERYONE)
         )
     }
 
