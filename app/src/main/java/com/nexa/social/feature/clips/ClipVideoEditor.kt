@@ -6,8 +6,6 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Effect
-import androidx.media3.common.audio.DefaultGainProvider
-import androidx.media3.common.audio.GainProcessor
 import androidx.media3.effect.RgbFilter
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
@@ -66,9 +64,7 @@ object ClipVideoEditor {
             .setUri(Uri.parse(inputUri))
             .setClippingConfiguration(clipping)
             .build()
-        val audio = if (volume < 0.999f) {
-            listOf(GainProcessor(DefaultGainProvider.Builder(volume.coerceIn(0f, 1f)).build()))
-        } else emptyList()
+        val audio = emptyList<androidx.media3.common.audio.AudioProcessor>()
         val videoEffects: List<Effect> = when (filter) {
             "grayscale" -> listOf(RgbFilter.createGrayscaleFilter())
             "invert" -> listOf(RgbFilter.createInvertedFilter())
