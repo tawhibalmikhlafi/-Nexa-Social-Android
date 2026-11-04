@@ -54,8 +54,9 @@ data class PulseComment(
 
 data class PulseBadge(
     val id: String,
-    val earnedAt: String
+    val earnedAt: String? = null
 ) {
+    val isEarned: Boolean get() = !earnedAt.isNullOrBlank()
     val title: String get() = when (id) {
         "pulse_first_entry" -> "أول نبضة"
         "pulse_five_entries" -> "صانع التحديات"
@@ -65,12 +66,22 @@ data class PulseBadge(
         else -> "إنجاز نبض"
     }
     val description: String get() = when (id) {
-        "pulse_first_entry" -> "نشرت أول مشاركة في نبض Nexa"
-        "pulse_five_entries" -> "شاركت في خمسة تحديات"
-        "pulse_first_comment" -> "كتبت أول تعليق في نبض"
-        "pulse_ten_comments" -> "كتبت عشرة تعليقات في نبض"
-        "pulse_ten_likes" -> "حصلت مشاركاتك على عشرة إعجابات"
+        "pulse_first_entry" -> "انشر أول مشاركة في نبض Nexa"
+        "pulse_five_entries" -> "شارك في خمسة تحديات"
+        "pulse_first_comment" -> "اكتب أول تعليق في نبض"
+        "pulse_ten_comments" -> "اكتب عشرة تعليقات في نبض"
+        "pulse_ten_likes" -> "احصل على عشرة إعجابات لمشاركاتك"
         else -> "إنجاز في نبض Nexa"
+    }
+
+    companion object {
+        val catalog = listOf(
+            PulseBadge("pulse_first_entry"),
+            PulseBadge("pulse_five_entries"),
+            PulseBadge("pulse_first_comment"),
+            PulseBadge("pulse_ten_comments"),
+            PulseBadge("pulse_ten_likes")
+        )
     }
 }
 
