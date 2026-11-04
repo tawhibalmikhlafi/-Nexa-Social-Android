@@ -188,7 +188,11 @@ fun PulseScreen(
                         Text("🏅 شاراتك في نبض", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         daily.badges.forEach { badge ->
                             Column(modifier = Modifier.padding(top = NexaSpacing.sm)) {
-                                Text("🏆 ${badge.title}", style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "${if (badge.isEarned) "🏆" else "🔒"} ${badge.title} · ${if (badge.isEarned) "مكتسبة" else "غير مكتسبة بعد"}",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = if (badge.isEarned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
                                 Text(badge.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
