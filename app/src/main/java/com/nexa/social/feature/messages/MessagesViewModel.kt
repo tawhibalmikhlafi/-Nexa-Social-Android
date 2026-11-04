@@ -75,7 +75,7 @@ class MessagesViewModel(
         }
     }
 
-    fun saveNote(value: String, onComplete: (Boolean) -> Unit = {}) {
+    fun saveNote(value: String, visibility: String = "FOLLOWING", durationHours: Int = 24, onComplete: (Boolean) -> Unit = {}) {
         val source = notesDataSource
         if (source == null) {
             _noteError.value = "ميزة الملاحظات تحتاج اتصالاً بحسابك"
@@ -91,7 +91,7 @@ class MessagesViewModel(
         viewModelScope.launch {
             _noteSaving.value = true
             _noteError.value = null
-            val ok = if (trimmed.isBlank()) source.clearNote() else source.saveNote(trimmed)
+            val ok = if (trimmed.isBlank()) source.clearNote() else source.saveNote(trimmed, visibility, durationHours)
             if (ok) {
                 refreshNotes()
                 _myNote.value = trimmed
