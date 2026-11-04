@@ -121,7 +121,8 @@ fun ClipDetailScreen(
     }
 
     Box(
-        Modifier.fillMaxSize().background(Color.Black).pointerInput(clips, clipIndex) {
+        Modifier.fillMaxSize().background(Color.Black).pointerInput(clips, clipIndex, showComments) {
+            if (!showComments) {
             var drag = 0f
             detectVerticalDragGestures(
                 onVerticalDrag = { change, amount -> change.consume(); drag += amount },
@@ -135,6 +136,7 @@ fun ClipDetailScreen(
                 },
                 onDragCancel = { drag = 0f }
             )
+            }
         },
         contentAlignment = Alignment.Center
     ) {
