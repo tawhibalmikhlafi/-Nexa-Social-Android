@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,11 +24,16 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +45,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -56,8 +64,13 @@ fun ClipDetailScreen(
     val autoplay by viewModel.videoAutoplay.collectAsStateWithLifecycle()
     val dataSaver by viewModel.dataSaver.collectAsStateWithLifecycle()
     val reduceMotion by viewModel.reduceMotion.collectAsStateWithLifecycle()
+    val comments by viewModel.comments.collectAsStateWithLifecycle()
+    val commentsLoading by viewModel.commentsLoading.collectAsStateWithLifecycle()
     val clip = clips.firstOrNull { it.id == clipId }
     var playing by remember(clipId) { mutableStateOf(autoplay && !dataSaver && !reduceMotion) }
+    var showComments by remember(clipId) { mutableStateOf(false) }
+    var commentText by remember(clipId) { mutableStateOf("") }
+    LaunchedEffect(clipId) { viewModel.recordView(clipId) }
 
     Box(
         modifier = Modifier.fillMaxSize().background(Color.Black),
@@ -147,8 +160,55 @@ fun ClipDetailScreen(
                             modifier = Modifier.size(27.dp)
                         )
                     }
+                    Text(clip.viewCount.toString(), color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
+                    IconButton(onClick = { showComments = true; viewModel.loadComments(clip.id) }) {
+                        Icon(Icons.Filled.Comment, contentDescription = "Comments", tint = Color.White)
+                    }
+                    Text(clip.commentCount.toString(), color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
                 }
             }
+        }
+
+        if (showComments) {
+            AlertDialog(
+                onDismissRequest = { showComments = false },
+                title = { Text("تعليقات الريلز") },
+                text = {
+                    Column {
+                        if (commentsLoading) Text("جارٍ تحميل التعليقات…")
+                        LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
+                            items(comments, key = { it.id }) { comment ->
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(comment.authorName, style = MaterialTheme.typography.labelMedium)
+                                        Text(comment.content, style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    if (comment.isAuthor) {
+                                        TextButton(onClick = { viewModel.deleteComment(comment.id) }) { Text("حذف") }
+                                    }
+                                }
+                            }
+                        }
+                        OutlinedTextField(
+                            value = commentText,
+                            onValueChange = { commentText = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("اكتب تعليقًا") },
+                            maxLines = 3
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = commentText.isNotBlank(),
+                        onClick = {
+                            viewModel.addComment(clip.id, commentText)
+                            commentText = ""
+                        }
+                    ) { Text("إرسال") }
+                },
+                dismissButton = { TextButton(onClick = { showComments = false }) { Text("إغلاق") } }
+            )
         }
 
         if (videoUri != null) {
