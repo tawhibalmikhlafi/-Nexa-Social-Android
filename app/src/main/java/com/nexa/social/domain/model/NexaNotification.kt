@@ -19,6 +19,7 @@ enum class NotificationType {
     COMMENT,
     REPLY,
     FOLLOW,
+    FOLLOW_REQUEST_ACCEPTED,
     COMMUNITY,
     SPACE,
     WELCOME,
@@ -38,6 +39,7 @@ enum class NotificationType {
             "post_comment" -> COMMENT
             "comment_reply" -> REPLY
             "follow" -> FOLLOW
+            "follow_request_accepted" -> FOLLOW_REQUEST_ACCEPTED
             "mention" -> MENTION
             "message" -> MESSAGE
             "story_reply" -> STORY_REPLY
