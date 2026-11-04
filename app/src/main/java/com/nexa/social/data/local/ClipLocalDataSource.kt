@@ -3,6 +3,7 @@ package com.nexa.social.data.local
 import com.nexa.social.core.storage.JsonFileStore
 import com.nexa.social.data.sample.SampleData
 import com.nexa.social.domain.model.Clip
+import com.nexa.social.domain.model.UserSummary
 
 /** Persists local clips. Seeded once from clearly-labelled sample clips (no bundled video files). */
 class ClipLocalDataSource(private val store: JsonFileStore) {
@@ -61,4 +62,4 @@ data class PendingClipComment(
 )
 
 
-data class PendingClipUpload(val id: String, val userId: String, val localVideoPath: String, val caption: String, val createdAt: Long, val localCoverPath: String? = null)
+data class PendingClipUpload(val id: String, val userId: String, val localVideoPath: String, val caption: String, val createdAt: Long, val author: UserSummary, val localCoverPath: String? = null)
