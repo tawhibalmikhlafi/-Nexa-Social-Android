@@ -284,6 +284,7 @@ interface ClipRepository {
     suspend fun addComment(clipId: String, content: String): Resource<ClipComment> = Resource.Failure(FailureReason.NOT_CONFIGURED)
     suspend fun deleteComment(commentId: String): Boolean = false
     suspend fun recordView(clipId: String) {}
+    suspend fun updateCaption(clipId: String, caption: String): Boolean = false
     suspend fun deleteClip(clipId: String): Boolean
     suspend fun refresh() {}
 }
