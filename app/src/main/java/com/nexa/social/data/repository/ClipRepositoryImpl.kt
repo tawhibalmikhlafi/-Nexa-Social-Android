@@ -324,6 +324,7 @@ class ClipRepositoryImpl(
             val next = pendingComments.value.filterNot { it.id == item.id } + item
             pendingComments.value = next
             withContext(Dispatchers.IO) { local.writeCommentOutbox(next) }
+            appContext?.let { NexaOfflineSyncWorker.schedule(it) }
         } finally { commentOutboxLock.unlock() }
     }
 
@@ -404,6 +405,7 @@ class ClipRepositoryImpl(
                 )
             pendingActions.value = next
             withContext(Dispatchers.IO) { local.writeOutbox(next) }
+            appContext?.let { NexaOfflineSyncWorker.schedule(it) }
         } finally {
             outboxLock.unlock()
         }
