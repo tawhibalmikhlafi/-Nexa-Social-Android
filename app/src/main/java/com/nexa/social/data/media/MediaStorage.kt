@@ -41,6 +41,14 @@ interface MediaStorage {
     suspend fun uploadVideo(localUri: String, path: String): Resource<String> =
         Resource.Failure(com.nexa.social.core.common.FailureReason.NOT_CONFIGURED)
 
+    suspend fun uploadVideoResumable(
+        localUri: String,
+        path: String,
+        uploadUrl: String?,
+        offset: Long,
+        onCheckpoint: suspend (String?, Long) -> Unit
+    ): Resource<String> = uploadVideo(localUri, path)
+
     suspend fun deleteByPublicUrl(url: String?)
 
     suspend fun deleteObject(bucket: MediaBucket, path: String)
