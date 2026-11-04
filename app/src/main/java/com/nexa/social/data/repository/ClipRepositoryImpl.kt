@@ -58,7 +58,7 @@ class ClipRepositoryImpl(
             remote.observeClips()
                 .onStart { emit(_clips.value) }
                 .onEach { fresh ->
-                    _clips.value = applyPending(fresh, pendingActions.value, session.userId)
+                    _clips.value = applyPending(fresh, pendingActions.value, pendingUploads.value, session.userId)
                     persist()
                 }
         } else {
@@ -91,7 +91,7 @@ class ClipRepositoryImpl(
                             is Resource.Success -> coverUpload.data
                             is Resource.Failure -> {
                                 if (coverUpload.reason == FailureReason.NETWORK) {
-                                    enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis(), coverBackup))
+                                    enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis(), author, coverBackup))
                                     return Resource.Success(Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true))
                                 }
                                 File(Uri.parse(backup).path.orEmpty()).delete()
@@ -118,7 +118,7 @@ class ClipRepositoryImpl(
                         File(Uri.parse(backup).path.orEmpty()).delete()
                         return upload
                     }
-                    enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis()))
+                    enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis(), author, coverBackup))
                     val pending = Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true)
                     _clips.value = listOf(pending) + _clips.value.filterNot { it.id == clipId }
                     persist()
@@ -190,7 +190,7 @@ class ClipRepositoryImpl(
                 }
             }
             if (item.localCoverPath != null && coverUrl == null) break
-            val clip = store.createClip(UserSummary.from(user), path, uploaded.data, item.caption, item.id, coverUrl)
+            val clip = store.createClip(item.author, path, uploaded.data, item.caption, item.id, coverUrl)
                 ?: break
             File(Uri.parse(item.localVideoPath).path.orEmpty()).delete()
             item.localCoverPath?.let { File(Uri.parse(it).path.orEmpty()).delete() }
@@ -382,8 +382,24 @@ class ClipRepositoryImpl(
         persist()
     }
 
-    private fun applyPending(clips: List<Clip>, actions: List<PendingClipAction>, userId: String): List<Clip> =
-        clips.map { original ->
+    private fun applyPending(
+        clips: List<Clip>,
+        actions: List<PendingClipAction>,
+        uploads: List<PendingClipUpload>,
+        userId: String
+    ): List<Clip> {
+        val merged = clips.toMutableList()
+        uploads.filter { it.userId == userId }.forEach { item ->
+            if (merged.none { it.id == item.id }) {
+                merged += Clip(
+                    id = item.id, author = item.author, videoUri = item.localVideoPath,
+                    caption = item.caption, createdAt = item.createdAt,
+                    likeCount = 0, commentCount = 0, likedByMe = false, savedByMe = false,
+                    isLocal = true, coverUrl = item.localCoverPath
+                )
+            }
+        }
+        return merged.map { original ->
             actions.filter { it.userId == userId && it.clipId == original.id }
                 .fold(original) { clip, action ->
                     when (action.relation) {
@@ -400,6 +416,7 @@ class ClipRepositoryImpl(
                     }
                 }
         }
+    }
 
     private suspend fun drainOutbox() {
         val session = sessionFlow.first() as? SessionState.RemoteAccount ?: return
