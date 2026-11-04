@@ -9,6 +9,7 @@ class ClipLocalDataSource(private val store: JsonFileStore) {
 
     private companion object {
         const val FILE = "clips.json"
+        const val OUTBOX_FILE = "clip_outbox.json"
     }
 
     fun seedIfEmpty() {
@@ -23,4 +24,19 @@ class ClipLocalDataSource(private val store: JsonFileStore) {
     }
 
     fun writeClips(clips: List<Clip>) = store.writeList(FILE, clips)
+
+    fun readOutbox(): List<PendingClipAction> = store.readList(OUTBOX_FILE)
+
+    fun writeOutbox(actions: List<PendingClipAction>) = store.writeList(OUTBOX_FILE, actions)
 }
+
+
+/** Desired-state action; retries are idempotent and safe after process death. */
+data class PendingClipAction(
+    val id: String,
+    val clipId: String,
+    val userId: String,
+    val relation: String,
+    val enabled: Boolean,
+    val createdAt: Long
+)
