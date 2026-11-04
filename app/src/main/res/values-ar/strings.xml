@@ -1136,4 +1136,11 @@
     <string name="notifications_filter_unread">غير المقروءة</string>
     <string name="action_refresh">تحديث</string>
     <string name="action_remove_follower">إزالة المتابع</string>
+    <string name="post_comment_settings">من يمكنه التعليق؟</string>
+    <string name="post_comment_permission_following">المتابعين الذين تتابعهم</string>
+    <string name="post_comment_permission_followers">المتابعين</string>
+    <string name="post_comment_permission_everyone">الجميع</string>
+    <string name="post_comment_permission_no_one">لا أحد</string>
+    <string name="post_comments_locked">أوقف صاحب المنشور التعليقات.</string>
+    <string name="post_comment_permission_saved">تم تحديث من يمكنه التعليق</string>
 </resources>
