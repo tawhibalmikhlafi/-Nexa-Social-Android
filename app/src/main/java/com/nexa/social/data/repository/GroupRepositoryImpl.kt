@@ -86,7 +86,13 @@ class GroupRepositoryImpl(
                     val group = row.getAsJsonObject("group") ?: return@mapNotNull null
                     parseGroup(group, row.string("role"), row.string("status"))
                 }
-                Resource.Success(Unit)
+                val hasPending = membershipOutbox.value.any { it.userId == uid } ||
+                    adminOutbox.value.any { it.userId == uid } ||
+                    reactionOutbox.value.any { it.userId == uid } ||
+                    postOutbox.value.any { it.userId == uid } ||
+                    commentOutbox.value.any { it.userId == uid } ||
+                    deleteOutbox.value.any { it.userId == uid }
+                if (hasPending) Resource.Failure(FailureReason.NETWORK) else Resource.Success(Unit)
             }
             is Resource.Failure -> Resource.Failure(result.reason)
             Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
