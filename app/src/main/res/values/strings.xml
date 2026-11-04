@@ -1133,6 +1133,8 @@
     <string name="action_refresh">Refresh</string>
     <string name="action_remove_follower">Remove follower</string>
     <string name="post_comment_settings">Who can comment?</string>
+    <string name="post_lock_comments">Turn off commenting</string>
+    <string name="post_unlock_comments">Turn on commenting</string>
     <string name="post_comment_permission_following">People this author follows</string>
     <string name="post_comment_permission_followers">Followers</string>
     <string name="post_comment_permission_everyone">Everyone</string>
