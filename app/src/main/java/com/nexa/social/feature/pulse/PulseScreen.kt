@@ -113,18 +113,19 @@ fun PulseScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         else -> {
-                            Text(prompt.title, style = MaterialTheme.typography.titleMedium)
-                            if (prompt.description.isNotBlank()) {
-                                Text(daily.prompt.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            val activePrompt = requireNotNull(prompt)
+                            Text(activePrompt.title, style = MaterialTheme.typography.titleMedium)
+                            if (activePrompt.description.isNotBlank()) {
+                                Text(activePrompt.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            val remaining = runCatching { Duration.between(Instant.now(), Instant.parse(prompt.endsAt)).toMinutes().coerceAtLeast(0) }.getOrNull()
+                            val remaining = runCatching { Duration.between(Instant.now(), Instant.parse(activePrompt.endsAt)).toMinutes().coerceAtLeast(0) }.getOrNull()
                             Text(
                                 remaining?.let { "ينتهي التحدي بعد ${it / 60} ساعة و${it % 60} دقيقة" } ?: "تحدٍ يومي من مجتمع Nexa",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Button(onClick = {
-                                val shareText = "⚡ نبض Nexa اليوم: ${daily.prompt.title}\n${daily.prompt.description}\nشاركنا إجابتك داخل تطبيق Nexa Social."
+                                val shareText = "⚡ نبض Nexa اليوم: ${activePrompt.title}\n${activePrompt.description}\nشاركنا إجابتك داخل تطبيق Nexa Social."
                                 context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, shareText) }, "مشاركة تحدّي نبض"))
                             }, modifier = Modifier.fillMaxWidth()) { Text("شارك التحدّي خارج Nexa") }
                             Text(
