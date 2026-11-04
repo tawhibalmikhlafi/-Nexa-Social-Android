@@ -99,6 +99,7 @@ fun FollowListScreen(
             emptyBody = stringResource(mode.emptyBodyRes),
             onOpenProfile = onOpenProfile,
             onToggleFollowing = viewModel::toggleFollowing,
+            onRemoveFollower = if (mode == FollowListMode.FOLLOWERS && targetUserId == currentUserId) viewModel::removeFollower else null,
             presenceViewModel = presenceViewModel,
             error = error,
             onConsumeError = viewModel::consumeError
@@ -122,6 +123,7 @@ fun FollowListContent(
     emptyBody: String,
     onOpenProfile: (String) -> Unit,
     onToggleFollowing: (String, Boolean) -> Unit,
+    onRemoveFollower: ((String) -> Unit)? = null,
     presenceViewModel: PresenceViewModel,
     modifier: Modifier = Modifier,
     emptyIcon: ImageVector = Icons.Filled.People,
@@ -162,6 +164,7 @@ fun FollowListContent(
                     isFollowRequestPending = user.id in requestPending,
                     onOpen = { onOpenProfile(user.id) },
                     onToggle = { follow -> onToggleFollowing(user.id, follow) },
+                    onRemoveFollower = onRemoveFollower?.let { remove -> { remove(user.id) } },
                     presenceViewModel = presenceViewModel
                 )
             }
@@ -178,6 +181,7 @@ private fun FollowRow(
     isFollowRequestPending: Boolean,
     onOpen: () -> Unit,
     onToggle: (Boolean) -> Unit,
+    onRemoveFollower: (() -> Unit)?,
     presenceViewModel: PresenceViewModel
 ) {
     Row(
@@ -207,6 +211,11 @@ private fun FollowRow(
         if (!isSelf) {
             if (busy) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            } else if (onRemoveFollower != null) {
+                NexaTextButton(
+                    text = stringResource(R.string.action_remove_follower),
+                    onClick = onRemoveFollower
+                )
             } else {
                 NexaTextButton(
                     text = stringResource(
