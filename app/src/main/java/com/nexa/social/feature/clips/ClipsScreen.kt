@@ -24,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,9 +70,23 @@ fun ClipsScreen(
 
     var pendingVideo by remember { mutableStateOf<String?>(null) }
     var caption by remember { mutableStateOf("") }
+    var durationMs by remember { mutableStateOf(0f) }
+    var trimStartMs by remember { mutableStateOf(0f) }
+    var trimEndMs by remember { mutableStateOf(0f) }
+    var coverPositionMs by remember { mutableStateOf(0f) }
+    var audioVolume by remember { mutableStateOf(1f) }
+    var videoFilter by remember { mutableStateOf("original") }
+    var exporting by remember { mutableStateOf(false) }
 
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         pendingVideo = uri?.toString()
+        val duration = uri?.let { ClipVideoEditor.durationMs(context, it.toString()).toFloat() } ?: 0f
+        durationMs = duration.coerceAtLeast(1f)
+        trimStartMs = 0f
+        trimEndMs = durationMs
+        coverPositionMs = 0f
+        audioVolume = 1f
+        videoFilter = "original"
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -174,6 +189,20 @@ fun ClipsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
+                Text("قص البداية: ${(trimStartMs / 1000f).toInt()} ثانية")
+                Slider(value = trimStartMs.coerceIn(0f, (trimEndMs - 1000f).coerceAtLeast(0f)), onValueChange = { trimStartMs = it }, valueRange = 0f..(durationMs - 1000f).coerceAtLeast(0f))
+                Text("قص النهاية: ${(trimEndMs / 1000f).toInt()} ثانية")
+                Slider(value = trimEndMs.coerceIn((trimStartMs + 1000f).coerceAtMost(durationMs), durationMs), onValueChange = { trimEndMs = it }, valueRange = (trimStartMs + 1000f).coerceAtMost(durationMs)..durationMs)
+                Text("موضع صورة الغلاف: ${(coverPositionMs / 1000f).toInt()} ثانية")
+                Slider(value = coverPositionMs.coerceIn(0f, (trimEndMs - trimStartMs).coerceAtLeast(0f)), onValueChange = { coverPositionMs = it }, valueRange = 0f..(trimEndMs - trimStartMs).coerceAtLeast(0f))
+                Text("مستوى الصوت: ${(audioVolume * 100).toInt()}٪")
+                Slider(value = audioVolume, onValueChange = { audioVolume = it }, valueRange = 0f..1f)
+                Text("المؤثر")
+                Row(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
+                    TextButton(onClick = { videoFilter = "original" }) { Text("أصلي") }
+                    TextButton(onClick = { videoFilter = "grayscale" }) { Text("أبيض وأسود") }
+                    TextButton(onClick = { videoFilter = "invert" }) { Text("معكوس") }
+                }
             }
             Spacer(Modifier.height(NexaSpacing.sm))
             NexaTextField(
@@ -182,23 +211,36 @@ fun ClipsScreen(
                 label = stringResource(R.string.clip_caption_hint)
             )
             Spacer(Modifier.height(NexaSpacing.md))
-            TextButton(onClick = {
+            TextButton(enabled = !exporting, onClick = {
                 val video = pendingVideo
                 if (video != null) {
-                    viewModel.addClip(video, caption) { reason ->
-                        if (reason == null) {
-                            snackbarHost?.let { host -> scope.launch { host.showSnackbar(addedMessage) } }
-                            showAdd = false
-                            pendingVideo = null
-                            caption = ""
+                    exporting = true
+                    scope.launch {
+                        val start = trimStartMs.toLong()
+                        val end = trimEndMs.toLong().coerceAtLeast(start + 1000L)
+                        val edited = ClipVideoEditor.export(context, video, start, end, audioVolume, videoFilter)
+                        if (edited == null) {
+                            exporting = false
+                            snackbarHost?.showSnackbar("تعذر تحرير الفيديو")
                         } else {
-                            val message = context.getString(failureMessageRes(reason))
-                            snackbarHost?.let { host -> scope.launch { host.showSnackbar(message) } }
+                            val cover = ClipVideoEditor.extractCover(context, edited, coverPositionMs.toLong().coerceAtLeast(0L))
+                            viewModel.addClip(edited, caption, cover) { reason ->
+                                exporting = false
+                                if (reason == null) {
+                                    snackbarHost?.let { host -> scope.launch { host.showSnackbar(addedMessage) } }
+                                    showAdd = false
+                                    pendingVideo = null
+                                    caption = ""
+                                } else {
+                                    val message = context.getString(failureMessageRes(reason))
+                                    snackbarHost?.let { host -> scope.launch { host.showSnackbar(message) } }
+                                }
+                            }
                         }
                     }
                 }
             }) {
-                Text(stringResource(R.string.action_save))
+                Text(if (exporting) "جارٍ تحرير الفيديو..." else stringResource(R.string.action_save))
             }
         }
     }
