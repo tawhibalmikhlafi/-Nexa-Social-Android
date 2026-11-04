@@ -620,11 +620,25 @@ class MessageRepositoryImpl(
         }
 
     override suspend fun acceptMessageRequest(conversationId: String): Resource<Unit> {
+        val session = prefs.session.first()
+        if (session is SessionState.RemoteAccount && remote != null) {
+            acceptedRequestIds.update { it + conversationId }
+            if (remote.setMessageRequestStatus(conversationId, session.userId, "accepted")) {
+                removeQueuedConversationAction(session.userId, conversationId, "accept_request")
+            } else {
+                enqueueConversationAction(session.userId, conversationId, "accept_request")
+            }
+            return Resource.Success(Unit)
+        }
         acceptedRequestIds.update { it + conversationId }
         return Resource.Success(Unit)
     }
 
     override suspend fun refresh() {
+        val session = prefs.session.first()
+        if (session is SessionState.RemoteAccount && remote != null) {
+            acceptedRequestIds.value = remote.getAcceptedMessageRequestIds(session.userId)
+        }
         drainOutbox()
         remote?.refresh()
     }
@@ -685,15 +699,24 @@ class MessageRepositoryImpl(
         }
     }
 
-    private suspend fun enqueueConversationAction(userId: String, conversationId: String) {
+    private suspend fun enqueueConversationAction(userId: String, conversationId: String, action: String = "read") {
         actionOutboxLock.lock()
         try {
-            val next = actionOutbox.value.filterNot { it.userId == userId && it.conversationId == conversationId && it.action == "read" } +
-                PendingMessageAction(Ids.newId(), userId, conversationId, "", "read", null, System.currentTimeMillis())
+            val next = actionOutbox.value.filterNot { it.userId == userId && it.conversationId == conversationId && it.action == action } +
+                PendingMessageAction(Ids.newId(), userId, conversationId, "", action, null, System.currentTimeMillis())
             actionOutbox.value = next
             withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
         } finally { actionOutboxLock.unlock() }
     }
+    private suspend fun removeQueuedConversationAction(userId: String, conversationId: String, action: String) {
+        actionOutboxLock.lock()
+        try {
+            val next = actionOutbox.value.filterNot { it.userId == userId && it.conversationId == conversationId && it.action == action }
+            actionOutbox.value = next
+            withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
+        } finally { actionOutboxLock.unlock() }
+    }
+
     private suspend fun enqueueAction(userId: String, messageId: String, action: String, value: String?) {
         actionOutboxLock.lock()
         try {
@@ -723,6 +746,7 @@ class MessageRepositoryImpl(
                 "star" -> store.setStarred(item.messageId, userId, true)
                 "unstar" -> store.setStarred(item.messageId, userId, false)
                 "read" -> store.markRead(item.conversationId, userId)
+                "accept_request" -> store.setMessageRequestStatus(item.conversationId, userId, "accepted")
                 else -> true
             }
             if (!success) break
