@@ -338,7 +338,7 @@ class GroupRepositoryImpl(
             }
         }
         queueMembership(PendingGroupMembership(java.util.UUID.randomUUID().toString(), uid, groupId, "join", message?.trim(), System.currentTimeMillis()))
-        Resource.Success("queued")
+        Resource.Success("سيتم إرسال طلب الانضمام عند عودة الاتصال")
     }
 
     private suspend fun sendJoinRequest(groupId: String, message: String?, token: String): Resource<String> {
