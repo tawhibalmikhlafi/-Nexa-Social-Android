@@ -1,5 +1,8 @@
 package com.nexa.social.feature.pulse
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import coil.compose.AsyncImage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +63,8 @@ fun PulseScreen(
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
     val daily by viewModel.dailyState.collectAsStateWithLifecycle()
     var entryText by remember { mutableStateOf("") }
+    var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { selectedImageUri = it }
 
     Column(modifier = Modifier.fillMaxSize()) {
         NexaTopBar(title = stringResource(R.string.pulse_title), onBack = onBack)
@@ -98,14 +103,28 @@ fun PulseScreen(
                                     maxLines = 4
                                 )
                                 Button(
+                                    onClick = { imagePicker.launch("image/*") },
+                                    enabled = !daily.submitting,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text(if (selectedImageUri == null) "إرفاق صورة (حتى 5MB)" else "تغيير الصورة") }
+                                selectedImageUri?.let { uri ->
+                                    AsyncImage(
+                                        model = uri,
+                                        contentDescription = "الصورة المرفقة",
+                                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                                    )
+                                    Text("تم اختيار صورة للمشاركة", color = MaterialTheme.colorScheme.primary)
+                                }
+                                Button(
                                     onClick = {
-                                        viewModel.publish(entryText)
+                                        viewModel.publish(entryText, selectedImageUri?.toString())
                                         entryText = ""
+                                        selectedImageUri = null
                                     },
-                                    enabled = entryText.isNotBlank() && !daily.submitting,
+                                    enabled = (entryText.isNotBlank() || selectedImageUri != null) && !daily.submitting,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text(if (daily.submitting) "جارٍ النشر…" else "انشر مشاركتك")
+                                    Text(if (daily.submitting) "جارٍ الرفع والنشر…" else "انشر مشاركتك")
                                 }
                             } else {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -142,7 +161,14 @@ fun PulseScreen(
                         }
                         Text(entry.reactions.toString(), style = MaterialTheme.typography.labelMedium)
                     }
-                    Text(entry.body, style = MaterialTheme.typography.bodyMedium)
+                    if (entry.body.isNotBlank()) Text(entry.body, style = MaterialTheme.typography.bodyMedium)
+                    entry.imageUrl?.let { image ->
+                        AsyncImage(
+                            model = image,
+                            contentDescription = "صورة مشاركة نبض Nexa",
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                        )
+                    }
                 }
             }
             item {
