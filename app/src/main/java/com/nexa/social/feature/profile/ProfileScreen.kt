@@ -1,6 +1,11 @@
 package com.nexa.social.feature.profile
 
 import androidx.compose.foundation.background
+import android.app.DownloadManager
+import android.content.Context
+import android.net.Uri
+import android.os.Environment
+import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +37,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.automirrored.filled.Launch
@@ -145,7 +151,8 @@ fun ProfileScreen(
     val remoteMode = rememberRemoteMode()
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    var showFullAvatar by remember { mutableStateOf(false) }
+    var fullImageUri by remember { mutableStateOf<String?>(null) }
+    var fullImageTitle by remember { mutableStateOf("") }
 
     val snackbarHost = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
@@ -233,59 +240,68 @@ fun ProfileScreen(
 
     val totalLikes = remember(posts) { posts.sumOf { it.likeCount } }
 
-    // Full Screen Avatar Dialog Viewer
-    if (showFullAvatar) {
-        Dialog(onDismissRequest = { showFullAvatar = false }) {
+    // Full-screen viewer shared by profile avatar and cover image.
+    fullImageUri?.let { imageUri ->
+        Dialog(onDismissRequest = { fullImageUri = null }) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.92f))
-                    .clickable { showFullAvatar = false },
+                    .background(Color.Black.copy(alpha = 0.96f)),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(24.dp)
+                AsyncImage(
+                    model = imageUri,
+                    contentDescription = fullImageTitle,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 56.dp, bottom = 86.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (!current.avatarUri.isNullOrBlank()) {
-                        AsyncImage(
-                            model = current.avatarUri,
-                            contentDescription = current.displayName,
-                            modifier = Modifier
-                                .size(280.dp)
-                                .clip(CircleShape)
-                                .border(4.dp, avatarGradient, CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(280.dp)
-                                .clip(CircleShape)
-                                .background(avatarGradient),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = initialsOf(current.displayName),
-                                color = Color.White,
-                                style = MaterialTheme.typography.displayLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                    IconButton(onClick = { fullImageUri = null }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "إغلاق", tint = Color.White)
                     }
-                    Spacer(Modifier.height(20.dp))
                     Text(
-                        text = current.displayName,
-                        style = MaterialTheme.typography.titleLarge,
+                        text = fullImageTitle,
                         color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
                     )
-                    Text(
-                        text = "@${current.username}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
+                }
+                androidx.compose.material3.Button(
+                    onClick = {
+                        runCatching {
+                            val extension = if (imageUri.substringBefore('?').substringAfterLast('.', "").lowercase() in setOf("png", "webp", "gif")) {
+                                imageUri.substringBefore('?').substringAfterLast('.').lowercase()
+                            } else "jpg"
+                            val fileName = "Nexa-${if (fullImageTitle.contains("غلاف")) "cover" else "profile"}-${System.currentTimeMillis()}.$extension"
+                            val request = DownloadManager.Request(Uri.parse(imageUri))
+                                .setTitle(fullImageTitle)
+                                .setDescription("جارٍ حفظ الصورة في مجلد الصور")
+                                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                .setAllowedOverMetered(true)
+                                .setAllowedOverRoaming(false)
+                                .setDestinationInExternalPublicDir(Environment.DIRECTORY_PICTURES, "Nexa/$fileName")
+                            (context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+                        }.onSuccess {
+                            Toast.makeText(context, "بدأ حفظ الصورة في Pictures/Nexa", Toast.LENGTH_SHORT).show()
+                        }.onFailure {
+                            Toast.makeText(context, "تعذر حفظ الصورة؛ قد تكون الصورة غير متاحة للتنزيل", Toast.LENGTH_LONG).show()
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 20.dp)
+                ) {
+                    Icon(Icons.Filled.Download, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("حفظ الصورة")
                 }
             }
         }
@@ -347,6 +363,17 @@ fun ProfileScreen(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
                     )
+                    if (!current.coverUri.isNullOrBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+                                .clickable {
+                                    fullImageUri = current.coverUri
+                                    fullImageTitle = "صورة الغلاف"
+                                }
+                        )
+                    }
 
                     if (showOwnerTools) {
                         Row(
@@ -380,7 +407,7 @@ fun ProfileScreen(
                                 .fillMaxSize()
                                 .background(MaterialTheme.colorScheme.surface, CircleShape)
                                 .border(width = 3.dp, brush = avatarGradient, shape = CircleShape)
-                                .clickable { showFullAvatar = true },
+                                .clickable { current.avatarUri?.takeIf { it.isNotBlank() }?.let { fullImageUri = it; fullImageTitle = "الصورة الشخصية" } },
                             contentAlignment = Alignment.Center
                         ) {
                             OnlineAvatar(
