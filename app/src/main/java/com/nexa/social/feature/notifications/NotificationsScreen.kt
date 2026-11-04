@@ -55,6 +55,7 @@ import com.nexa.social.R
 import com.nexa.social.core.common.TimeUtils
 import com.nexa.social.domain.model.NexaNotification
 import com.nexa.social.domain.model.NotificationType
+import com.nexa.social.feature.profile.ProfileViewModel
 import com.nexa.social.ui.components.LocalDataBanner
 import com.nexa.social.ui.components.NexaAvatar
 import com.nexa.social.ui.components.NexaBottomSheet
@@ -88,10 +89,15 @@ fun NotificationsScreen(
     viewModel: NotificationsViewModel = viewModel(factory = NotificationsViewModel.Factory)
 ) {
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
+    val profileViewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.factory(null), key = "notification-follow-requests")
+    val followRequests by profileViewModel.incomingFollowRequests.collectAsStateWithLifecycle()
+    val followRequestsLoading by profileViewModel.followRequestsLoading.collectAsStateWithLifecycle()
+    val followRequestActionId by profileViewModel.followRequestActionId.collectAsStateWithLifecycle()
     val typeEnabled by viewModel.typeEnabled.collectAsStateWithLifecycle()
     val isRemote by viewModel.isRemote.collectAsStateWithLifecycle()
     var showTypes by remember { mutableStateOf(false) }
     var unreadOnly by remember { mutableStateOf(false) }
+    var showFollowRequests by remember { mutableStateOf(false) }
     val visibleNotifications = if (unreadOnly) notifications.filter { !it.isRead } else notifications
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -129,6 +135,11 @@ fun NotificationsScreen(
                 onClick = { unreadOnly = true },
                 label = { Text(stringResource(R.string.notifications_filter_unread) + " (" + notifications.count { !it.isRead } + ")") }
             )
+            FilterChip(
+                selected = showFollowRequests,
+                onClick = { showFollowRequests = true },
+                label = { Text("طلبات المتابعة (" + followRequests.size + ")") }
+            )
         }
         LazyColumn(
             modifier = Modifier
@@ -137,6 +148,42 @@ fun NotificationsScreen(
             contentPadding = PaddingValues(top = NexaSpacing.md, bottom = NexaSpacing.xxxl),
             verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)
         ) {
+            if (showFollowRequests) {
+                item { Text("طلبات المتابعة", style = MaterialTheme.typography.titleMedium) }
+                if (followRequestsLoading && followRequests.isEmpty()) {
+                    item { Text("جارٍ تحميل الطلبات…", style = MaterialTheme.typography.bodySmall) }
+                }
+                if (followRequests.isEmpty() && !followRequestsLoading) {
+                    item {
+                        NexaEmptyState(
+                            icon = Icons.Filled.PersonAdd,
+                            title = "لا توجد طلبات متابعة",
+                            body = "ستظهر هنا طلبات الأشخاص الذين يرغبون في متابعة حسابك الخاص."
+                        )
+                    }
+                }
+                items(followRequests, key = { "follow_request_" + it.id }) { request ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = NexaSpacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+                    ) {
+                        NexaAvatar(displayName = request.requester.displayName, avatarUri = request.requester.avatarUri, size = 44.dp)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(request.requester.displayName + " طلب متابعتك", style = MaterialTheme.typography.bodyMedium)
+                            Text("@" + request.requester.username, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        NexaTextButton(
+                            text = "إزالة",
+                            onClick = { profileViewModel.respondToFollowRequest(request.id, false) }
+                        )
+                        NexaTextButton(
+                            text = if (followRequestActionId == request.id) "…" else "تأكيد",
+                            onClick = { profileViewModel.respondToFollowRequest(request.id, true) }
+                        )
+                    }
+                }
+            } else {
             item {
                 if (!isRemote) {
                     LocalDataBanner(
@@ -164,6 +211,7 @@ fun NotificationsScreen(
                         onDelete = { viewModel.delete(notification.id) }
                     )
                 }
+            }
             }
         }
     }
