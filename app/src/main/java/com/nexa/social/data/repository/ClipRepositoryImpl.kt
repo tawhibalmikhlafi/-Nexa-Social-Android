@@ -9,6 +9,7 @@ import com.nexa.social.data.media.MediaBucket
 import com.nexa.social.data.media.MediaStorage
 import com.nexa.social.data.remote.SupabaseClipDataSource
 import com.nexa.social.domain.model.Clip
+import com.nexa.social.domain.model.ClipComment
 import com.nexa.social.domain.model.CounterKind
 import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.model.UserSummary
@@ -133,6 +134,32 @@ class ClipRepositoryImpl(
         persist()
     }
 
+    override suspend fun getComments(clipId: String): Resource<List<ClipComment>> {
+        val session = sessionFlow.first()
+        if (session !is SessionState.RemoteAccount || remote == null) return Resource.Failure(FailureReason.NOT_CONFIGURED)
+        val rows = remote.getComments(clipId) ?: return Resource.Failure(FailureReason.NETWORK)
+        return Resource.Success(rows)
+    }
+
+    override suspend fun addComment(clipId: String, content: String): Resource<ClipComment> {
+        if (content.isBlank()) return Resource.Failure(FailureReason.REQUIRED)
+        val session = sessionFlow.first()
+        if (session !is SessionState.RemoteAccount || remote == null) return Resource.Failure(FailureReason.NOT_CONFIGURED)
+        val comment = remote.addComment(clipId, content) ?: return Resource.Failure(FailureReason.NETWORK)
+        remote.notifyChanged()
+        return Resource.Success(comment)
+    }
+
+    override suspend fun deleteComment(commentId: String): Boolean {
+        val session = sessionFlow.first()
+        if (session !is SessionState.RemoteAccount || remote == null) return false
+        return remote.deleteComment(commentId)
+    }
+
+    override suspend fun recordView(clipId: String) {
+        val session = sessionFlow.first()
+        if (session is SessionState.RemoteAccount) remote?.recordView(clipId)
+    }
     override suspend fun deleteClip(clipId: String): Boolean {
         val session = sessionFlow.first()
         if (session is SessionState.RemoteAccount && remote != null) {
