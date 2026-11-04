@@ -84,7 +84,10 @@ class PulseViewModel(
         viewModelScope.launch {
             _dailyState.value = _dailyState.value.copy(loading = true, message = null)
             val feed = dailyRepository?.load()
-            val badges = dailyRepository?.loadMyBadges().orEmpty()
+            val earnedBadges = dailyRepository?.loadMyBadges().orEmpty().associateBy { it.id }
+            val badges = PulseBadge.catalog.map { definition ->
+                definition.copy(earnedAt = earnedBadges[definition.id]?.earnedAt)
+            }
             _dailyState.value = if (feed == null) {
                 DailyState(loading = false, message = "تعذر الاتصال بنبض Nexa. تحقق من تسجيل الدخول والإنترنت.", badges = badges)
             } else {
