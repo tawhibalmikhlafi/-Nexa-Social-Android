@@ -639,7 +639,7 @@ class MessageRepositoryImpl(
     override suspend fun refresh() {
         val session = prefs.session.first()
         if (session is SessionState.RemoteAccount && remote != null) {
-            acceptedRequestIds.value = remote.getAcceptedMessageRequestIds(session.userId)
+            remote.getAcceptedMessageRequestIds(session.userId)?.let { acceptedRequestIds.value = it }
         }
         drainOutbox()
         remote?.refresh()
