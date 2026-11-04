@@ -326,7 +326,7 @@ fun ConversationScreen(
                             Icon(if (isRecordingPaused) Icons.Filled.PlayArrow else Icons.Filled.Pause, contentDescription = null)
                         }
                         IconButton(onClick = { finishVoiceRecording(false) }) { Icon(Icons.Filled.Close, contentDescription = null) }
-                        FilledIconButton(onClick = { finishVoiceRecording(true) }) { Icon(Icons.Filled.Send, contentDescription = null) }
+                        FilledIconButton(onClick = { finishVoiceRecording(true) }) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null) }
                     }
                 }
                 if (editing != null || attachmentUri != null) {
