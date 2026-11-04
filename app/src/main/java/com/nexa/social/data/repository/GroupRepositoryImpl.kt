@@ -1,11 +1,14 @@
 package com.nexa.social.data.repository
 
+import android.content.Context
+
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.nexa.social.core.common.FailureReason
 import com.nexa.social.core.common.Resource
 import com.nexa.social.core.storage.JsonFileStore
+import com.nexa.social.core.sync.NexaOfflineSyncWorker
 import com.nexa.social.core.supabase.AccessTokenProvider
 import com.nexa.social.core.supabase.CurrentUidProvider
 import com.nexa.social.core.supabase.SupabaseHttp
@@ -44,6 +47,7 @@ class GroupRepositoryImpl(
     private val currentUid: CurrentUidProvider,
     private val mediaStorage: MediaStorage? = null,
     private val jsonStore: JsonFileStore? = null,
+    private val appContext: Context? = null,
 ) : GroupRepository {
 
     private val base get() = http.config.restUrl
@@ -370,6 +374,7 @@ class GroupRepositoryImpl(
             }
             adminOutbox.value = next
             withContext(Dispatchers.IO) { jsonStore?.writeList("group_admin_outbox.json", next) }
+            appContext?.let { NexaOfflineSyncWorker.schedule(it) }
         } finally { adminOutboxLock.unlock() }
     }
 
@@ -448,6 +453,7 @@ class GroupRepositoryImpl(
             val next = membershipOutbox.value.filterNot { it.userId == item.userId && it.groupId == item.groupId } + item
             membershipOutbox.value = next
             withContext(Dispatchers.IO) { jsonStore?.writeList("group_membership_outbox.json", next) }
+            appContext?.let { NexaOfflineSyncWorker.schedule(it) }
         } finally { membershipOutboxLock.unlock() }
     }
 
@@ -674,6 +680,7 @@ class GroupRepositoryImpl(
             val next = postOutbox.value.filterNot { it.id == item.id } + item
             postOutbox.value = next
             withContext(Dispatchers.IO) { jsonStore?.writeList("group_post_outbox.json", next) }
+            appContext?.let { NexaOfflineSyncWorker.schedule(it) }
         } finally { postOutboxLock.unlock() }
     }
 
@@ -724,6 +731,7 @@ class GroupRepositoryImpl(
             val next = deleteOutbox.value.filterNot { it.userId == item.userId && it.kind == item.kind && it.targetId == item.targetId } + item
             deleteOutbox.value = next
             withContext(Dispatchers.IO) { jsonStore?.writeList("group_delete_outbox.json", next) }
+            appContext?.let { NexaOfflineSyncWorker.schedule(it) }
         } finally { deleteOutboxLock.unlock() }
     }
 
@@ -781,6 +789,7 @@ class GroupRepositoryImpl(
                 PendingGroupReaction(uid, postId, kind?.wire, System.currentTimeMillis())
             reactionOutbox.value = next
             withContext(Dispatchers.IO) { jsonStore?.writeList("group_reaction_outbox.json", next) }
+            appContext?.let { NexaOfflineSyncWorker.schedule(it) }
         } finally {
             reactionOutboxLock.unlock()
         }
@@ -879,6 +888,7 @@ class GroupRepositoryImpl(
             val next = commentOutbox.value.filterNot { it.id == item.id } + item
             commentOutbox.value = next
             withContext(Dispatchers.IO) { jsonStore?.writeList("group_comment_outbox.json", next) }
+            appContext?.let { NexaOfflineSyncWorker.schedule(it) }
         } finally { commentOutboxLock.unlock() }
     }
 
