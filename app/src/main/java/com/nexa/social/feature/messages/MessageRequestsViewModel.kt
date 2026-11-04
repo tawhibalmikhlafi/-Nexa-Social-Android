@@ -28,7 +28,7 @@ class MessageRequestsViewModel(
 
     fun deleteRequest(conversationId: String) {
         viewModelScope.launch {
-            messageRepository.acceptMessageRequest(conversationId)
+            messageRepository.rejectMessageRequest(conversationId)
         }
     }
 
