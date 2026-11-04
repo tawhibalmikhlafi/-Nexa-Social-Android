@@ -153,6 +153,25 @@ class FollowListViewModel(
         }
     }
 
+    fun removeFollower(userId: String) {
+        if (targetUserId != currentUserId.value || userId in _pending.value) return
+        viewModelScope.launch {
+            _pending.value = _pending.value + userId
+            try {
+                if (userRepository.removeFollower(userId)) {
+                    _overrides.value = _overrides.value - userId
+                    userRepository.refresh()
+                } else {
+                    _error.value = true
+                }
+            } catch (_: Exception) {
+                _error.value = true
+            } finally {
+                _pending.value = _pending.value - userId
+            }
+        }
+    }
+
     fun consumeError() {
         _error.value = false
     }
