@@ -1128,4 +1128,6 @@
     <string name="reactions_load_failed">Could not load reactions.</string>
     <string name="reactions_retry">Retry</string>
     <string name="comment_sending">Sending…</string>
+    <string name="notifications_filter_all">All</string>
+    <string name="notifications_filter_unread">Unread</string>
 </resources>
