@@ -90,7 +90,7 @@ fun PulseScreen(
             verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)
         ) {
             item {
-                NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg).clickable { selectedEntry = entry }) {
+                NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
                     Text("⚡ نبض اليوم", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                     when {
                         daily.loading -> Text("جارٍ تحميل تحدي اليوم…", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -179,7 +179,7 @@ fun PulseScreen(
                 }
             }
             items(if (popularFirst) daily.entries.sortedWith(compareByDescending<DailyPulseEntry> { it.reactions }.thenByDescending { it.createdAt }) else daily.entries, key = { it.id }) { entry ->
-                NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
+                NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg).clickable { selectedEntry = entry }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(entry.displayName, style = MaterialTheme.typography.titleSmall)
