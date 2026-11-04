@@ -248,6 +248,16 @@ class DefaultAppContainer(context: Context) : AppContainer {
                         presenceRepository.pingNow()
                     }
                 },
+                object : Syncable {
+                    override suspend fun onNetworkRestored() {
+                        postRepository.refresh()
+                        storyRepository.refresh()
+                        clipRepository.refresh()
+                        messageRepository.refresh()
+                        notificationRepository.refresh()
+                        groupRepository.refreshMyGroups()
+                    }
+                },
             ),
             scope = applicationScope,
         )
