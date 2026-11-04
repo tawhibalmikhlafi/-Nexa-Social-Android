@@ -350,6 +350,9 @@ interface MessageRepository {
     suspend fun acceptMessageRequest(conversationId: String): Resource<Unit> =
         Resource.Failure(FailureReason.NOT_CONFIGURED)
 
+    suspend fun rejectMessageRequest(conversationId: String): Resource<Unit> =
+        Resource.Failure(FailureReason.NOT_CONFIGURED)
+
     suspend fun refresh() {}
 }
 
