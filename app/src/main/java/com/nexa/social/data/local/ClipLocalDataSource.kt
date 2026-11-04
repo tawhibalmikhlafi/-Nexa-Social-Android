@@ -11,6 +11,7 @@ class ClipLocalDataSource(private val store: JsonFileStore) {
         const val FILE = "clips.json"
         const val OUTBOX_FILE = "clip_outbox.json"
         const val COMMENT_OUTBOX_FILE = "clip_comment_outbox.json"
+        const val UPLOAD_OUTBOX_FILE = "clip_upload_outbox.json"
     }
 
     fun seedIfEmpty() {
@@ -33,6 +34,8 @@ class ClipLocalDataSource(private val store: JsonFileStore) {
     fun readCommentOutbox(): List<PendingClipComment> = store.readList(COMMENT_OUTBOX_FILE)
 
     fun writeCommentOutbox(comments: List<PendingClipComment>) = store.writeList(COMMENT_OUTBOX_FILE, comments)
+    fun readUploadOutbox(): List<PendingClipUpload> = store.readList(UPLOAD_OUTBOX_FILE)
+    fun writeUploadOutbox(items: List<PendingClipUpload>) = store.writeList(UPLOAD_OUTBOX_FILE, items)
 }
 
 
@@ -56,3 +59,6 @@ data class PendingClipComment(
     val content: String,
     val createdAt: Long
 )
+
+
+data class PendingClipUpload(val id: String, val userId: String, val localVideoPath: String, val caption: String, val createdAt: Long)
