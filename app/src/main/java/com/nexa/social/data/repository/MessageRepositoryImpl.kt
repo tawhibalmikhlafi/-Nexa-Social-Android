@@ -416,14 +416,25 @@ class MessageRepositoryImpl(
         text: String
     ): Resource<Unit> {
         if (text.isBlank()) return Resource.Failure(FailureReason.REQUIRED)
-        val session = prefs.session.first() as? SessionState.RemoteAccount
-            ?: return Resource.Failure(FailureReason.REQUIRES_ACCOUNT)
-        val conversation = startConversation(recipientId)
-            ?: return Resource.Failure(FailureReason.GENERIC)
+        val sessionState = prefs.session.first()
         val body = buildString {
             if (storyPreview.isNotBlank()) { append("↩ "); append(storyPreview.trim().take(80)); append('\n') }
             append(text.trim().take(3900))
         }
+        if (sessionState !is SessionState.RemoteAccount) {
+            if (sessionState !is SessionState.LocalAccount) return Resource.Failure(FailureReason.REQUIRES_ACCOUNT)
+            val conversation = _conversations.value.firstOrNull { it.participant.id == recipientId }
+                ?: startConversation(recipientId)
+                ?: return Resource.Failure(FailureReason.GENERIC)
+            return when (sendMessage(conversation.id, body)) {
+                is Resource.Success -> Resource.Success(Unit)
+                is Resource.Failure -> Resource.Failure(FailureReason.NETWORK)
+                Resource.Loading -> Resource.Loading
+            }
+        }
+        val session = sessionState
+        val conversation = startConversation(recipientId)
+            ?: return Resource.Failure(FailureReason.GENERIC)
         val id = Ids.newId()
         val sent = remote?.sendMessage(
             conversationId = conversation.id, senderId = session.userId, text = body,
