@@ -103,6 +103,16 @@ class MessagesViewModel(
         }
     }
 
+    fun interactWithNote(noteUserId: String, kind: String, content: String, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val ok = notesDataSource?.addInteraction(noteUserId, kind, content) == true
+            onComplete(ok)
+        }
+    }
+
+    suspend fun getNoteInteractions(noteUserId: String) =
+        notesDataSource?.loadInteractions(noteUserId).orEmpty()
+
     fun clearNoteError() { _noteError.value = null }
 
     companion object {
