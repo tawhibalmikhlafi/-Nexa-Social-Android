@@ -371,7 +371,9 @@ fun PulseScreen(
                             }
                         }
                     }
-                    commentsState.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    commentsState.message?.takeIf { commentsState.comments.isNotEmpty() }?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error)
+                    }
                     OutlinedTextField(
                         value = commentText,
                         onValueChange = { if (it.length <= 500) commentText = it },
