@@ -169,7 +169,7 @@ class SupabaseMessageDataSource(
         )
     }
 
-    suspend fun startConversation(uid: String, participantId: String): String? {
+    suspend fun startConversation(uid: String, participantId: String, conversationId: String = Ids.newId()): String? {
         val token = accessToken() ?: return null
         val userA = if (uid < participantId) uid else participantId
         val userB = if (uid < participantId) participantId else uid
@@ -177,7 +177,7 @@ class SupabaseMessageDataSource(
         val existing = fetchRows("conversations?select=id&user_a=eq.${encode(userA)}&user_b=eq.${encode(userB)}&limit=1")
         existing?.firstOrNull()?.string("id")?.let { return it }
 
-        val convId = Ids.newId()
+        val convId = conversationId
         val body = JsonObject().apply {
             addProperty("id", convId)
             addProperty("user_a", userA)
