@@ -214,11 +214,13 @@ class SupabaseMessageDataSource(
         return response.getOrNull()?.successful == true
     }
 
-    suspend fun getAcceptedMessageRequestIds(uid: String): Set<String> {
-        val token = accessToken() ?: return emptySet()
-        return fetchRows(
-            "message_request_decisions?select=conversation_id&user_id=eq.${encode(uid)}&status=eq.accepted"
-        )?.mapNotNull { it.string("conversation_id") }?.toSet().orEmpty()
+    suspend fun getAcceptedMessageRequestIds(uid: String): Set<String>? {
+        val token = accessToken() ?: return null
+        val rows = fetchRows(
+            "message_request_decisions?select=conversation_id&user_id=eq.${encode(uid)}&status=eq.accepted",
+            token
+        ) ?: return null
+        return rows.mapNotNull { it.string("conversation_id") }.toSet()
     }
 
     suspend fun markRead(conversationId: String, uid: String): Boolean {
