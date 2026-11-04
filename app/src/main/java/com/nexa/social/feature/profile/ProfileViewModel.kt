@@ -10,6 +10,7 @@ import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.domain.model.Post
 import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.model.User
+import com.nexa.social.domain.model.FollowRequest
 import com.nexa.social.domain.model.accountUserId
 import com.nexa.social.domain.model.NexaNotification
 import com.nexa.social.domain.repository.MessageRepository
@@ -106,6 +107,15 @@ class ProfileViewModel(
     private val _followError = MutableStateFlow(false)
     val followError: StateFlow<Boolean> = _followError.asStateFlow()
 
+    private val _incomingFollowRequests = MutableStateFlow<List<FollowRequest>>(emptyList())
+    val incomingFollowRequests: StateFlow<List<FollowRequest>> = _incomingFollowRequests.asStateFlow()
+    private val _followRequestsLoading = MutableStateFlow(false)
+    val followRequestsLoading: StateFlow<Boolean> = _followRequestsLoading.asStateFlow()
+    private val _followRequestError = MutableStateFlow(false)
+    val followRequestError: StateFlow<Boolean> = _followRequestError.asStateFlow()
+    private val _followRequestActionId = MutableStateFlow<String?>(null)
+    val followRequestActionId: StateFlow<String?> = _followRequestActionId.asStateFlow()
+
     val isFollowRequestPending: StateFlow<Boolean> = followRequestPending
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
@@ -142,6 +152,52 @@ class ProfileViewModel(
                         followRequestPending.value = pending
                     }
                 }
+            }
+        } else {
+            viewModelScope.launch {
+                preferences.session.collect { session ->
+                    if (session is SessionState.RemoteAccount) refreshIncomingFollowRequests()
+                    else _incomingFollowRequests.value = emptyList()
+                }
+            }
+        }
+    }
+
+    fun refreshIncomingFollowRequests() {
+        if (!isSelf || _followRequestsLoading.value) return
+        viewModelScope.launch {
+            _followRequestsLoading.value = true
+            _followRequestError.value = false
+            try {
+                val requests = userRepository.loadIncomingFollowRequests()
+                if (requests == null) _followRequestError.value = true
+                else _incomingFollowRequests.value = requests
+            } catch (_: Exception) {
+                _followRequestError.value = true
+            } finally {
+                _followRequestsLoading.value = false
+            }
+        }
+    }
+
+    fun respondToFollowRequest(requestId: String, approve: Boolean) {
+        if (!isSelf || _followRequestActionId.value != null) return
+        viewModelScope.launch {
+            _followRequestActionId.value = requestId
+            _followRequestError.value = false
+            try {
+                val ok = userRepository.respondToFollowRequest(requestId, approve)
+                if (ok) {
+                    _incomingFollowRequests.update { list -> list.filterNot { it.id == requestId } }
+                    userRepository.refresh()
+                    refreshIncomingFollowRequests()
+                } else {
+                    _followRequestError.value = true
+                }
+            } catch (_: Exception) {
+                _followRequestError.value = true
+            } finally {
+                _followRequestActionId.value = null
             }
         }
     }
