@@ -208,16 +208,23 @@ class ClipRepositoryImpl(
         val store = remote ?: return
         for (item in pendingUploads.value.filter { it.userId == session.userId }.sortedBy { it.createdAt }) {
             val path = "${session.userId}/${item.id}.mp4"
-            val uploaded = storage.uploadVideo(item.localVideoPath, path)
-            if (uploaded !is Resource.Success) break
-            val coverUrl = item.localCoverPath?.let { localCover ->
+            val videoUrl = item.uploadedVideoUrl ?: when (val uploaded = storage.uploadVideoResumable(
+                item.localVideoPath, path, item.uploadUrl, item.uploadOffset
+            ) { url, offset -> updateUploadCheckpoint(item.id, url, offset) }) {
+                is Resource.Success -> uploaded.data
+                else -> break
+            }
+            if (item.uploadedVideoUrl == null) updateUploadCheckpoint(item.id, null, 0L, uploadedVideoUrl = videoUrl)
+            val coverUrl = item.uploadedCoverUrl ?: item.localCoverPath?.let { localCover ->
                 when (val coverUpload = storage.uploadImage(localCover, MediaBucket.CLIP_COVERS, "${session.userId}/${item.id}.jpg")) {
-                    is Resource.Success -> coverUpload.data
+                    is Resource.Success -> coverUpload.data.also {
+                        updateUploadCheckpoint(item.id, null, 0L, uploadedCoverUrl = it)
+                    }
                     else -> null
                 }
             }
             if (item.localCoverPath != null && coverUrl == null) break
-            val clip = store.createClip(item.author, path, uploaded.data, item.caption, item.id, coverUrl)
+            val clip = store.createClip(item.author, path, videoUrl, item.caption, item.id, coverUrl)
                 ?: break
             File(Uri.parse(item.localVideoPath).path.orEmpty()).delete()
             item.localCoverPath?.let { File(Uri.parse(it).path.orEmpty()).delete() }
