@@ -25,9 +25,12 @@ import kotlin.coroutines.resume
 object ClipVideoEditor {
 
     fun durationMs(context: Context, uri: String): Long = runCatching {
-        MediaMetadataRetriever().use { retriever ->
+        val retriever = MediaMetadataRetriever()
+        try {
             retriever.setDataSource(context, Uri.parse(uri))
             retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+        } finally {
+            retriever.release()
         }
     }.getOrDefault(0L)
 
