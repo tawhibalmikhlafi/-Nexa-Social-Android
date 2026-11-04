@@ -53,6 +53,7 @@ class ClipRepositoryImpl(
     private val commentOutboxLock = kotlinx.coroutines.sync.Mutex()
     private val pendingComments = MutableStateFlow(local.readCommentOutbox())
     private val uploadOutboxLock = kotlinx.coroutines.sync.Mutex()
+    private val uploadExecutionLock = kotlinx.coroutines.sync.Mutex()
     private val pendingUploads = MutableStateFlow(local.readUploadOutbox())
 
     override fun observeClips(): Flow<List<Clip>> = sessionFlow.flatMapLatest { session ->
@@ -81,6 +82,8 @@ class ClipRepositoryImpl(
         val user = userRepository.currentUser.first() ?: return Resource.Failure(FailureReason.GENERIC)
         val author = UserSummary.from(user)
         if (session is SessionState.RemoteAccount) {
+            uploadExecutionLock.lock()
+            try {
             val storage = mediaStorage ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
             val remoteStore = remote ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
             val clipId = Ids.newId()
@@ -142,6 +145,9 @@ class ClipRepositoryImpl(
                     return Resource.Success(pending)
                 }
                 Resource.Loading -> return Resource.Failure(FailureReason.GENERIC)
+            }
+            } finally {
+                uploadExecutionLock.unlock()
             }
         }
         val clip = Clip(
@@ -209,6 +215,8 @@ class ClipRepositoryImpl(
     }
 
     private suspend fun drainUploadOutbox() {
+        uploadExecutionLock.lock()
+        try {
         val session = sessionFlow.first() as? SessionState.RemoteAccount ?: return
         val storage = mediaStorage ?: return
         val store = remote ?: return
@@ -420,6 +428,9 @@ class ClipRepositoryImpl(
             }
         }
         persist()
+        } finally {
+            uploadExecutionLock.unlock()
+        }
     }
 
     private fun applyPending(
