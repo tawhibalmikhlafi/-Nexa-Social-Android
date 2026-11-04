@@ -141,6 +141,18 @@ fun ClipsScreen(
                             Spacer(Modifier.height(NexaSpacing.sm))
                             Text(text = clip.caption, style = MaterialTheme.typography.bodyMedium)
                         }
+                        clip.uploadState?.let { state ->
+                            val statusText = when (state) {
+                                "uploading" -> "جارٍ رفع الفيديو " + (((clip.uploadProgress ?: 0f) * 100).toInt()) + "٪"
+                                "publishing" -> "اكتمل الرفع، جارٍ نشر الريل"
+                                else -> "محفوظ محليًا — بانتظار الاتصال"
+                            }
+                            Text(
+                                text = statusText,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         Row(
                             modifier = Modifier.padding(top = NexaSpacing.sm),
                             verticalAlignment = Alignment.CenterVertically
