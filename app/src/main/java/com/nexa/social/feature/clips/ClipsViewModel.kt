@@ -64,10 +64,18 @@ class ClipsViewModel(
         _commentsLoading.value = false
     }
 
-    fun addComment(clipId: String, content: String) = viewModelScope.launch {
+    fun addComment(clipId: String, content: String, onResult: (Boolean) -> Unit = {}) = viewModelScope.launch {
+        _commentError.value = false
         when (val result = clipRepository.addComment(clipId, content)) {
-            is Resource.Success -> { _comments.value = _comments.value + result.data; _commentError.value = false }
-            is Resource.Failure -> _commentError.value = true
+            is Resource.Success -> {
+                _comments.value = _comments.value + result.data
+                _commentError.value = false
+                onResult(true)
+            }
+            is Resource.Failure -> {
+                _commentError.value = true
+                onResult(false)
+            }
             Resource.Loading -> Unit
         }
     }
