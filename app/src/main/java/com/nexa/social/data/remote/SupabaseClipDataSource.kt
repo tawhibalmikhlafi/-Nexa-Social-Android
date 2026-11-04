@@ -9,6 +9,7 @@ import com.nexa.social.core.supabase.long
 import com.nexa.social.core.supabase.string
 import com.nexa.social.domain.model.AccountOrigin
 import com.nexa.social.domain.model.Clip
+import com.nexa.social.domain.model.ClipComment
 import com.nexa.social.domain.model.UserSummary
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
@@ -70,6 +71,30 @@ class SupabaseClipDataSource(
         return Clip(id, author, videoUrl, caption.trim(), now.toEpochMilli(), 0, 0, false, false, false)
     }
 
+    suspend fun recordView(clipId: String): Boolean {
+        val uid = currentUid() ?: return false
+        val token = accessToken() ?: return false
+        val body = JsonObject().apply { addProperty("clip_id", clipId); addProperty("user_id", uid) }
+        val request = http.authenticatedRequest("$restUrl/clip_views", token)
+            .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+            .post(http.jsonBody(body)).build()
+        val response = http.execute(request).getOrNull() ?: return false
+        if (response.successful) notifyChanged()
+        return response.successful
+    }
+
+    suspend fun getComments(clipId: String): List<ClipComment>? {
+        val uid = currentUid() ?: return null
+        val token = accessToken() ?: return null
+        val path = "clip_comments?select=*,author:profiles!author_id(id,display_name,username,avatar_url)&clip_id=eq." + encode(clipId) + "&is_deleted=eq.false&order=created_at.asc"
+        val rows = fetchRows(path, token) ?: return null
+        return rows.mapNotNull { row ->
+            val author = row.getAsJsonObject("author") ?: return@mapNotNull null
+            val authorId = author.string("id") ?: return@mapNotNull null
+            val username = author.string("username") ?: "user"
+            ClipComment(row.string("id") ?: return@mapNotNull null, clipId, authorId, author.string("display_name") ?: username, author.string("avatar_url"), row.string("content").orEmpty(), parseMillis(row.string("created_at")), authorId == uid)
+        }
+    }
     suspend fun toggleLike(clipId: String): Boolean = toggleRelation("clip_likes", clipId)
     suspend fun toggleSave(clipId: String): Boolean = toggleRelation("clip_saves", clipId)
 
@@ -157,7 +182,8 @@ class SupabaseClipDataSource(
             createdAt = parseMillis(row.string("created_at")),
             likeCount = row.long("like_count")?.toInt() ?: 0,
             commentCount = row.long("comment_count")?.toInt() ?: 0,
-            likedByMe = id in likes, savedByMe = id in saves, isLocal = false
+            likedByMe = id in likes, savedByMe = id in saves, isLocal = false,
+            viewCount = row.long("view_count") ?: 0L
         )
     }
 
