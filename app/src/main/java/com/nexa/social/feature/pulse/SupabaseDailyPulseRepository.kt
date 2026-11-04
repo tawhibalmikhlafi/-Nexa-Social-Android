@@ -144,7 +144,7 @@ class SupabaseDailyPulseRepository(
         val uid = currentUid() ?: return false
         val token = accessToken() ?: return false
         val clean = bodyText.trim()
-        if (clean.length > 1000 || (clean.isEmpty() && imageUri.isNullOrBlank())) return false
+        if (!PulseInputRules.validEntry(clean, imageUri)) return false
         var imagePath: String? = null
         if (!imageUri.isNullOrBlank()) {
             val storage = mediaStorage ?: return false
@@ -212,7 +212,7 @@ class SupabaseDailyPulseRepository(
         val uid = currentUid() ?: return@withContext false
         val token = accessToken() ?: return@withContext false
         val clean = bodyText.trim()
-        if (clean.isEmpty() || clean.length > 500) return@withContext false
+        if (!PulseInputRules.validComment(clean)) return@withContext false
         val body = JsonObject().apply {
             addProperty("entry_id", entryId)
             addProperty("user_id", uid)
