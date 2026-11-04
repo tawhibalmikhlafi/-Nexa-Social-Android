@@ -89,7 +89,7 @@ class SupabaseMessageDataSource(
                 } ?: UserSummary(otherUid, "user", "User", null, AccountOrigin.REMOTE_ACCOUNT)
                 val suffix = "&conversation_id=eq.${encode(id)}&order=created_at.desc&limit=100"
                 val msgRows = fetchRows(
-                    "messages?select=*,reactions:message_reactions(emoji,user_id)$suffix"
+                    "messages?select=*,reactions:message_reactions(emoji,user_id),stars:message_stars(user_id)$suffix"
                 ) ?: fetchRows("messages?select=*$suffix")
                 val messages = if (msgRows != null) {
                     msgRows.mapNotNull { parseMessage(it, uid) }
@@ -270,6 +270,18 @@ class SupabaseMessageDataSource(
         return response?.successful == true
     }
 
+    suspend fun setStarred(messageId: String, uid: String, starred: Boolean): Boolean {
+        val token = accessToken() ?: return false
+        val request = if (starred) {
+            val body = JsonObject().apply { addProperty("message_id", messageId); addProperty("user_id", uid) }
+            http.authenticatedRequest("$restUrl/message_stars?on_conflict=message_id,user_id", token)
+                .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+                .post(http.jsonBody(body)).build()
+        } else {
+            http.authenticatedRequest("$restUrl/message_stars?message_id=eq.${encode(messageId)}&user_id=eq.${encode(uid)}", token).delete().build()
+        }
+        return execute(request)?.successful == true
+    }
     suspend fun reactToMessage(messageId: String, uid: String, emoji: String): Boolean {
         val token = accessToken() ?: return false
         val body = JsonObject().apply {
@@ -322,7 +334,8 @@ class SupabaseMessageDataSource(
             attachmentName = row.string("attachment_name"),
             editedAt = editedAt,
             replyToStoryId = row.string("reply_to_story_id"),
-            reactions = parseReactions(row)
+            reactions = parseReactions(row),
+            isStarred = runCatching { row.getAsJsonArray("stars").any { it.asJsonObject.string("user_id") == uid } }.getOrDefault(false)
         )
     }
 
