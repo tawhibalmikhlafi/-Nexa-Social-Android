@@ -81,7 +81,7 @@ class SupabaseStorageDataSource(
             }
         }
         return try {
-            when (val result = upload(sourceUri, bucket, path, sourceInfo, onProgress)) {
+            when (val result = upload(sourceUri, bucket, path, sourceInfo, onProgress, upsert = bucket == MediaBucket.CLIP_COVERS)) {
                 is Resource.Success -> {
                     val publicUrl = config.normalizedUrl +
                         "/storage/v1/object/public/${bucket.id}/${encodePath(path)}"
