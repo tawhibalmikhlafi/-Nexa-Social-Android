@@ -508,7 +508,8 @@ class MessageRepositoryImpl(
         val session = prefs.session.first()
         val remoteStore = remote
         if (isRemote(session) && remoteStore != null) {
-            remoteStore.markRead(id, (session as SessionState.RemoteAccount).userId)
+            val uid = (session as SessionState.RemoteAccount).userId
+            if (!remoteStore.markRead(id, uid)) enqueueConversationAction(uid, id)
             return
         }
         _conversations.value = _conversations.value.map { conversation ->
@@ -651,6 +652,15 @@ class MessageRepositoryImpl(
         }
     }
 
+    private suspend fun enqueueConversationAction(userId: String, conversationId: String) {
+        actionOutboxLock.lock()
+        try {
+            val next = actionOutbox.value.filterNot { it.userId == userId && it.conversationId == conversationId && it.action == "read" } +
+                PendingMessageAction(Ids.newId(), userId, conversationId, "", "read", null, System.currentTimeMillis())
+            actionOutbox.value = next
+            withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
+        } finally { actionOutboxLock.unlock() }
+    }
     private suspend fun enqueueAction(userId: String, messageId: String, action: String, value: String?) {
         actionOutboxLock.lock()
         try {
@@ -679,6 +689,7 @@ class MessageRepositoryImpl(
                 "unreact" -> store.unreactToMessage(item.messageId, userId)
                 "star" -> store.setStarred(item.messageId, userId, true)
                 "unstar" -> store.setStarred(item.messageId, userId, false)
+                "read" -> store.markRead(item.conversationId, userId)
                 else -> true
             }
             if (!success) break
