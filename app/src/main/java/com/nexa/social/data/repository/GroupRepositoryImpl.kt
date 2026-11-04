@@ -254,16 +254,16 @@ class GroupRepositoryImpl(
         val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
         val body = JsonObject().apply {
             addProperty("p_group_id", groupId)
-            name?.let { addProperty("p_name", it) }
-            description?.let { addProperty("p_description", it) }
-            rules?.let { addProperty("p_rules", it) }
-            category?.let { addProperty("p_category", it) }
-            privacy?.let { addProperty("p_privacy", it) }
-            avatarUrl?.let { addProperty("p_avatar_url", it) }
-            coverUrl?.let { addProperty("p_cover_url", it) }
-            allowMemberPosts?.let { addProperty("p_allow_member_posts", it) }
-            allowMemberInvites?.let { addProperty("p_allow_member_invites", it) }
-            requireJoinApproval?.let { addProperty("p_require_join_approval", it) }
+            addProperty("p_name", name)
+            addProperty("p_description", description)
+            addProperty("p_rules", rules)
+            addProperty("p_category", category)
+            addProperty("p_privacy", privacy)
+            addProperty("p_avatar_url", avatarUrl)
+            addProperty("p_cover_url", coverUrl)
+            addProperty("p_allow_member_posts", allowMemberPosts)
+            addProperty("p_allow_member_invites", allowMemberInvites)
+            addProperty("p_require_join_approval", requireJoinApproval)
         }
         val result = submitAdminOperation(uid, "update_group_details", body, accessToken.token())
         if (result is Resource.Success && accessToken.token() != null) refreshMyGroups()
