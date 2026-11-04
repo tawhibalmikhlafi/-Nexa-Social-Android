@@ -1,5 +1,6 @@
 package com.nexa.social.feature.pulse
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.AsyncImage
@@ -23,7 +24,9 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -39,10 +42,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexa.social.R
+import java.time.Duration
+import java.time.Instant
 import com.nexa.social.domain.model.Community
 import com.nexa.social.domain.model.UserSummary
 import com.nexa.social.feature.worlds.categoryLabel
@@ -64,6 +70,9 @@ fun PulseScreen(
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
     val daily by viewModel.dailyState.collectAsStateWithLifecycle()
     var entryText by remember { mutableStateOf("") }
+    var selectedEntry by remember { mutableStateOf<DailyPulseEntry?>(null) }
+    var popularFirst by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { selectedImageUri = it }
     LaunchedEffect(daily.myEntryId) {
@@ -81,7 +90,7 @@ fun PulseScreen(
             verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)
         ) {
             item {
-                NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
+                NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg).clickable { selectedEntry = entry }) {
                     Text("⚡ نبض اليوم", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                     when {
                         daily.loading -> Text("جارٍ تحميل تحدي اليوم…", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -94,6 +103,16 @@ fun PulseScreen(
                             if (daily.prompt.description.isNotBlank()) {
                                 Text(daily.prompt.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
+                            val remaining = runCatching { Duration.between(Instant.now(), Instant.parse(daily.prompt.endsAt)).toMinutes().coerceAtLeast(0) }.getOrNull()
+                            Text(
+                                remaining?.let { "ينتهي التحدي بعد ${it / 60} ساعة و${it % 60} دقيقة" } ?: "تحدٍ يومي من مجتمع Nexa",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Button(onClick = {
+                                val shareText = "⚡ نبض Nexa اليوم: ${daily.prompt.title}\n${daily.prompt.description}\nشاركنا إجابتك داخل تطبيق Nexa Social."
+                                context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, shareText) }, "مشاركة تحدّي نبض"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text("شارك التحدّي خارج Nexa") }
                             Text(
                                 if (daily.myEntryId != null) "شاركت في تحدي اليوم — يمكنك استكشاف مشاركات المجتمع."
                                 else "شارك بإجابة واحدة، واجعل نبض Nexa يبدأ منك.",
@@ -151,7 +170,15 @@ fun PulseScreen(
                     }
                 }
             }
-            items(daily.entries, key = { it.id }) { entry ->
+            item {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = NexaSpacing.lg), verticalAlignment = Alignment.CenterVertically) {
+                    Text("مشاركات المجتمع", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { popularFirst = !popularFirst }) {
+                        Text(if (popularFirst) "الأحدث أولًا" else "الأكثر تفاعلًا")
+                    }
+                }
+            }
+            items(if (popularFirst) daily.entries.sortedWith(compareByDescending<DailyPulseEntry> { it.reactions }.thenByDescending { it.createdAt }) else daily.entries, key = { it.id }) { entry ->
                 NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
@@ -167,6 +194,7 @@ fun PulseScreen(
                         Text(entry.reactions.toString(), style = MaterialTheme.typography.labelMedium)
                     }
                     if (entry.body.isNotBlank()) Text(entry.body, style = MaterialTheme.typography.bodyMedium)
+                    Text("عرض التفاصيل", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     entry.imageUrl?.let { image ->
                         AsyncImage(
                             model = image,
@@ -374,5 +402,36 @@ private fun WorldRow(
                 color = MaterialTheme.colorScheme.primary
             )
         }
+
+    selectedEntry?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { selectedEntry = null },
+            title = { Text("مشاركة ${entry.displayName}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)) {
+                    Text("@${entry.username}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (entry.body.isNotBlank()) Text(entry.body)
+                    entry.imageUrl?.let { image ->
+                        AsyncImage(model = image, contentDescription = "صورة المشاركة",
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)))
+                    }
+                    Text("❤ ${entry.reactions} إعجاب", style = MaterialTheme.typography.labelMedium)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val shareText = buildString {
+                        append("مشاركة من نبض Nexa بواسطة ${entry.displayName}")
+                        if (entry.body.isNotBlank()) append("\n${entry.body}")
+                        entry.imageUrl?.let { append("\n${it}") }
+                    }
+                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"; putExtra(Intent.EXTRA_TEXT, shareText)
+                    }, "مشاركة نبض Nexa"))
+                }) { Text("مشاركة") }
+            },
+            dismissButton = { TextButton(onClick = { selectedEntry = null }) { Text("إغلاق") } }
+        )
+    }
     }
 }
