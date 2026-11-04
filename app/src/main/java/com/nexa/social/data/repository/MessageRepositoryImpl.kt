@@ -325,7 +325,6 @@ class MessageRepositoryImpl(
                 return Resource.Success(Unit)
             }
             removeQueuedAction(uid, messageId, "delete_me")
-            removeQueuedAction((session as SessionState.RemoteAccount).userId, messageId, "delete_all")
             pendingMessages.update { pending ->
                 pending.mapValues { (_, list) -> list.filterNot { it.id == messageId } }
             }
@@ -348,6 +347,7 @@ class MessageRepositoryImpl(
                 enqueueAction((session as SessionState.RemoteAccount).userId, messageId, "delete_all", null)
                 return Resource.Success(Unit)
             }
+            removeQueuedAction((session as SessionState.RemoteAccount).userId, messageId, "delete_all")
             pendingMessages.update { pending ->
                 pending.mapValues { (_, list) -> list.filterNot { it.id == messageId } }
             }
