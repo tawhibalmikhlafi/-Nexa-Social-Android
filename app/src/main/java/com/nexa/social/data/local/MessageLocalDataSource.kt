@@ -43,7 +43,11 @@ data class PendingMessage(
     val conversationId: String,
     val senderId: String,
     val text: String,
-    val createdAt: Long
+    val createdAt: Long,
+    val attachmentPath: String? = null,
+    val localAttachmentUri: String? = null,
+    val attachmentMime: String? = null,
+    val attachmentName: String? = null
 )
 
 
