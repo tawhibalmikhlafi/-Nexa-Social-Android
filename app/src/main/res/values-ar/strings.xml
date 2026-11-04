@@ -1145,4 +1145,5 @@
     <string name="post_comment_permission_no_one">لا أحد</string>
     <string name="post_comments_locked">أوقف صاحب المنشور التعليقات.</string>
     <string name="post_comment_permission_saved">تم تحديث من يمكنه التعليق</string>
+    <string name="notif_follow_request_accepted">تم قبول طلب متابعتك</string>
 </resources>
