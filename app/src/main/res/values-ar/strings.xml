@@ -1137,6 +1137,8 @@
     <string name="action_refresh">تحديث</string>
     <string name="action_remove_follower">إزالة المتابع</string>
     <string name="post_comment_settings">من يمكنه التعليق؟</string>
+    <string name="post_lock_comments">قفل التعليقات</string>
+    <string name="post_unlock_comments">فتح التعليقات</string>
     <string name="post_comment_permission_following">المتابعين الذين تتابعهم</string>
     <string name="post_comment_permission_followers">المتابعين</string>
     <string name="post_comment_permission_everyone">الجميع</string>
