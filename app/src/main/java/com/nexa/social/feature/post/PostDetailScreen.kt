@@ -631,6 +631,31 @@ fun PostDetailScreen(
     if (showMenu) {
         NexaBottomSheet(onDismiss = { showMenu = false }) {
             SheetTitle(stringResource(R.string.post_menu))
+            if (canManage && current != null) {
+                NexaOptionRow(
+                    icon = Icons.Filled.ChatBubbleOutline,
+                    label = stringResource(
+                        if (current.commentPermission == CommentPermission.NO_ONE) R.string.post_unlock_comments
+                        else R.string.post_lock_comments
+                    ),
+                    onClick = {
+                        showMenu = false
+                        val next = if (current.commentPermission == CommentPermission.NO_ONE) {
+                            CommentPermission.EVERYONE
+                        } else CommentPermission.NO_ONE
+                        viewModel.updateCommentPermission(next) { saved ->
+                            scope.launch {
+                                snackbarHost?.showSnackbar(
+                                    context.getString(
+                                        if (saved) R.string.post_comment_permission_saved
+                                        else R.string.comment_action_failed
+                                    )
+                                )
+                            }
+                        }
+                    }
+                )
+            }
             if (canManage) {
                 NexaOptionRow(
                     icon = Icons.Filled.ChatBubbleOutline,
