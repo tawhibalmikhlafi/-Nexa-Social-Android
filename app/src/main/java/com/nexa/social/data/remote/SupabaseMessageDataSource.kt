@@ -124,10 +124,11 @@ class SupabaseMessageDataSource(
         attachmentPath: String?,
         attachmentMime: String?,
         attachmentName: String?,
-        replyToStoryId: String? = null
+        replyToStoryId: String? = null,
+        messageId: String = Ids.newId()
     ): Message? {
         val token = accessToken() ?: return null
-        val messageId = Ids.newId()
+        // Keep the same ID across retries so the persistent outbox is idempotent.
         val body = JsonObject().apply {
             addProperty("id", messageId)
             addProperty("conversation_id", conversationId)
