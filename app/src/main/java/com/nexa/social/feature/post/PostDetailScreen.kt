@@ -51,6 +51,7 @@ import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -97,6 +98,7 @@ import com.nexa.social.core.ui.LocalSnackbarHostState
 import com.nexa.social.core.ui.failureMessageRes
 import com.nexa.social.core.ui.rememberRemoteMode
 import com.nexa.social.domain.model.Audience
+import com.nexa.social.domain.model.CommentPermission
 import com.nexa.social.domain.model.Post
 import com.nexa.social.domain.model.PostComment
 import com.nexa.social.domain.model.PostReaction
@@ -246,6 +248,7 @@ fun PostDetailScreen(
     val comments by viewModel.comments.collectAsStateWithLifecycle()
     val suggestedUsers by viewModel.suggestedUsers.collectAsStateWithLifecycle()
     val canManage by viewModel.canManage.collectAsStateWithLifecycle()
+    val canComment by viewModel.canComment.collectAsStateWithLifecycle()
     val canLoadMore by viewModel.canLoadMore.collectAsStateWithLifecycle()
     val reactionsState by viewModel.reactions.collectAsStateWithLifecycle()
     val commentReactionsState by viewModel.commentReactions.collectAsStateWithLifecycle()
@@ -255,6 +258,7 @@ fun PostDetailScreen(
     val context = LocalContext.current
 
     var showMenu by remember { mutableStateOf(false) }
+    var showCommentSettings by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
     var showBlockConfirm by remember { mutableStateOf(false) }
     var showReport by remember { mutableStateOf(false) }
@@ -494,44 +498,52 @@ fun PostDetailScreen(
                 }
                 item { Spacer(Modifier.height(NexaSpacing.sm)) }
             }
-            CommentComposer(
-                text = commentText,
-                onTextChange = { value ->
-                    if (value.length <= CommentRepository.MAX_COMMENT_LENGTH) {
-                        commentText = value
-                        showMentionSuggestions = value.endsWith("@") ||
-                            (value.contains("@") && !value.endsWith(" "))
+            if (canComment) {
+                CommentComposer(
+                    text = commentText,
+                    onTextChange = { value ->
+                        if (value.length <= CommentRepository.MAX_COMMENT_LENGTH) {
+                            commentText = value
+                            showMentionSuggestions = value.endsWith("@") ||
+                                (value.contains("@") && !value.endsWith(" "))
+                            commentError = null
+                        }
+                    },
+                    replyingTo = replyingToComment,
+                    onCancelReply = { replyingToComment = null },
+                    mentionSuggestions = filteredUsers,
+                    showMentions = showMentionSuggestions,
+                    onMentionSelected = { user ->
+                        commentText = commentText.substringBeforeLast("@") + "@${user.username} "
+                        showMentionSuggestions = false
+                    },
+                    selectedImage = commentImageUri,
+                    onPickImage = pickCommentImage,
+                    onClearImage = { commentImageUri = null },
+                    showEmojiPicker = showEmojiPicker,
+                    onToggleEmoji = { showEmojiPicker = !showEmojiPicker },
+                    onEmojiSelected = { emoji ->
+                        if (commentText.length < CommentRepository.MAX_COMMENT_LENGTH) {
+                            commentText += emoji
+                        }
+                    },
+                    sending = sendingComment,
+                    error = commentError,
+                    onDismissError = { commentError = null },
+                    onRetry = {
                         commentError = null
-                    }
-                },
-                replyingTo = replyingToComment,
-                onCancelReply = { replyingToComment = null },
-                mentionSuggestions = filteredUsers,
-                showMentions = showMentionSuggestions,
-                onMentionSelected = { user ->
-                    commentText = commentText.substringBeforeLast("@") + "@${user.username} "
-                    showMentionSuggestions = false
-                },
-                selectedImage = commentImageUri,
-                onPickImage = pickCommentImage,
-                onClearImage = { commentImageUri = null },
-                showEmojiPicker = showEmojiPicker,
-                onToggleEmoji = { showEmojiPicker = !showEmojiPicker },
-                onEmojiSelected = { emoji ->
-                    if (commentText.length < CommentRepository.MAX_COMMENT_LENGTH) {
-                        commentText += emoji
-                    }
-                },
-                sending = sendingComment,
-                error = commentError,
-                onDismissError = { commentError = null },
-                onRetry = {
-                    commentError = null
-                    submitComment()
-                },
-                onSend = submitComment,
-                focusRequester = commentFocusRequester
+                        submitComment()
+                    },
+                    onSend = submitComment,
+                    focusRequester = commentFocusRequester
             )
+            } else {
+                Text(
+                    text = stringResource(R.string.post_comments_locked),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(NexaSpacing.md)
+                )
+            }
         }
     }
 
@@ -619,6 +631,16 @@ fun PostDetailScreen(
     if (showMenu) {
         NexaBottomSheet(onDismiss = { showMenu = false }) {
             SheetTitle(stringResource(R.string.post_menu))
+            if (canManage) {
+                NexaOptionRow(
+                    icon = Icons.Filled.ChatBubbleOutline,
+                    label = stringResource(R.string.post_comment_settings),
+                    onClick = {
+                        showMenu = false
+                        showCommentSettings = true
+                    }
+                )
+            }
             NexaOptionRow(
                 icon = if (current?.savedByMe == true) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
                 label = stringResource(if (current?.savedByMe == true) R.string.post_unsave else R.string.post_save),
@@ -717,6 +739,64 @@ fun PostDetailScreen(
                 )
             }
         }
+    }
+
+    if (showCommentSettings && current != null && canManage) {
+        val options = listOf(
+            CommentPermission.FOLLOWING to R.string.post_comment_permission_following,
+            CommentPermission.FOLLOWERS to R.string.post_comment_permission_followers,
+            CommentPermission.EVERYONE to R.string.post_comment_permission_everyone,
+            CommentPermission.NO_ONE to R.string.post_comment_permission_no_one
+        )
+        AlertDialog(
+            onDismissRequest = { showCommentSettings = false },
+            title = { Text(stringResource(R.string.post_comment_settings)) },
+            text = {
+                Column {
+                    options.forEach { (permission, labelRes) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                viewModel.updateCommentPermission(permission) { saved ->
+                                    showCommentSettings = false
+                                    scope.launch {
+                                        snackbarHost?.showSnackbar(
+                                            context.getString(
+                                                if (saved) R.string.post_comment_permission_saved
+                                                else R.string.comment_action_failed
+                                            )
+                                        )
+                                    }
+                                }
+                            }.padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = current.commentPermission == permission,
+                                onClick = {
+                                    viewModel.updateCommentPermission(permission) { saved ->
+                                        showCommentSettings = false
+                                        scope.launch {
+                                            snackbarHost?.showSnackbar(
+                                                context.getString(
+                                                    if (saved) R.string.post_comment_permission_saved
+                                                    else R.string.comment_action_failed
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+                            Text(stringResource(labelRes), modifier = Modifier.padding(start = 8.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCommentSettings = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
     }
 
     if (showEditPost) {
