@@ -43,6 +43,37 @@ data class DailyPulseFeed(
     val myEntryId: String?
 )
 
+data class PulseComment(
+    val id: String,
+    val userId: String,
+    val displayName: String,
+    val username: String,
+    val body: String,
+    val createdAt: String
+)
+
+data class PulseBadge(
+    val id: String,
+    val earnedAt: String
+) {
+    val title: String get() = when (id) {
+        "pulse_first_entry" -> "أول نبضة"
+        "pulse_five_entries" -> "صانع التحديات"
+        "pulse_first_comment" -> "صوت المجتمع"
+        "pulse_ten_comments" -> "مُشجّع المجتمع"
+        "pulse_ten_likes" -> "محبوب المجتمع"
+        else -> "إنجاز نبض"
+    }
+    val description: String get() = when (id) {
+        "pulse_first_entry" -> "نشرت أول مشاركة في نبض Nexa"
+        "pulse_five_entries" -> "شاركت في خمسة تحديات"
+        "pulse_first_comment" -> "كتبت أول تعليق في نبض"
+        "pulse_ten_comments" -> "كتبت عشرة تعليقات في نبض"
+        "pulse_ten_likes" -> "حصلت مشاركاتك على عشرة إعجابات"
+        else -> "إنجاز في نبض Nexa"
+    }
+}
+
 /** Daily challenge data is always read/written through Supabase; no local demo fallback. */
 class SupabaseDailyPulseRepository(
     private val config: SupabaseConfig,
@@ -147,6 +178,65 @@ class SupabaseDailyPulseRepository(
     private fun publicImageUrl(path: String): String =
         config.normalizedUrl + "/storage/v1/object/public/nexa-pulse/" +
             path.split('/').joinToString("/") { Uri.encode(it) }
+
+    suspend fun loadComments(entryId: String): List<PulseComment>? = withContext(Dispatchers.IO) {
+        val token = accessToken() ?: return@withContext null
+        val rows = getRows(
+            "pulse_comments?select=id,user_id,body,created_at&entry_id=eq.${enc(entryId)}&order=created_at.asc&limit=100",
+            token
+        ) ?: return@withContext null
+        if (rows.isEmpty()) return@withContext emptyList()
+        val ids = rows.mapNotNull { it.string("user_id") }.distinct()
+        val profiles = getRows(
+            "profiles?select=id,username,display_name&id=in.(${ids.joinToString(",") { enc(it) }})",
+            token
+        ) ?: return@withContext null
+        val byId = profiles.associateBy { it.string("id").orEmpty() }
+        rows.mapNotNull { row ->
+            val id = row.string("id") ?: return@mapNotNull null
+            val userId = row.string("user_id") ?: return@mapNotNull null
+            val profile = byId[userId]
+            val username = profile?.string("username") ?: "user"
+            PulseComment(
+                id = id,
+                userId = userId,
+                displayName = profile?.string("display_name") ?: username,
+                username = username,
+                body = row.string("body").orEmpty(),
+                createdAt = row.string("created_at").orEmpty()
+            )
+        }
+    }
+
+    suspend fun addComment(entryId: String, bodyText: String): Boolean = withContext(Dispatchers.IO) {
+        val uid = currentUid() ?: return@withContext false
+        val token = accessToken() ?: return@withContext false
+        val clean = bodyText.trim()
+        if (clean.isEmpty() || clean.length > 500) return@withContext false
+        val body = JsonObject().apply {
+            addProperty("entry_id", entryId)
+            addProperty("user_id", uid)
+            addProperty("body", clean)
+        }
+        http.execute(
+            http.authenticatedRequest("$rest/pulse_comments", token)
+                .header("Prefer", "return=minimal")
+                .post(http.jsonBody(body)).build()
+        ).getOrNull()?.successful == true
+    }
+
+    suspend fun loadMyBadges(): List<PulseBadge>? = withContext(Dispatchers.IO) {
+        val uid = currentUid() ?: return@withContext null
+        val token = accessToken() ?: return@withContext null
+        val rows = getRows(
+            "pulse_user_badges?select=badge_id,earned_at&user_id=eq.${enc(uid)}&order=earned_at.desc",
+            token
+        ) ?: return@withContext null
+        rows.mapNotNull { row ->
+            val id = row.string("badge_id") ?: return@mapNotNull null
+            PulseBadge(id, row.string("earned_at").orEmpty())
+        }
+    }
 
     suspend fun setReaction(entryId: String, enabled: Boolean): Boolean {
         val uid = currentUid() ?: return false
