@@ -54,7 +54,7 @@ class SupabaseNotesDataSource(
                 item.takeIf { it.isJsonObject }?.asJsonObject?.let { row ->
                     val id = row.string("user_id") ?: return@let null
                     val note = row.string("note") ?: return@let null
-                    id to Triple(note, row.string("visibility") ?: "FOLLOWING", row.int("duration_hours") ?: 24)
+                    id to Triple(note, row.string("visibility") ?: "FOLLOWING", runCatching { row.get("duration_hours")?.asInt }.getOrNull() ?: 24)
                 }
             }
         }.getOrDefault(emptyList())
