@@ -10,6 +10,7 @@ import com.nexa.social.core.common.Resource
 import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.core.storage.PreferenceStorage
 import com.nexa.social.domain.model.Clip
+import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.repository.ClipRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +24,10 @@ class ClipsViewModel(
 
     val clips: StateFlow<List<Clip>> = clipRepository.observeClips()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val isRemote: StateFlow<Boolean> = preferenceStorage.session
+        .map { it is SessionState.RemoteAccount }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val videoAutoplay: StateFlow<Boolean> = preferenceStorage.videoAutoplay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
