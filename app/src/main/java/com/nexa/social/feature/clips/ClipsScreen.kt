@@ -60,6 +60,7 @@ fun ClipsScreen(
     viewModel: ClipsViewModel = viewModel(factory = ClipsViewModel.Factory)
 ) {
     val clips by viewModel.clips.collectAsStateWithLifecycle()
+    val isRemote by viewModel.isRemote.collectAsStateWithLifecycle()
     val snackbarHost = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -83,10 +84,12 @@ fun ClipsScreen(
                 }
             }
         )
-        LocalDataBanner(
-            text = stringResource(R.string.clips_local_notice),
-            modifier = Modifier.padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.sm)
-        )
+        if (!isRemote) {
+            LocalDataBanner(
+                text = stringResource(R.string.clips_local_notice),
+                modifier = Modifier.padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.sm)
+            )
+        }
 
         if (clips.isEmpty()) {
             NexaEmptyState(
