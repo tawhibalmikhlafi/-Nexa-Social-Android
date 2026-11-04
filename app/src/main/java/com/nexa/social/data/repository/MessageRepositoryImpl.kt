@@ -63,7 +63,10 @@ class MessageRepositoryImpl(
                     Message(
                         id = item.id, conversationId = item.conversationId, senderId = item.senderId,
                         text = item.text, timestamp = item.createdAt, isRead = true,
-                        isMine = true, isLocal = true
+                        isMine = true, isLocal = true,
+                        attachmentPath = item.attachmentPath ?: item.localAttachmentUri,
+                        attachmentMime = item.attachmentMime,
+                        attachmentName = item.attachmentName
                     )
                 }
             }
@@ -89,7 +92,10 @@ class MessageRepositoryImpl(
                                     id = item.id, conversationId = item.conversationId,
                                     senderId = item.senderId, text = item.text,
                                     timestamp = item.createdAt, isRead = true,
-                                    isMine = true, isLocal = true
+                                    isMine = true, isLocal = true,
+                                    attachmentPath = item.attachmentPath ?: item.localAttachmentUri,
+                                    attachmentMime = item.attachmentMime,
+                                    attachmentName = item.attachmentName
                                 )
                             }
                         }
@@ -606,24 +612,36 @@ class MessageRepositoryImpl(
         val session = prefs.session.first() as? SessionState.RemoteAccount ?: return
         drainMessageActions(store, session.userId)
         for (item in outbox.value.filter { it.senderId == session.userId }) {
+            var queued = item
+            if (queued.localAttachmentUri != null) {
+                val storage = mediaStorage ?: continue
+                val uploaded = storage.uploadAttachment(queued.localAttachmentUri, "${session.userId}/${queued.id}")
+                if (uploaded !is Resource.Success) continue
+                queued = queued.copy(attachmentPath = uploaded.data.path, localAttachmentUri = null, attachmentMime = uploaded.data.mimeType, attachmentName = uploaded.data.displayName)
+                outboxLock.lock()
+                try {
+                    val next = outbox.value.map { if (it.id == queued.id) queued else it }
+                    outbox.value = next
+                    withContext(Dispatchers.IO) { local.writeOutbox(next) }
+                } finally { outboxLock.unlock() }
+                deleteLocalAttachment(item.localAttachmentUri)
+            }
             val sent = runCatching {
                 store.sendMessage(
-                    conversationId = item.conversationId, senderId = item.senderId,
-                    text = item.text, attachmentPath = null, attachmentMime = null,
-                    attachmentName = null, messageId = item.id
+                    conversationId = queued.conversationId, senderId = queued.senderId,
+                    text = queued.text, attachmentPath = queued.attachmentPath, attachmentMime = queued.attachmentMime,
+                    attachmentName = queued.attachmentName, messageId = queued.id
                 )
             }.getOrNull() ?: continue
             outboxLock.lock()
             try {
-                val next = outbox.value.filterNot { it.id == item.id }
+                val next = outbox.value.filterNot { it.id == queued.id }
                 outbox.value = next
                 withContext(Dispatchers.IO) { local.writeOutbox(next) }
-            } finally {
-                outboxLock.unlock()
-            }
+            } finally { outboxLock.unlock() }
             pendingMessages.update { current ->
-                val list = current[item.conversationId].orEmpty()
-                current + (item.conversationId to (list.filterNot { it.id == item.id } + sent).takeLast(50))
+                val list = current[queued.conversationId].orEmpty()
+                current + (queued.conversationId to (list.filterNot { it.id == queued.id } + sent).takeLast(50))
             }
         }
     }
