@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -78,6 +79,7 @@ import com.nexa.social.core.common.TimeUtils
 import com.nexa.social.ui.components.NexaAvatar
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClipDetailScreen(
     clipId: String,
