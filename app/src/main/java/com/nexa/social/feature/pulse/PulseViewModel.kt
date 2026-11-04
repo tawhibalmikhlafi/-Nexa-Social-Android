@@ -86,16 +86,16 @@ class PulseViewModel(
         }
     }
 
-    fun publish(text: String) {
+    fun publish(text: String, imageUri: String? = null) {
         val prompt = _dailyState.value.prompt ?: return
-        if (_dailyState.value.submitting || text.isBlank()) return
+        if (_dailyState.value.submitting || (text.isBlank() && imageUri.isNullOrBlank())) return
         viewModelScope.launch {
             _dailyState.value = _dailyState.value.copy(submitting = true, message = null)
-            val ok = dailyRepository?.publish(prompt.id, text) == true
+            val ok = dailyRepository?.publish(prompt.id, text, imageUri) == true
             if (ok) refreshDaily()
             else _dailyState.value = _dailyState.value.copy(
                 submitting = false,
-                message = "لم تُنشر المشاركة. ربما شاركت بالفعل في تحدي اليوم."
+                message = "لم تُنشر المشاركة. تحقق من الصورة والاتصال، أو ربما شاركت بالفعل في تحدي اليوم."
             )
         }
     }
