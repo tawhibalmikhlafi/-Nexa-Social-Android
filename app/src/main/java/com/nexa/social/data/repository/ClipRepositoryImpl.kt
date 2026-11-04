@@ -7,6 +7,7 @@ import java.io.File
 import com.nexa.social.core.common.FailureReason
 import com.nexa.social.core.common.Ids
 import com.nexa.social.core.common.Resource
+import com.nexa.social.core.sync.NexaOfflineSyncWorker
 import com.nexa.social.data.local.ClipLocalDataSource
 import com.nexa.social.data.local.PendingClipAction
 import com.nexa.social.data.local.PendingClipComment
@@ -178,6 +179,7 @@ class ClipRepositoryImpl(
             val next = pendingUploads.value.filterNot { it.id == item.id } + item
             pendingUploads.value = next
             withContext(Dispatchers.IO) { local.writeUploadOutbox(next) }
+            appContext?.let { NexaOfflineSyncWorker.schedule(it) }
         } finally { uploadOutboxLock.unlock() }
     }
 
