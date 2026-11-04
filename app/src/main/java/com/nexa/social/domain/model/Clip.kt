@@ -11,5 +11,17 @@ data class Clip(
     val commentCount: Int,
     val likedByMe: Boolean,
     val savedByMe: Boolean,
-    val isLocal: Boolean
+    val isLocal: Boolean,
+    val viewCount: Long = 0L
+)
+
+data class ClipComment(
+    val id: String,
+    val clipId: String,
+    val authorId: String,
+    val authorName: String,
+    val authorAvatarUrl: String?,
+    val content: String,
+    val createdAt: Long,
+    val isAuthor: Boolean
 )
