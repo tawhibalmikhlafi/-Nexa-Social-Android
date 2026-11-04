@@ -10,7 +10,8 @@ enum class MediaBucket(val id: String) {
     GROUPS("group-media"),
     MESSAGES("message-media"),
     CLIPS("clips-media"),
-    CLIP_COVERS("clip-covers")
+    CLIP_COVERS("clip-covers"),
+    PULSE("nexa-pulse")
 }
 
 data class StoredMedia(
