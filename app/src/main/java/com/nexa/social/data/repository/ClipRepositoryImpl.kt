@@ -196,6 +196,11 @@ class ClipRepositoryImpl(
             }
             pendingUploads.value = next
             withContext(Dispatchers.IO) { local.writeUploadOutbox(next) }
+            val owner = next.firstOrNull { it.id == id }?.userId
+            if (owner != null) {
+                _clips.value = applyPending(_clips.value, pendingActions.value, next, owner)
+                persist()
+            }
         } finally { uploadOutboxLock.unlock() }
     }
 
@@ -419,16 +424,10 @@ class ClipRepositoryImpl(
         uploads: List<PendingClipUpload>,
         userId: String
     ): List<Clip> {
-        val merged = clips.toMutableList()
-        uploads.filter { it.userId == userId }.forEach { item ->
-            if (merged.none { it.id == item.id }) {
-                merged += Clip(
-                    id = item.id, author = item.author, videoUri = item.localVideoPath,
-                    caption = item.caption, createdAt = item.createdAt,
-                    likeCount = 0, commentCount = 0, likedByMe = false, savedByMe = false,
-                    isLocal = true, coverUrl = item.localCoverPath
-                )
-            }
+        val ownUploads = uploads.filter { it.userId == userId }.associateBy { it.id }
+        val merged = clips.map { clip -> ownUploads[clip.id]?.let(::toPendingClip) ?: clip }.toMutableList()
+        ownUploads.values.forEach { item ->
+            if (merged.none { it.id == item.id }) merged += toPendingClip(item)
         }
         return merged.map { original ->
             actions.filter { it.userId == userId && it.clipId == original.id }
@@ -447,6 +446,26 @@ class ClipRepositoryImpl(
                     }
                 }
         }
+    }
+
+    private fun toPendingClip(item: PendingClipUpload): Clip {
+        val totalBytes = File(Uri.parse(item.localVideoPath).path.orEmpty()).length()
+        val progress = if (item.uploadedVideoUrl != null) 1f
+            else if (totalBytes > 0L) (item.uploadOffset.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
+            else 0f
+        val state = when {
+            item.uploadedVideoUrl != null -> "publishing"
+            item.uploadUrl != null -> "uploading"
+            else -> "waiting"
+        }
+        return Clip(
+            id = item.id, author = item.author,
+            videoUri = item.uploadedVideoUrl ?: item.localVideoPath,
+            caption = item.caption, createdAt = item.createdAt,
+            likeCount = 0, commentCount = 0, likedByMe = false, savedByMe = false,
+            isLocal = true, coverUrl = item.uploadedCoverUrl ?: item.localCoverPath,
+            uploadProgress = progress, uploadState = state
+        )
     }
 
     private suspend fun drainOutbox() {
