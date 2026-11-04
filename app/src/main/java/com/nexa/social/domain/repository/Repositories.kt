@@ -9,6 +9,7 @@ import com.nexa.social.domain.model.AiResult
 import com.nexa.social.domain.model.Audience
 import com.nexa.social.domain.model.BlockedUser
 import com.nexa.social.domain.model.Clip
+import com.nexa.social.domain.model.ClipComment
 import com.nexa.social.domain.model.Community
 import com.nexa.social.domain.model.CommunityCategory
 import com.nexa.social.domain.model.CommunityMember
@@ -279,6 +280,10 @@ interface ClipRepository {
     suspend fun addClip(videoUri: String, caption: String): Resource<Clip>
     suspend fun toggleLike(clipId: String)
     suspend fun toggleSave(clipId: String)
+    suspend fun getComments(clipId: String): Resource<List<ClipComment>> = Resource.Success(emptyList())
+    suspend fun addComment(clipId: String, content: String): Resource<ClipComment> = Resource.Failure(FailureReason.NOT_CONFIGURED)
+    suspend fun deleteComment(commentId: String): Boolean = false
+    suspend fun recordView(clipId: String) {}
     suspend fun deleteClip(clipId: String): Boolean
     suspend fun refresh() {}
 }
