@@ -95,6 +95,17 @@ class SupabaseStorageDataSource(
         }
     }
 
+    override suspend fun uploadVideo(localUri: String, path: String): Resource<String> {
+        val info = readFileInfo(localUri) ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
+        if (!info.mimeType.startsWith("video/")) return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
+        if (info.size <= 0L || info.size > MAX_CLIP_BYTES) return Resource.Failure(FailureReason.FILE_TOO_LARGE)
+        return when (val result = upload(localUri, MediaBucket.CLIPS, path, info, {})) {
+            is Resource.Success -> Resource.Success(config.normalizedUrl + "/storage/v1/object/public/${MediaBucket.CLIPS.id}/${encodePath(path)}")
+            is Resource.Failure -> result
+            Resource.Loading -> Resource.Loading
+        }
+    }
+
     override suspend fun uploadAttachment(
         localUri: String,
         path: String
@@ -379,6 +390,7 @@ class SupabaseStorageDataSource(
 
     companion object {
         const val MAX_IMAGE_BYTES: Long = 10L * 1024L * 1024L
+        private const val MAX_CLIP_BYTES: Long = 500L * 1024L * 1024L
         const val MAX_ATTACHMENT_BYTES: Long = 25L * 1024L * 1024L
         private const val MAX_PROFILE_SOURCE_BYTES: Long = 25L * 1024L * 1024L
         private const val MAX_PROFILE_DIMENSION = 1440
