@@ -66,8 +66,8 @@ class GroupRepositoryImpl(
         when (val result = executeJsonArray(http.authenticatedRequest(url, token).get().build())) {
             is Resource.Success -> {
                 drainReactionOutbox(uid, token)
-                drainCommentOutbox(uid, token)
                 drainPostOutbox(uid, token)
+                drainCommentOutbox(uid, token)
                 _myGroups.value = result.data.mapNotNull { element ->
                     val row = element.asJsonObject
                     val group = row.getAsJsonObject("group") ?: return@mapNotNull null
