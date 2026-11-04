@@ -98,7 +98,7 @@ class ClipRepositoryImpl(
                             }
                             is Resource.Failure -> {
                                 if (coverUpload.reason == FailureReason.NETWORK) {
-                                    val pending = Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true, coverUrl = coverBackup)
+                                    val pending = pendingUploads.value.first { it.id == clipId }.let(::toPendingClip)
                                     _clips.value = listOf(pending) + _clips.value.filterNot { it.id == clipId }
                                     persist()
                                     return Resource.Success(pending)
@@ -121,7 +121,7 @@ class ClipRepositoryImpl(
                         return Resource.Success(created)
                     }
                     // Keep the source and stable clip ID; the retry is safe if the first insert committed.
-                    val pending = Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true, coverUrl = coverBackup)
+                    val pending = pendingUploads.value.first { it.id == clipId }.let(::toPendingClip)
                     _clips.value = listOf(pending) + _clips.value.filterNot { it.id == clipId }
                     persist()
                     return Resource.Success(pending)
