@@ -87,9 +87,9 @@ class ClipsViewModel(
         onResult(clipRepository.updateCaption(clipId, caption))
     }
 
-    fun addClip(videoUri: String, caption: String, onResult: (FailureReason?) -> Unit) {
+    fun addClip(videoUri: String, caption: String, coverUri: String? = null, onResult: (FailureReason?) -> Unit) {
         viewModelScope.launch {
-            when (val result = clipRepository.addClip(videoUri, caption)) {
+            when (val result = clipRepository.addClip(videoUri, caption, coverUri)) {
                 is Resource.Success -> onResult(null)
                 is Resource.Failure -> onResult(result.reason)
                 Resource.Loading -> Unit
