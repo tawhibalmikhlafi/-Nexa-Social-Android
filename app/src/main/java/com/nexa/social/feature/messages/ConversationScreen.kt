@@ -3,6 +3,8 @@ package com.nexa.social.feature.messages
 import android.Manifest
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
+import android.widget.MediaController
+import android.widget.VideoView
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
