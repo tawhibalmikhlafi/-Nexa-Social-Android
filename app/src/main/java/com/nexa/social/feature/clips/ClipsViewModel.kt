@@ -13,6 +13,7 @@ import com.nexa.social.domain.model.Clip
 import com.nexa.social.domain.model.ClipComment
 import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.repository.ClipRepository
+import com.nexa.social.domain.repository.UserRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +25,8 @@ import kotlinx.coroutines.launch
 
 class ClipsViewModel(
     private val clipRepository: ClipRepository,
-    private val preferenceStorage: PreferenceStorage
+    private val preferenceStorage: PreferenceStorage,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     val clips: StateFlow<List<Clip>> = clipRepository.observeClips()
@@ -46,6 +48,32 @@ class ClipsViewModel(
 
     val reduceMotion: StateFlow<Boolean> = preferenceStorage.reduceMotion
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    private val _followStates = MutableStateFlow<Map<String, String>>(emptyMap())
+    val followStates: StateFlow<Map<String, String>> = _followStates.asStateFlow()
+
+    fun refreshAuthorFollowState(authorId: String) = viewModelScope.launch {
+        if (authorId.isBlank() || authorId == currentUserId.value) return@launch
+        val following = userRepository.isFollowing(authorId)
+        val pending = if (following) false else userRepository.hasPendingFollowRequest(authorId) == true
+        _followStates.update { it + (authorId to when { following -> "following"; pending -> "requested"; else -> "follow" }) }
+    }
+
+    fun followAuthor(authorId: String, onResult: (String) -> Unit = {}) = viewModelScope.launch {
+        if (authorId.isBlank() || authorId == currentUserId.value) return@launch
+        val state = _followStates.value[authorId] ?: "follow"
+        if (state == "following" || state == "requested") return@launch
+        val success = userRepository.setFollowing(authorId, true)
+        if (!success) {
+            onResult("error")
+            return@launch
+        }
+        val following = userRepository.isFollowing(authorId)
+        val pending = if (following) false else userRepository.hasPendingFollowRequest(authorId) == true
+        val next = when { following -> "following"; pending -> "requested"; else -> "follow" }
+        _followStates.update { it + (authorId to next) }
+        onResult(next)
+    }
 
     private val _comments = MutableStateFlow<List<ClipComment>>(emptyList())
     val comments = _comments.asStateFlow()
@@ -109,7 +137,7 @@ class ClipsViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val container = nexaApplication().container
-                ClipsViewModel(container.clipRepository, container.preferenceStorage)
+                ClipsViewModel(container.clipRepository, container.preferenceStorage, container.userRepository)
             }
         }
     }
