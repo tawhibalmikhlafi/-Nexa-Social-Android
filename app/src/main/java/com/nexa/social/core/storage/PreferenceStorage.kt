@@ -354,7 +354,8 @@ class PreferenceStorage(private val context: Context) {
                     NotificationType.LIKE, NotificationType.COMMENT_LIKE -> Keys.notifLike
                     NotificationType.COMMENT -> Keys.notifComment
                     NotificationType.REPLY -> Keys.notifReply
-                    NotificationType.FOLLOW -> Keys.notifFollow
+                    NotificationType.FOLLOW,
+                    NotificationType.FOLLOW_REQUEST_ACCEPTED -> Keys.notifFollow
                     NotificationType.COMMUNITY -> Keys.notifCommunity
                     NotificationType.SPACE -> Keys.notifSpace
                     NotificationType.MESSAGE -> Keys.notifMessages
@@ -375,7 +376,8 @@ class PreferenceStorage(private val context: Context) {
             NotificationType.LIKE, NotificationType.COMMENT_LIKE -> Keys.notifLike
             NotificationType.COMMENT -> Keys.notifComment
             NotificationType.REPLY -> Keys.notifReply
-            NotificationType.FOLLOW -> Keys.notifFollow
+            NotificationType.FOLLOW,
+            NotificationType.FOLLOW_REQUEST_ACCEPTED -> Keys.notifFollow
             NotificationType.COMMUNITY -> Keys.notifCommunity
             NotificationType.SPACE -> Keys.notifSpace
             NotificationType.MESSAGE -> Keys.notifMessages
