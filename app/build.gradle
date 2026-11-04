@@ -107,6 +107,7 @@ dependencies {
     implementation 'androidx.media3:media3-common:1.5.1'
     implementation 'androidx.media3:media3-effect:1.5.1'
     implementation 'androidx.media3:media3-transformer:1.5.1'
+    implementation 'androidx.work:work-runtime-ktx:2.10.0'
 
     // Supabase Auth/Storage are consumed through their documented REST API with OkHttp.
     // This avoids pulling a Kotlin 2.0-compiled Supabase SDK into a Kotlin 1.9.24 build.
