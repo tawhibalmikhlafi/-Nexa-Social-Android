@@ -243,6 +243,7 @@ class SupabaseStorageDataSource(
                     } else {
                         return@withContext Resource.Failure(
                             if (response.code == 401 || response.code == 403) FailureReason.NOT_AUTHENTICATED
+                            else if (response.code == 413) FailureReason.FILE_TOO_LARGE
                             else if (response.code >= 500 || response.code == 408) FailureReason.NETWORK
                             else FailureReason.UPLOAD_FAILED
                         )
