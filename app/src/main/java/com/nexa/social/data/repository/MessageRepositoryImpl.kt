@@ -77,7 +77,19 @@ class MessageRepositoryImpl(
                 val remoteUid = (session as SessionState.RemoteAccount).userId
                 if (lastRemoteUid != remoteUid) {
                     lastRemoteUid = remoteUid
-                    pendingMessages.value = emptyMap()
+                    pendingMessages.value = outbox.value
+                        .filter { it.senderId == remoteUid }
+                        .groupBy { it.conversationId }
+                        .mapValues { (_, items) ->
+                            items.map { item ->
+                                Message(
+                                    id = item.id, conversationId = item.conversationId,
+                                    senderId = item.senderId, text = item.text,
+                                    timestamp = item.createdAt, isRead = true,
+                                    isMine = true, isLocal = true
+                                )
+                            }
+                        }
                 }
                 combine(
                     remote.observeConversations(remoteUid),
