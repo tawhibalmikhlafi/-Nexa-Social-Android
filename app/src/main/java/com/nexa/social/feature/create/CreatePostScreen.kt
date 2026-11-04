@@ -35,14 +35,6 @@ import com.nexa.social.ui.theme.NexaSpacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val NexaBackground = Color(0xFF070711)
-private val NexaSurface = Color(0xFF151129)
-private val NexaSurfaceVariant = Color(0xFF1B1630)
-private val NexaPurple = Color(0xFF9B4DFF)
-private val NexaLavender = Color(0xFFC6A7FF)
-private val NexaText = Color(0xFFF7F3FF)
-private val NexaMuted = Color(0xFFA69BBF)
-
 private fun parseTags(input: String): List<String> = input
     .split(Regex("[,\\s]+"))
     .map { it.trim().removePrefix("#") }
@@ -63,6 +55,14 @@ fun CreatePostScreen(
     val uploadProgress by viewModel.uploadProgress.collectAsStateWithLifecycle()
     val snackbarHost = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
+    var isDarkMode by rememberSaveable { mutableStateOf(true) }
+    val NexaBackground = if (isDarkMode) Color(0xFF070711) else Color(0xFFF7F6FC)
+    val NexaSurface = if (isDarkMode) Color(0xFF151129) else Color(0xFFFFFFFF)
+    val NexaSurfaceVariant = if (isDarkMode) Color(0xFF1B1630) else Color(0xFFEDEAF5)
+    val NexaPurple = if (isDarkMode) Color(0xFF9B4DFF) else Color(0xFF7138C8)
+    val NexaLavender = if (isDarkMode) Color(0xFFC6A7FF) else Color(0xFF6336A8)
+    val NexaText = if (isDarkMode) Color(0xFFF7F3FF) else Color(0xFF211A2B)
+    val NexaMuted = if (isDarkMode) Color(0xFFA69BBF) else Color(0xFF716A7C)
 
     var text by rememberSaveable { mutableStateOf("") }
     var tagsText by rememberSaveable { mutableStateOf("") }
@@ -176,6 +176,14 @@ fun CreatePostScreen(
                     fontSize = 22.sp,
                     style = MaterialTheme.typography.titleLarge
                 )
+
+                IconButton(onClick = { isDarkMode = !isDarkMode }) {
+                    Icon(
+                        imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                        contentDescription = if (isDarkMode) "تفعيل الوضع الفاتح" else "تفعيل الوضع الداكن",
+                        tint = NexaLavender
+                    )
+                }
 
                 Button(
                     onClick = {
