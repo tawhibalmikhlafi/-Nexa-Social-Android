@@ -6,6 +6,7 @@ import com.nexa.social.core.common.FailureReason
 import com.nexa.social.core.common.Ids
 import com.nexa.social.core.common.Resource
 import com.nexa.social.core.storage.PreferenceStorage
+import com.nexa.social.core.sync.NexaOfflineSyncWorker
 import com.nexa.social.data.local.MessageLocalDataSource
 import com.nexa.social.data.local.PendingMessage
 import com.nexa.social.data.local.PendingMessageAction
@@ -463,6 +464,10 @@ class MessageRepositoryImpl(
         return Resource.Success(Unit)
     }
 
+    private fun scheduleOfflineSync() {
+        appContext?.let { NexaOfflineSyncWorker.schedule(it) }
+    }
+
     private suspend fun removeLocalMessage(
         conversationId: String,
         messageId: String,
@@ -585,6 +590,7 @@ class MessageRepositoryImpl(
             val next = conversationOutbox.value.filterNot { it.userId == item.userId && it.participant.id == item.participant.id } + item
             conversationOutbox.value = next
             withContext(Dispatchers.IO) { local.writeConversationOutbox(next) }
+            scheduleOfflineSync()
         } finally { conversationOutboxLock.unlock() }
     }
 
@@ -663,6 +669,7 @@ class MessageRepositoryImpl(
             val next = outbox.value.filterNot { it.id == item.id } + item
             outbox.value = next
             withContext(Dispatchers.IO) { local.writeOutbox(next) }
+            scheduleOfflineSync()
         } finally {
             outboxLock.unlock()
         }
@@ -720,6 +727,7 @@ class MessageRepositoryImpl(
                 PendingMessageAction(Ids.newId(), userId, conversationId, "", action, null, System.currentTimeMillis())
             actionOutbox.value = next
             withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
+            scheduleOfflineSync()
         } finally { actionOutboxLock.unlock() }
     }
     private suspend fun removeQueuedConversationAction(userId: String, conversationId: String, action: String) {
@@ -738,6 +746,7 @@ class MessageRepositoryImpl(
                 PendingMessageAction(Ids.newId(), userId, "", messageId, action, value, System.currentTimeMillis())
             actionOutbox.value = next
             withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
+            scheduleOfflineSync()
         } finally { actionOutboxLock.unlock() }
     }
 
