@@ -114,9 +114,34 @@ fun MessagesScreen(
     val noteError by viewModel.noteError.collectAsStateWithLifecycle()
     var showNotesEditor by rememberSaveable { mutableStateOf(false) }
     var noteDraft by rememberSaveable { mutableStateOf("") }
+    var noteVisibility by rememberSaveable { mutableStateOf("FOLLOWING") }
+    var noteDuration by rememberSaveable { mutableIntStateOf(24) }
+    var selectedNote by remember { mutableStateOf<UserNote?>(null) }
+    var noteReply by rememberSaveable { mutableStateOf("") }
     var showBanner by rememberSaveable { mutableStateOf(true) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        if (selectedNote != null) {
+            val note = selectedNote!!
+            AlertDialog(
+                onDismissRequest = { selectedNote = null; noteReply = "" },
+                title = { Text(note.displayName + " · @" + note.username) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(note.note, style = MaterialTheme.typography.titleMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            listOf("❤️", "😂", "🔥", "👏", "😍").forEach { emoji ->
+                                TextButton(onClick = { viewModel.interactWithNote(note.userId, "REACTION", emoji) }) { Text(emoji, fontSize = 20.sp) }
+                            }
+                        }
+                        OutlinedTextField(value = noteReply, onValueChange = { noteReply = it.take(200) }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("اكتب رداً على الملاحظة") }, trailingIcon = {
+                            TextButton(enabled = noteReply.isNotBlank(), onClick = { viewModel.interactWithNote(note.userId, "REPLY", noteReply) { if (it) { noteReply = ""; selectedNote = null } } }) { Text("إرسال") }
+                        })
+                    }
+                },
+                confirmButton = { TextButton(onClick = { selectedNote = null }) { Text("إغلاق") } }
+            )
+        }
         if (showNotesEditor) {
             AlertDialog(
                 onDismissRequest = { if (!noteSaving) { showNotesEditor = false; viewModel.clearNoteError() } },
@@ -124,6 +149,18 @@ fun MessagesScreen(
                 text = {
                     Column {
                         Text("شارك فكرة قصيرة تظهر لأصدقائك في شاشة الرسائل لمدة 24 ساعة.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        Text("من يمكنه مشاهدة الملاحظة؟", fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            listOf("FOLLOWING" to "الذين تتابعهم", "FOLLOWERS" to "المتابعين", "EVERYONE" to "الجميع").forEach { (value, label) ->
+                                TextButton(onClick = { noteVisibility = value }) { Text(if (noteVisibility == value) "✓ " + label else label, fontSize = 10.sp) }
+                            }
+                        }
+                        Text("مدة ظهور الملاحظة", fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            listOf(1, 6, 12, 24, 48).forEach { hours ->
+                                TextButton(onClick = { noteDuration = hours }) { Text((if (noteDuration == hours) "✓ " else "") + hours + "س", fontSize = 10.sp) }
+                            }
+                        }
                         Spacer(Modifier.height(12.dp))
                         OutlinedTextField(
                             value = noteDraft,
@@ -143,7 +180,7 @@ fun MessagesScreen(
                     TextButton(
                         enabled = !noteSaving,
                         onClick = {
-                            viewModel.saveNote(noteDraft) { success ->
+                            viewModel.saveNote(noteDraft, noteVisibility, noteDuration) { success ->
                                 if (success) showNotesEditor = false
                             }
                         }
@@ -208,9 +245,11 @@ fun MessagesScreen(
                         currentUserId = viewModel.currentUserId,
                         onMyNoteClick = {
                             noteDraft = myNote
+                            notes.firstOrNull { it.userId == viewModel.currentUserId }?.let { noteVisibility = it.visibility; noteDuration = it.durationHours }
                             viewModel.clearNoteError()
                             showNotesEditor = true
-                        }
+                        },
+                        onNoteClick = { selectedNote = it }
                     )
                 }
                 if (showBanner) {
@@ -530,7 +569,8 @@ fun ChatListItem(
 private fun NotesSection(
     notes: List<UserNote>,
     currentUserId: String?,
-    onMyNoteClick: () -> Unit
+    onMyNoteClick: () -> Unit,
+    onNoteClick: (UserNote) -> Unit
 ) {
     val ordered = notes.filterNot { it.userId == currentUserId } 
         .let { others -> listOfNotNull(notes.firstOrNull { it.userId == currentUserId }) + others }
@@ -563,7 +603,7 @@ private fun NotesSection(
                     note = entry.note,
                     avatarUrl = entry.avatarUrl,
                     isMine = false,
-                    onClick = {}
+                    onClick = { onNoteClick(entry) }
                 )
             }
         }
