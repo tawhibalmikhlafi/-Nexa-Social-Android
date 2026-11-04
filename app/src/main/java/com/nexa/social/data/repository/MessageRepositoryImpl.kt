@@ -634,10 +634,11 @@ class MessageRepositoryImpl(
         }
 
     override fun observeMessageRequests(): Flow<List<Conversation>> =
-        observeConversations().map { list ->
-            list.filter { conversation ->
-                conversation.id !in acceptedRequestIds.value && conversation.unreadCount > 0
-            }
+        combine(observeConversations(), acceptedRequestIds, actionOutbox) { conversations, resolved, actions ->
+            val locallyResolved = resolved + actions.filter {
+                it.action == "accept_request" || it.action == "reject_request"
+            }.map { it.conversationId }
+            conversations.filter { it.id !in locallyResolved && it.unreadCount > 0 }
         }
 
     override suspend fun acceptMessageRequest(conversationId: String): Resource<Unit> {
