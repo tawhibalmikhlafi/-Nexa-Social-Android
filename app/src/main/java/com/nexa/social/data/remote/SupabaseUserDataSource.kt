@@ -9,6 +9,7 @@ import com.nexa.social.core.common.Resource
 import com.nexa.social.core.common.Validators
 import com.nexa.social.core.supabase.SupabaseConfig
 import com.nexa.social.core.supabase.SupabaseHttp
+import com.nexa.social.core.supabase.boolean
 import com.nexa.social.core.supabase.long
 import com.nexa.social.core.supabase.objectOrNull
 import com.nexa.social.core.supabase.string
