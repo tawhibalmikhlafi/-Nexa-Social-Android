@@ -20,7 +20,8 @@ data class User(
     val followingCount: Int,
     val isFollowingLocally: Boolean = false,
     val city: String? = null,
-    val website: String? = null
+    val website: String? = null,
+    val isPrivateAccount: Boolean = false
 )
 
 /** Lightweight author reference embedded in feeds and messages. */
