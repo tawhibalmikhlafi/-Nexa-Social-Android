@@ -61,11 +61,22 @@ class PulseViewModel(
         val entries: List<DailyPulseEntry> = emptyList(),
         val myEntryId: String? = null,
         val message: String? = null,
-        val submitting: Boolean = false
+        val submitting: Boolean = false,
+        val badges: List<PulseBadge> = emptyList()
+    )
+
+    data class CommentsState(
+        val entryId: String? = null,
+        val loading: Boolean = false,
+        val comments: List<PulseComment> = emptyList(),
+        val submitting: Boolean = false,
+        val message: String? = null
     )
 
     private val _dailyState = MutableStateFlow(DailyState())
     val dailyState = _dailyState.asStateFlow()
+    private val _commentsState = MutableStateFlow(CommentsState())
+    val commentsState = _commentsState.asStateFlow()
 
     init { refreshDaily() }
 
@@ -73,14 +84,16 @@ class PulseViewModel(
         viewModelScope.launch {
             _dailyState.value = _dailyState.value.copy(loading = true, message = null)
             val feed = dailyRepository?.load()
+            val badges = dailyRepository?.loadMyBadges().orEmpty()
             _dailyState.value = if (feed == null) {
-                DailyState(loading = false, message = "تعذر الاتصال بنبض Nexa. تحقق من تسجيل الدخول والإنترنت.")
+                DailyState(loading = false, message = "تعذر الاتصال بنبض Nexa. تحقق من تسجيل الدخول والإنترنت.", badges = badges)
             } else {
                 DailyState(
                     loading = false,
                     prompt = feed.prompt,
                     entries = feed.entries,
-                    myEntryId = feed.myEntryId
+                    myEntryId = feed.myEntryId,
+                    badges = badges
                 )
             }
         }
@@ -97,6 +110,36 @@ class PulseViewModel(
                 submitting = false,
                 message = "لم تُنشر المشاركة. تحقق من الصورة والاتصال، أو ربما شاركت بالفعل في تحدي اليوم."
             )
+        }
+    }
+
+    fun loadComments(entryId: String) {
+        viewModelScope.launch {
+            _commentsState.value = CommentsState(entryId = entryId, loading = true)
+            val comments = dailyRepository?.loadComments(entryId)
+            _commentsState.value = if (comments == null) {
+                CommentsState(entryId = entryId, message = "تعذر تحميل التعليقات. تحقق من الاتصال ثم أعد المحاولة.")
+            } else {
+                CommentsState(entryId = entryId, comments = comments)
+            }
+        }
+    }
+
+    fun addComment(entryId: String, text: String) {
+        val clean = text.trim()
+        if (clean.isEmpty() || clean.length > 500 || _commentsState.value.submitting) return
+        viewModelScope.launch {
+            _commentsState.value = _commentsState.value.copy(submitting = true, message = null)
+            val ok = dailyRepository?.addComment(entryId, clean) == true
+            if (ok) {
+                loadComments(entryId)
+                refreshDaily()
+            } else {
+                _commentsState.value = _commentsState.value.copy(
+                    submitting = false,
+                    message = "تعذر نشر التعليق. قد يكون التحدي انتهى أو انقطع الاتصال."
+                )
+            }
         }
     }
 
