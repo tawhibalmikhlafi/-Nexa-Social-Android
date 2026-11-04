@@ -52,6 +52,21 @@ class MessageRepositoryImpl(
     private val outboxLock = kotlinx.coroutines.sync.Mutex()
     private val outbox = MutableStateFlow(local.readOutbox())
     private var lastRemoteUid: String? = null
+    init {
+        val restored = outbox.value
+        if (restored.isNotEmpty()) {
+            pendingMessages.value = restored.groupBy { it.conversationId }.mapValues { (_, items) ->
+                items.map { item ->
+                    Message(
+                        id = item.id, conversationId = item.conversationId, senderId = item.senderId,
+                        text = item.text, timestamp = item.createdAt, isRead = true,
+                        isMine = true, isLocal = true
+                    )
+                }
+            }
+        }
+    }
+
 
     private fun isRemote(session: SessionState): Boolean =
         session is SessionState.RemoteAccount && remote != null
