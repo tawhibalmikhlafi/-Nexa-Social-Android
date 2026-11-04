@@ -160,6 +160,13 @@ class ClipRepositoryImpl(
         val session = sessionFlow.first()
         if (session is SessionState.RemoteAccount) remote?.recordView(clipId)
     }
+    override suspend fun updateCaption(clipId: String, caption: String): Boolean {
+        if (caption.length > 2200) return false
+        val session = sessionFlow.first() as? SessionState.RemoteAccount ?: return false
+        val updated = remote?.updateCaption(clipId, caption) ?: false
+        if (updated) remote?.notifyChanged()
+        return updated
+    }
     override suspend fun deleteClip(clipId: String): Boolean {
         val session = sessionFlow.first()
         if (session is SessionState.RemoteAccount && remote != null) {
