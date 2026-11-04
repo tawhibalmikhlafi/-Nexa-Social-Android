@@ -61,6 +61,7 @@ import com.nexa.social.data.remote.SupabaseCommentDataSource
 import com.nexa.social.data.remote.SupabaseClipDataSource
 import com.nexa.social.data.remote.SupabaseMessageDataSource
 import com.nexa.social.data.remote.SupabaseNotificationDataSource
+import com.nexa.social.data.remote.SupabaseNotesDataSource
 import com.nexa.social.data.remote.SupabasePostDataSource
 import com.nexa.social.data.remote.SupabaseSafetyDataSource
 import com.nexa.social.data.remote.SupabaseStorageDataSource
@@ -112,6 +113,7 @@ interface AppContainer {
     val spaceRepository: SpaceRepository
     val clipRepository: ClipRepository
     val messageRepository: MessageRepository
+    val notesDataSource: SupabaseNotesDataSource?
     val notificationRepository: NotificationRepository
     val searchRepository: SearchRepository
     val feedRepository: FeedRepository
@@ -335,6 +337,19 @@ class DefaultAppContainer(context: Context) : AppContainer {
     } else {
         null
     }
+    private val remoteNotes = if (supabaseHttp != null && supabaseTokens != null) {
+        SupabaseNotesDataSource(
+            config = supabaseConfig,
+            http = supabaseHttp,
+            accessToken = { supabaseTokens.currentSession()?.accessToken },
+            currentUid = { supabaseTokens.currentSession()?.userId }
+        )
+    } else {
+        null
+    }
+
+    override val notesDataSource: SupabaseNotesDataSource? get() = remoteNotes
+
     private val remoteNotifications = if (supabaseHttp != null && supabaseTokens != null) {
         SupabaseNotificationDataSource(
             config = supabaseConfig,
