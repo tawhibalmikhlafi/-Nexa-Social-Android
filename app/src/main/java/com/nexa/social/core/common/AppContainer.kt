@@ -234,7 +234,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
 
     override val groupRepository: GroupRepository =
         supabaseHttp?.let {
-            GroupRepositoryImpl(it, accessTokenProvider, currentUidProvider, mediaStorage)
+            GroupRepositoryImpl(it, accessTokenProvider, currentUidProvider, mediaStorage, jsonStore)
         } ?: UnconfiguredGroupRepository
 
     private val networkMonitor by lazy { NetworkMonitor(appContext) }
