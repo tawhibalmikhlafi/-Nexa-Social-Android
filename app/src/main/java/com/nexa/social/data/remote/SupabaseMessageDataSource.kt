@@ -145,7 +145,13 @@ class SupabaseMessageDataSource(
                 .post(http.jsonBody(body))
                 .build()
         )
-        if (response?.successful != true) return null
+        if (response?.successful != true) {
+            // The first insert may have committed even if its response was lost.
+            val existing = fetchRows("messages?select=*&id=eq." + encode(messageId) + "&limit=1")
+                ?.firstOrNull()
+            if (existing != null) return parseMessage(existing, senderId)
+            return null
+        }
         val now = System.currentTimeMillis()
         return Message(
             id = messageId,
