@@ -644,7 +644,8 @@ internal object SupabaseUserMapper {
             followersCount = row.long("followers_count")?.toInt() ?: 0,
             followingCount = row.long("following_count")?.toInt() ?: 0,
             city = row.string("city"),
-            website = row.string("website")
+            website = row.string("website"),
+            isPrivateAccount = row.boolean("is_private_account") ?: false
         )
     }
 
