@@ -613,9 +613,10 @@ class MessageRepositoryImpl(
         drainMessageActions(store, session.userId)
         for (item in outbox.value.filter { it.senderId == session.userId }) {
             var queued = item
-            if (queued.localAttachmentUri != null) {
+            val localAttachmentUri = queued.localAttachmentUri
+            if (localAttachmentUri != null) {
                 val storage = mediaStorage ?: continue
-                val uploaded = storage.uploadAttachment(queued.localAttachmentUri, "${session.userId}/${queued.id}")
+                val uploaded = storage.uploadAttachment(localAttachmentUri, "${session.userId}/${queued.id}")
                 if (uploaded !is Resource.Success) continue
                 queued = queued.copy(attachmentPath = uploaded.data.path, localAttachmentUri = null, attachmentMime = uploaded.data.mimeType, attachmentName = uploaded.data.displayName)
                 outboxLock.lock()
@@ -624,7 +625,7 @@ class MessageRepositoryImpl(
                     outbox.value = next
                     withContext(Dispatchers.IO) { local.writeOutbox(next) }
                 } finally { outboxLock.unlock() }
-                deleteLocalAttachment(item.localAttachmentUri)
+                deleteLocalAttachment(localAttachmentUri)
             }
             val sent = runCatching {
                 store.sendMessage(
