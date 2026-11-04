@@ -12,6 +12,9 @@ import com.nexa.social.domain.model.UserSummary
 import com.nexa.social.domain.repository.CommunityRepository
 import com.nexa.social.domain.repository.PostRepository
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -48,8 +51,71 @@ data class PulseSnapshot(
  */
 class PulseViewModel(
     postRepository: PostRepository,
-    communityRepository: CommunityRepository
+    communityRepository: CommunityRepository,
+    private val dailyRepository: SupabaseDailyPulseRepository?
 ) : ViewModel() {
+
+    data class DailyState(
+        val loading: Boolean = true,
+        val prompt: DailyPulsePrompt? = null,
+        val entries: List<DailyPulseEntry> = emptyList(),
+        val myEntryId: String? = null,
+        val message: String? = null,
+        val submitting: Boolean = false
+    )
+
+    private val _dailyState = MutableStateFlow(DailyState())
+    val dailyState = _dailyState.asStateFlow()
+
+    init { refreshDaily() }
+
+    fun refreshDaily() {
+        viewModelScope.launch {
+            _dailyState.value = _dailyState.value.copy(loading = true, message = null)
+            val feed = dailyRepository?.load()
+            _dailyState.value = if (feed == null) {
+                DailyState(loading = false, message = "تعذر الاتصال بنبض Nexa. تحقق من تسجيل الدخول والإنترنت.")
+            } else {
+                DailyState(
+                    loading = false,
+                    prompt = feed.prompt,
+                    entries = feed.entries,
+                    myEntryId = feed.myEntryId
+                )
+            }
+        }
+    }
+
+    fun publish(text: String) {
+        val prompt = _dailyState.value.prompt ?: return
+        if (_dailyState.value.submitting || text.isBlank()) return
+        viewModelScope.launch {
+            _dailyState.value = _dailyState.value.copy(submitting = true, message = null)
+            val ok = dailyRepository?.publish(prompt.id, text) == true
+            if (ok) refreshDaily()
+            else _dailyState.value = _dailyState.value.copy(
+                submitting = false,
+                message = "لم تُنشر المشاركة. ربما شاركت بالفعل في تحدي اليوم."
+            )
+        }
+    }
+
+    fun toggleReaction(entry: DailyPulseEntry) {
+        viewModelScope.launch {
+            val ok = dailyRepository?.setReaction(entry.id, !entry.likedByMe) == true
+            if (ok) refreshDaily()
+            else _dailyState.value = _dailyState.value.copy(message = "تعذر تسجيل التفاعل.")
+        }
+    }
+
+    fun deleteMyEntry() {
+        val id = _dailyState.value.myEntryId ?: return
+        viewModelScope.launch {
+            val ok = dailyRepository?.deleteEntry(id) == true
+            if (ok) refreshDaily()
+            else _dailyState.value = _dailyState.value.copy(message = "تعذر حذف المشاركة.")
+        }
+    }
 
     val snapshot: StateFlow<PulseSnapshot> = combine(
         postRepository.observeFeed(),
@@ -132,7 +198,8 @@ class PulseViewModel(
                 val container = nexaApplication().container
                 PulseViewModel(
                     postRepository = container.postRepository,
-                    communityRepository = container.communityRepository
+                    communityRepository = container.communityRepository,
+                    dailyRepository = container.dailyPulseRepository
                 )
             }
         }
