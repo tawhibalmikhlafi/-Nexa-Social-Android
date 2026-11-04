@@ -75,7 +75,7 @@ class SupabaseClipDataSource(
         val uid = currentUid() ?: return false
         val token = accessToken() ?: return false
         val body = JsonObject().apply { addProperty("clip_id", clipId); addProperty("user_id", uid) }
-        val request = http.authenticatedRequest("$restUrl/clip_views", token)
+        val request = http.authenticatedRequest("$restUrl/clip_views?on_conflict=clip_id,user_id", token)
             .header("Prefer", "resolution=ignore-duplicates,return=minimal")
             .post(http.jsonBody(body)).build()
         val response = http.execute(request).getOrNull() ?: return false
