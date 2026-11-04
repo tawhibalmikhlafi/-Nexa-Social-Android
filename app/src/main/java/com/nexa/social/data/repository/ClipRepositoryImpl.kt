@@ -139,7 +139,7 @@ class ClipRepositoryImpl(
                         coverBackup?.let { File(Uri.parse(it).path.orEmpty()).delete() }
                         return upload
                     }
-                    val pending = Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true)
+                    val pending = pendingUploads.value.first { it.id == clipId }.let(::toPendingClip)
                     _clips.value = listOf(pending) + _clips.value.filterNot { it.id == clipId }
                     persist()
                     return Resource.Success(pending)
@@ -248,6 +248,9 @@ class ClipRepositoryImpl(
         }
         store.notifyChanged()
         persist()
+        } finally {
+            uploadExecutionLock.unlock()
+        }
     }
 
     override suspend fun toggleLike(clipId: String) {
