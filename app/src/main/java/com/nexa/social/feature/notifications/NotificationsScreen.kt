@@ -69,7 +69,7 @@ private fun notificationIcon(type: NotificationType?): ImageVector = when (type)
     NotificationType.LIKE, NotificationType.COMMENT_LIKE -> Icons.Filled.Favorite
     NotificationType.COMMENT -> Icons.Filled.ChatBubble
     NotificationType.REPLY, NotificationType.STORY_REPLY -> Icons.AutoMirrored.Filled.Reply
-    NotificationType.FOLLOW -> Icons.Filled.PersonAdd
+    NotificationType.FOLLOW, NotificationType.FOLLOW_REQUEST_ACCEPTED -> Icons.Filled.PersonAdd
     NotificationType.COMMUNITY,
     NotificationType.GROUP_JOIN_REQUEST,
     NotificationType.GROUP_JOIN_APPROVED,
@@ -247,6 +247,7 @@ private fun notificationTypeToggles(): List<NotificationType> = listOf(
     NotificationType.COMMENT,
     NotificationType.REPLY,
     NotificationType.FOLLOW,
+    NotificationType.FOLLOW_REQUEST_ACCEPTED,
     NotificationType.MENTION,
     NotificationType.STORY_REPLY,
     NotificationType.COMMUNITY,
@@ -259,7 +260,7 @@ private fun notificationTypeLabel(type: NotificationType): String = when (type) 
     NotificationType.COMMENT_LIKE -> stringResource(R.string.notif_type_comment_like)
     NotificationType.COMMENT -> stringResource(R.string.notif_type_comment)
     NotificationType.REPLY -> stringResource(R.string.notif_type_reply)
-    NotificationType.FOLLOW -> stringResource(R.string.notif_type_follow)
+    NotificationType.FOLLOW, NotificationType.FOLLOW_REQUEST_ACCEPTED -> stringResource(R.string.notif_type_follow)
     NotificationType.COMMUNITY -> stringResource(R.string.notif_type_community)
     NotificationType.GROUP_JOIN_REQUEST -> stringResource(R.string.notif_type_group_join_request)
     NotificationType.GROUP_JOIN_APPROVED -> stringResource(R.string.notif_type_group_join_approved)
@@ -282,6 +283,7 @@ private fun notificationMessage(notification: NexaNotification): String {
         NotificationType.COMMENT -> stringResource(R.string.notif_post_comment, actor)
         NotificationType.REPLY -> stringResource(R.string.notif_comment_reply, actor)
         NotificationType.FOLLOW -> stringResource(R.string.notif_follow, actor)
+        NotificationType.FOLLOW_REQUEST_ACCEPTED -> stringResource(R.string.notif_follow_request_accepted)
         NotificationType.MENTION -> stringResource(R.string.notif_mention, actor)
         NotificationType.STORY_REPLY -> stringResource(R.string.notif_story_reply, actor)
         NotificationType.MESSAGE -> stringResource(R.string.notif_message, actor)
