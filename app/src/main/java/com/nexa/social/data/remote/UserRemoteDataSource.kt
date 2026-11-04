@@ -50,6 +50,7 @@ interface UserRemoteDataSource {
     fun observeFollowers(uid: String): Flow<List<User>>
     suspend fun isFollowing(uid: String, targetId: String): Boolean
     suspend fun setFollowing(uid: String, targetId: String, following: Boolean): Boolean
+    suspend fun removeFollower(ownerUid: String, followerId: String): Boolean = false
     suspend fun hasPendingFollowRequest(uid: String, targetId: String): Boolean? = null
     suspend fun loadIncomingFollowRequests(uid: String): List<FollowRequest>? = null
     suspend fun respondToFollowRequest(requestId: String, approve: Boolean): Boolean = false
