@@ -54,6 +54,8 @@ class GroupRepositoryImpl(
     private val commentOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupComment>("group_comment_outbox.json").orEmpty())
     private val postOutboxLock = kotlinx.coroutines.sync.Mutex()
     private val postOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupPost>("group_post_outbox.json").orEmpty())
+    private val membershipOutboxLock = kotlinx.coroutines.sync.Mutex()
+    private val membershipOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupMembership>("group_membership_outbox.json").orEmpty())
 
     override fun observeMyGroups(): Flow<List<Group>> = _myGroups.asStateFlow()
 
@@ -61,6 +63,7 @@ class GroupRepositoryImpl(
     override suspend fun refreshMyGroups(): Resource<Unit> = withContext(Dispatchers.IO) {
         val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
         val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        drainMembershipOutbox(uid, token)
         val url = "$base/group_members?user_id=eq.${encode(uid)}&status=eq.active" +
             "&select=role,status,group:groups(*)&order=joined_at.desc"
         when (val result = executeJsonArray(http.authenticatedRequest(url, token).get().build())) {
@@ -324,42 +327,82 @@ class GroupRepositoryImpl(
     }
 
     // ── Join / leave / requests ────────────────────────────────────────────
-    override suspend fun joinOrRequest(groupId: String, message: String?): Resource<String> =
-        withContext(Dispatchers.IO) {
-            val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-            val body = JsonObject().apply {
-                addProperty("p_group_id", groupId)
-                if (!message.isNullOrBlank()) addProperty("p_message", message.trim())
-            }
-            val request = http.authenticatedRequest("$base/rpc/request_join_group", token)
-                .post(http.jsonBody(body))
-                .build()
-            when (val result = execute(request)) {
-                is Resource.Success -> {
-                    val outcome = runCatching {
-                        JsonParser.parseString(result.data.body).asString
-                    }.getOrElse { result.data.body.trim().trim('"') }
-                    refreshMyGroups()
-                    Resource.Success(outcome)
-                }
-                is Resource.Failure -> Resource.Failure(result.reason)
-                Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
+    override suspend fun joinOrRequest(groupId: String, message: String?): Resource<String> = withContext(Dispatchers.IO) {
+        val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val token = accessToken.token()
+        if (token != null) {
+            when (val result = sendJoinRequest(groupId, message, token)) {
+                is Resource.Success -> { refreshMyGroups(); return@withContext result }
+                is Resource.Failure -> if (result.reason != FailureReason.NETWORK) return@withContext result
+                Resource.Loading -> Unit
             }
         }
+        queueMembership(PendingGroupMembership(java.util.UUID.randomUUID().toString(), uid, groupId, "join", message?.trim(), System.currentTimeMillis()))
+        Resource.Success("queued")
+    }
 
-    override suspend fun leaveGroup(groupId: String): Resource<Unit> = withContext(Dispatchers.IO) {
-        val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-        val body = JsonObject().apply { addProperty("p_group_id", groupId) }
-        val request = http.authenticatedRequest("$base/rpc/leave_group", token)
-            .post(http.jsonBody(body))
-            .build()
-        when (val result = execute(request)) {
+    private suspend fun sendJoinRequest(groupId: String, message: String?, token: String): Resource<String> {
+        val body = JsonObject().apply { addProperty("p_group_id", groupId); if (!message.isNullOrBlank()) addProperty("p_message", message.trim()) }
+        val request = http.authenticatedRequest("$base/rpc/request_join_group", token).post(http.jsonBody(body)).build()
+        return when (val result = execute(request)) {
             is Resource.Success -> {
-                refreshMyGroups()
-                Resource.Success(Unit)
+                val outcome = runCatching { JsonParser.parseString(result.data.body).asString }.getOrElse { result.data.body.trim().trim('"') }
+                Resource.Success(outcome)
             }
             is Resource.Failure -> Resource.Failure(result.reason)
             Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
+        }
+    }
+
+    override suspend fun leaveGroup(groupId: String): Resource<Unit> = withContext(Dispatchers.IO) {
+        val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val token = accessToken.token()
+        if (token != null) {
+            val result = sendLeaveGroup(groupId, token)
+            if (result is Resource.Success) { refreshMyGroups(); return@withContext result }
+            if (result is Resource.Failure && result.reason != FailureReason.NETWORK) return@withContext result
+        }
+        queueMembership(PendingGroupMembership(java.util.UUID.randomUUID().toString(), uid, groupId, "leave", null, System.currentTimeMillis()))
+        Resource.Success(Unit)
+    }
+
+    private suspend fun sendLeaveGroup(groupId: String, token: String): Resource<Unit> {
+        val body = JsonObject().apply { addProperty("p_group_id", groupId) }
+        val request = http.authenticatedRequest("$base/rpc/leave_group", token).post(http.jsonBody(body)).build()
+        return when (val result = execute(request)) {
+            is Resource.Success -> Resource.Success(Unit)
+            is Resource.Failure -> Resource.Failure(result.reason)
+            Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
+        }
+    }
+
+    private suspend fun queueMembership(item: PendingGroupMembership) {
+        membershipOutboxLock.lock()
+        try {
+            val next = membershipOutbox.value.filterNot { it.userId == item.userId && it.groupId == item.groupId } + item
+            membershipOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_membership_outbox.json", next) }
+        } finally { membershipOutboxLock.unlock() }
+    }
+
+    private suspend fun removeMembership(id: String) {
+        membershipOutboxLock.lock()
+        try {
+            val next = membershipOutbox.value.filterNot { it.id == id }
+            membershipOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_membership_outbox.json", next) }
+        } finally { membershipOutboxLock.unlock() }
+    }
+
+    private suspend fun drainMembershipOutbox(uid: String, token: String) {
+        for (item in membershipOutbox.value.filter { it.userId == uid }) {
+            val result = when (item.action) {
+                "join" -> sendJoinRequest(item.groupId, item.message, token).let { it is Resource.Success }
+                "leave" -> sendLeaveGroup(item.groupId, token).let { it is Resource.Success }
+                else -> true
+            }
+            if (!result) break
+            removeMembership(item.id)
         }
     }
 
@@ -984,5 +1027,15 @@ data class PendingGroupPost(
     val userId: String,
     val groupId: String,
     val content: String,
+    val createdAt: Long
+)
+
+
+data class PendingGroupMembership(
+    val id: String,
+    val userId: String,
+    val groupId: String,
+    val action: String,
+    val message: String?,
     val createdAt: Long
 )
