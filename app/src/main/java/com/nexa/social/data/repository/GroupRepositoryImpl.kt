@@ -543,7 +543,7 @@ class GroupRepositoryImpl(
 
     override suspend fun setMemberRole(groupId: String, userId: String, role: String): Resource<Unit> =
         withContext(Dispatchers.IO) {
-            if (role !in setOf("admin", "member")) return@withContext Resource.Failure(FailureReason.INVALID_INPUT)
+            if (role !in setOf("admin", "member")) return@withContext Resource.Failure(FailureReason.REQUIRED)
             val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
             val body = JsonObject().apply { addProperty("p_group_id", groupId); addProperty("p_user_id", userId); addProperty("p_role", role) }
             submitAdminOperation(uid, "set_member_role", body, accessToken.token())
