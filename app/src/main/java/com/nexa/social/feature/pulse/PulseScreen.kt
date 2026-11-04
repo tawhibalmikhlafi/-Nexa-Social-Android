@@ -87,6 +87,12 @@ fun PulseScreen(
         commentText = ""
         selectedEntry?.id?.let(viewModel::loadComments)
     }
+    LaunchedEffect(commentsState.comments, commentsState.submitting) {
+        if (!commentsState.submitting && commentText.isNotBlank() &&
+            commentsState.comments.any { it.body == commentText.trim() }) {
+            commentText = ""
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         NexaTopBar(title = stringResource(R.string.pulse_title), onBack = onBack)
@@ -375,7 +381,6 @@ fun PulseScreen(
                     Button(
                         onClick = {
                             viewModel.addComment(entry.id, commentText)
-                            commentText = ""
                         },
                         enabled = commentText.isNotBlank() && !commentsState.submitting,
                         modifier = Modifier.fillMaxWidth()
