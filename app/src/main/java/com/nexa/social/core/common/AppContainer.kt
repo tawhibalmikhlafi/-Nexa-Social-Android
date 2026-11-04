@@ -66,6 +66,7 @@ import com.nexa.social.data.remote.SupabaseSafetyDataSource
 import com.nexa.social.data.remote.SupabaseStorageDataSource
 import com.nexa.social.data.remote.SupabaseStoryDataSource
 import com.nexa.social.data.remote.SupabaseUserDataSource
+import com.nexa.social.feature.pulse.SupabaseDailyPulseRepository
 import com.nexa.social.domain.model.UserSession
 import com.nexa.social.domain.repository.AchievementRepository
 import com.nexa.social.domain.repository.AiRepository
@@ -126,6 +127,7 @@ interface AppContainer {
     val accountRepository: AccountRepository
     val presenceRepository: PresenceRepository
     val groupRepository: GroupRepository
+    val dailyPulseRepository: SupabaseDailyPulseRepository?
     val presenceTracker: PresenceTracker
     val syncCoordinator: SyncCoordinator
 
@@ -231,6 +233,18 @@ class DefaultAppContainer(context: Context) : AppContainer {
         currentUid = currentUidProvider,
         prefs = preferenceStorage,
     )
+
+    override val dailyPulseRepository: SupabaseDailyPulseRepository? =
+        if (supabaseHttp != null && supabaseAuth != null) {
+            SupabaseDailyPulseRepository(
+                config = supabaseConfig,
+                http = supabaseHttp,
+                accessToken = { supabaseAuth.currentAccessToken() },
+                currentUid = { supabaseAuth.currentUid() }
+            )
+        } else {
+            null
+        }
 
     override val groupRepository: GroupRepository =
         supabaseHttp?.let {
