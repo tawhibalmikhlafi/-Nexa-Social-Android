@@ -52,6 +52,8 @@ class GroupRepositoryImpl(
     private val reactionOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupReaction>("group_reaction_outbox.json").orEmpty())
     private val commentOutboxLock = kotlinx.coroutines.sync.Mutex()
     private val commentOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupComment>("group_comment_outbox.json").orEmpty())
+    private val postOutboxLock = kotlinx.coroutines.sync.Mutex()
+    private val postOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupPost>("group_post_outbox.json").orEmpty())
 
     override fun observeMyGroups(): Flow<List<Group>> = _myGroups.asStateFlow()
 
@@ -65,6 +67,7 @@ class GroupRepositoryImpl(
             is Resource.Success -> {
                 drainReactionOutbox(uid, token)
                 drainCommentOutbox(uid, token)
+                drainPostOutbox(uid, token)
                 _myGroups.value = result.data.mapNotNull { element ->
                     val row = element.asJsonObject
                     val group = row.getAsJsonObject("group") ?: return@mapNotNull null
@@ -573,30 +576,60 @@ class GroupRepositoryImpl(
         mediaUrl: String?,
     ): Resource<String> = withContext(Dispatchers.IO) {
         val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-        val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        if (content.isBlank()) return@withContext Resource.Failure(FailureReason.REQUIRED)
+        if (!mediaUrl.isNullOrBlank()) {
+            val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NETWORK)
+            val id = java.util.UUID.randomUUID().toString()
+            return@withContext if (sendGroupPost(uid, id, groupId, content, mediaUrl, token)) Resource.Success(id) else Resource.Failure(FailureReason.NETWORK)
+        }
+        val id = java.util.UUID.randomUUID().toString()
+        val token = accessToken.token()
+        if (token != null && sendGroupPost(uid, id, groupId, content, null, token)) {
+            Resource.Success(id)
+        } else {
+            queueGroupPost(PendingGroupPost(id, uid, groupId, content.trim(), System.currentTimeMillis()))
+            Resource.Success(id)
+        }
+    }
+
+    private suspend fun sendGroupPost(uid: String, id: String, groupId: String, content: String, mediaUrl: String?, token: String): Boolean {
         val body = JsonObject().apply {
+            addProperty("id", id)
             addProperty("group_id", groupId)
             addProperty("author_id", uid)
             addProperty("content", content.trim())
             if (!mediaUrl.isNullOrBlank()) addProperty("media_url", mediaUrl)
         }
         val request = http.authenticatedRequest("$base/group_posts", token)
-            .addHeader("Prefer", "return=representation")
-            .post(http.jsonBody(body))
-            .build()
-        when (val result = execute(request)) {
-            is Resource.Success -> {
-                val id = runCatching {
-                    JsonParser.parseString(result.data.body).asJsonArray.firstOrNull()
-                        ?.asJsonObject?.string("id")
-                }.getOrNull()
-                if (id.isNullOrBlank()) Resource.Failure(FailureReason.GENERIC) else Resource.Success(id)
-            }
-            is Resource.Failure -> Resource.Failure(result.reason)
-            Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
-        }
+            .addHeader("Prefer", "resolution=ignore-duplicates,return=minimal")
+            .post(http.jsonBody(body)).build()
+        return execute(request) is Resource.Success
     }
 
+    private suspend fun queueGroupPost(item: PendingGroupPost) {
+        postOutboxLock.lock()
+        try {
+            val next = postOutbox.value.filterNot { it.id == item.id } + item
+            postOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_post_outbox.json", next) }
+        } finally { postOutboxLock.unlock() }
+    }
+
+    private suspend fun removeGroupPost(id: String) {
+        postOutboxLock.lock()
+        try {
+            val next = postOutbox.value.filterNot { it.id == id }
+            postOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_post_outbox.json", next) }
+        } finally { postOutboxLock.unlock() }
+    }
+
+    private suspend fun drainPostOutbox(uid: String, token: String) {
+        for (item in postOutbox.value.filter { it.userId == uid }) {
+            if (!sendGroupPost(uid, item.id, item.groupId, item.content, null, token)) break
+            removeGroupPost(item.id)
+        }
+    }
     override suspend fun deletePost(postId: String): Resource<Unit> = withContext(Dispatchers.IO) {
         val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
         val body = JsonObject().apply { addProperty("is_deleted", true) }
@@ -944,5 +977,14 @@ data class PendingGroupComment(
     val postId: String,
     val content: String,
     val parentId: String?,
+    val createdAt: Long
+)
+
+
+data class PendingGroupPost(
+    val id: String,
+    val userId: String,
+    val groupId: String,
+    val content: String,
     val createdAt: Long
 )
