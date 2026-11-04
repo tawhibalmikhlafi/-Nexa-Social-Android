@@ -69,7 +69,9 @@ fun PulseScreen(
 ) {
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
     val daily by viewModel.dailyState.collectAsStateWithLifecycle()
+    val commentsState by viewModel.commentsState.collectAsStateWithLifecycle()
     var entryText by remember { mutableStateOf("") }
+    var commentText by remember { mutableStateOf("") }
     var selectedEntry by remember { mutableStateOf<DailyPulseEntry?>(null) }
     var popularFirst by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -80,6 +82,10 @@ fun PulseScreen(
             entryText = ""
             selectedImageUri = null
         }
+    }
+    LaunchedEffect(selectedEntry?.id) {
+        commentText = ""
+        selectedEntry?.id?.let(viewModel::loadComments)
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -167,6 +173,19 @@ fun PulseScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                }
+            }
+            if (daily.badges.isNotEmpty()) {
+                item {
+                    NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
+                        Text("🏅 شاراتك في نبض", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        daily.badges.forEach { badge ->
+                            Column(modifier = Modifier.padding(top = NexaSpacing.sm)) {
+                                Text("🏆 ${badge.title}", style = MaterialTheme.typography.titleSmall)
+                                Text(badge.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
                 }
             }
@@ -333,7 +352,34 @@ fun PulseScreen(
                         AsyncImage(model = image, contentDescription = "صورة المشاركة",
                             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)))
                     }
-                    Text("❤ ${entry.reactions} إعجاب", style = MaterialTheme.typography.labelMedium)
+                    Text("❤ ${entry.reactions} إعجاب · ${if (commentsState.entryId == entry.id) commentsState.comments.size else "…"} تعليق", style = MaterialTheme.typography.labelMedium)
+                    Text("التعليقات", style = MaterialTheme.typography.titleSmall)
+                    when {
+                        commentsState.entryId != entry.id || commentsState.loading -> Text("جارٍ تحميل التعليقات…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        commentsState.comments.isEmpty() -> Text("كن أول من يعلّق", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        else -> commentsState.comments.takeLast(8).forEach { comment ->
+                            Column(modifier = Modifier.fillMaxWidth().padding(top = NexaSpacing.xs)) {
+                                Text(comment.displayName + "  @" + comment.username, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                Text(comment.body, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                    commentsState.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    OutlinedTextField(
+                        value = commentText,
+                        onValueChange = { if (it.length <= 500) commentText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("اكتب تعليقًا (حتى 500 حرف)") },
+                        maxLines = 3
+                    )
+                    Button(
+                        onClick = {
+                            viewModel.addComment(entry.id, commentText)
+                            commentText = ""
+                        },
+                        enabled = commentText.isNotBlank() && !commentsState.submitting,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(if (commentsState.submitting) "جارٍ النشر…" else "إضافة تعليق") }
                 }
             },
             confirmButton = {
