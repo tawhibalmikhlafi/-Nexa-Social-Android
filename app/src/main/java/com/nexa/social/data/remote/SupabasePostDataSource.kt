@@ -171,9 +171,10 @@ class SupabasePostDataSource(
 
     suspend fun updateCommentPermission(postId: String, permission: com.nexa.social.domain.model.CommentPermission): Boolean {
         val token = accessToken() ?: return false
+        val uid = currentUid() ?: return false
         val body = JsonObject().apply { addProperty("comment_permission", permission.name) }
         val response = execute(
-            http.authenticatedRequest("$restUrl/posts?id=eq.${encode(postId)}&author_id=eq.${encode(currentUid().orEmpty())}", token)
+            http.authenticatedRequest("$restUrl/posts?id=eq.${encode(postId)}&author_id=eq.${encode(uid)}", token)
                 .header("Prefer", "return=minimal")
                 .patch(http.jsonBody(body))
                 .build()
