@@ -2,6 +2,10 @@ name: Android Debug Build
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+      - feature/nexa-pulse-mvp
 
 permissions:
   contents: read
@@ -34,6 +38,11 @@ jobs:
 
       - name: Grant Gradle wrapper permission
         run: chmod +x ./gradlew
+
+      - name: Run unit tests (including offline/error cases)
+        env:
+          JAVA_TOOL_OPTIONS: -Xmx3g -Dfile.encoding=UTF-8
+        run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
 
       - name: Build debug APK
         env:

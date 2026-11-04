@@ -1,7 +1,9 @@
 package com.nexa.social.core.supabase
 
 import com.nexa.social.core.common.FailureReason
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SupabaseHttpFailureTest {
@@ -38,6 +40,22 @@ class SupabaseHttpFailureTest {
     @Test
     fun `maps server errors to network`() {
         assertEquals(FailureReason.NETWORK, reason(503, "upstream unavailable"))
+    }
+
+    @Test
+    fun `maps authentication and oversized payload errors`() {
+        assertEquals(FailureReason.NOT_AUTHENTICATED, reason(401, """{"message":"invalid token"}"""))
+        assertEquals(FailureReason.FILE_TOO_LARGE, reason(413, """{"message":"payload too large"}"""))
+    }
+
+    @Test
+    fun `connection refused is returned as a network failure instead of throwing`() = runBlocking {
+        val disconnected = SupabaseHttp(SupabaseConfig("http://127.0.0.1:1", "test-key"))
+        val result = disconnected.execute(
+            disconnected.request("http://127.0.0.1:1/unreachable").build()
+        )
+        assertTrue("transport failures should be represented as Result.failure", result.isFailure)
+        assertEquals(FailureReason.NETWORK, disconnected.transportFailure(result.exceptionOrNull()!!))
     }
 
     @Test
