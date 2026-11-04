@@ -166,6 +166,16 @@ class SupabaseClipDataSource(
         return response.successful
     }
 
+    suspend fun updateCaption(clipId: String, caption: String): Boolean {
+        val uid = currentUid() ?: return false
+        val token = accessToken() ?: return false
+        val body = JsonObject().apply { addProperty("caption", caption.trim()) }
+        val request = http.authenticatedRequest("$restUrl/clips?id=eq." + encode(clipId) + "&author_id=eq." + encode(uid), token)
+            .patch(http.jsonBody(body)).build()
+        val response = http.execute(request).getOrNull() ?: return false
+        if (response.successful) notifyChanged()
+        return response.successful
+    }
     suspend fun deleteClip(clipId: String): String? {
         val uid = currentUid() ?: return null
         val token = accessToken() ?: return null
