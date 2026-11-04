@@ -634,13 +634,21 @@ class MessageRepositoryImpl(
     private suspend fun enqueueAction(userId: String, messageId: String, action: String, value: String?) {
         actionOutboxLock.lock()
         try {
-            val next = actionOutbox.value.filterNot { it.userId == userId && it.messageId == messageId && it.action in setOf("edit", "react", "unreact", "delete_me", "delete_all") } +
+            val next = actionOutbox.value.filterNot { it.userId == userId && it.messageId == messageId && (it.action == action || action == "delete_all" || (action in setOf("react", "unreact") && it.action in setOf("react", "unreact"))) } +
                 PendingMessageAction(Ids.newId(), userId, "", messageId, action, value, System.currentTimeMillis())
             actionOutbox.value = next
             withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
         } finally { actionOutboxLock.unlock() }
     }
 
+    private suspend fun removeQueuedAction(userId: String, messageId: String, action: String) {
+        actionOutboxLock.lock()
+        try {
+            val next = actionOutbox.value.filterNot { it.userId == userId && it.messageId == messageId && (it.action == action || (action in setOf("react", "unreact") && it.action in setOf("react", "unreact")) || action == "delete_all") }
+            actionOutbox.value = next
+            withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
+        } finally { actionOutboxLock.unlock() }
+    }
     private suspend fun drainMessageActions(store: SupabaseMessageDataSource, userId: String) {
         for (item in actionOutbox.value.filter { it.userId == userId }) {
             val success = when (item.action) {
