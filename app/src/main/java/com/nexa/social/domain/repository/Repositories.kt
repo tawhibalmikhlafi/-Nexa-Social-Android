@@ -18,6 +18,7 @@ import com.nexa.social.domain.model.ContentKind
 import com.nexa.social.domain.model.Conversation
 import com.nexa.social.domain.model.CounterKind
 import com.nexa.social.domain.model.FeedType
+import com.nexa.social.domain.model.FollowRequest
 import com.nexa.social.domain.model.HiddenContent
 import com.nexa.social.domain.model.Message
 import com.nexa.social.domain.model.MutedUser
@@ -147,6 +148,8 @@ interface UserRepository {
     suspend fun setFollowing(userId: String, following: Boolean): Boolean
     suspend fun isFollowing(userId: String): Boolean
     suspend fun hasPendingFollowRequest(userId: String): Boolean? = null
+    suspend fun loadIncomingFollowRequests(): List<FollowRequest>? = null
+    suspend fun respondToFollowRequest(requestId: String, approve: Boolean): Boolean = false
 
     suspend fun refresh() {}
 }
