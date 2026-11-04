@@ -270,6 +270,13 @@ fun ConversationScreen(
             )
         }
 
+        Text(
+            text = "الصور لا تُحفظ تلقائياً على جهازك؛ استخدم زر التنزيل لحفظ الصورة عند الحاجة.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.xs)
+        )
+
         LazyColumn(
             state = listState,
             modifier = Modifier
