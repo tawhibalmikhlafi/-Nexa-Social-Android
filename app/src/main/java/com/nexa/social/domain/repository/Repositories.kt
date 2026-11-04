@@ -189,6 +189,7 @@ interface PostRepository {
     suspend fun hidePost(postId: String)
     suspend fun unhidePost(postId: String)
     suspend fun togglePin(postId: String)
+    suspend fun updateCommentPermission(postId: String, permission: com.nexa.social.domain.model.CommentPermission): Boolean = false
     fun observeDraft(): Flow<PostDraft?>
     suspend fun saveDraft(draft: PostDraft)
     suspend fun clearDraft()
