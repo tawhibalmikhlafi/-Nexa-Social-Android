@@ -7,6 +7,7 @@ import com.nexa.social.core.common.Ids
 import com.nexa.social.core.common.Resource
 import com.nexa.social.core.storage.PreferenceStorage
 import com.nexa.social.data.local.MessageLocalDataSource
+import com.nexa.social.data.local.PendingMessage
 import com.nexa.social.data.media.MediaBucket
 import com.nexa.social.data.media.MediaStorage
 import com.nexa.social.data.media.StoredMedia
@@ -48,6 +49,8 @@ class MessageRepositoryImpl(
     private val _conversations = MutableStateFlow(local.readConversations())
 
     private val pendingMessages = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
+    private val outboxLock = kotlinx.coroutines.sync.Mutex()
+    private val outbox = MutableStateFlow(local.readOutbox())
     private var lastRemoteUid: String? = null
 
     private fun isRemote(session: SessionState): Boolean =
@@ -138,17 +141,36 @@ class MessageRepositoryImpl(
         }
         val remoteStore = remote
         if (isRemote(session) && remoteStore != null) {
+            val clientMessageId = Ids.newId()
             val sent = remoteStore.sendMessage(
                 conversationId = conversationId,
                 senderId = senderId,
                 text = text,
                 attachmentPath = storedAttachment?.path,
                 attachmentMime = storedAttachment?.mimeType,
-                attachmentName = storedAttachment?.displayName
-            ) ?: return Resource.Failure(FailureReason.NETWORK)
+                attachmentName = storedAttachment?.displayName,
+                messageId = clientMessageId
+            )
+            if (sent == null) {
+                // Queue text only. An external attachment URI may no longer be readable after process death.
+                if (attachmentUri.isNullOrBlank()) {
+                    val item = PendingMessage(clientMessageId, conversationId, senderId, text.trim(), System.currentTimeMillis())
+                    enqueue(item)
+                    val optimistic = Message(
+                        id = item.id, conversationId = conversationId, senderId = senderId,
+                        text = item.text, timestamp = item.createdAt, isRead = true,
+                        isMine = true, isLocal = true
+                    )
+                    pendingMessages.update { current ->
+                        current + (conversationId to (current[conversationId].orEmpty() + optimistic).takeLast(50))
+                    }
+                    return Resource.Success(optimistic)
+                }
+                return Resource.Failure(FailureReason.NETWORK)
+            }
             pendingMessages.update { pending ->
                 val current = pending[conversationId].orEmpty()
-                pending + (conversationId to (current + sent).takeLast(20))
+                pending + (conversationId to (current.filterNot { it.id == sent.id } + sent).takeLast(50))
             }
             return Resource.Success(sent)
         }
@@ -527,6 +549,44 @@ class MessageRepositoryImpl(
 
     override suspend fun refresh() {
         remote?.refresh()
+        drainOutbox()
+    }
+
+    private suspend fun enqueue(item: PendingMessage) {
+        outboxLock.lock()
+        try {
+            val next = outbox.value.filterNot { it.id == item.id } + item
+            outbox.value = next
+            withContext(Dispatchers.IO) { local.writeOutbox(next) }
+        } finally {
+            outboxLock.unlock()
+        }
+    }
+
+    private suspend fun drainOutbox() {
+        val store = remote ?: return
+        val session = prefs.session.first() as? SessionState.RemoteAccount ?: return
+        for (item in outbox.value.filter { it.senderId == session.userId }) {
+            val sent = runCatching {
+                store.sendMessage(
+                    conversationId = item.conversationId, senderId = item.senderId,
+                    text = item.text, attachmentPath = null, attachmentMime = null,
+                    attachmentName = null, messageId = item.id
+                )
+            }.getOrNull() ?: continue
+            outboxLock.lock()
+            try {
+                val next = outbox.value.filterNot { it.id == item.id }
+                outbox.value = next
+                withContext(Dispatchers.IO) { local.writeOutbox(next) }
+            } finally {
+                outboxLock.unlock()
+            }
+            pendingMessages.update { current ->
+                val list = current[item.conversationId].orEmpty()
+                current + (item.conversationId to (list.filterNot { it.id == item.id } + sent).takeLast(50))
+            }
+        }
     }
 
     private suspend fun copyLocalAttachment(localUri: String): StoredMedia? {
