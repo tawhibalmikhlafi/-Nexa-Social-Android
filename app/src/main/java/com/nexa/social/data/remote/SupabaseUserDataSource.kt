@@ -385,8 +385,11 @@ class SupabaseUserDataSource(
             Log.w(TAG, "respondToFollowRequest failed with HTTP ${response.code}")
             return false
         }
-        refresh()
-        return true
+        val acceptedByServer = runCatching {
+            JsonParser.parseString(response.body.orEmpty()).asBoolean
+        }.getOrDefault(false)
+        if (acceptedByServer) refresh()
+        return acceptedByServer
     }
 
     override suspend fun setFollowing(uid: String, targetId: String, following: Boolean): Boolean {
