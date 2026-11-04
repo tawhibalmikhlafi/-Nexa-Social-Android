@@ -163,9 +163,9 @@ class MessageRepositoryImpl(
                                 unreadCount = 0,
                                 messages = messages,
                                 isLocalSample = false,
-                                pinnedLocally = queued.id in pinnedConversationIdsSnapshot(),
-                                mutedLocally = queued.id in mutedConversationIdsSnapshot(),
-                                archivedLocally = queued.id in archivedConversationIdsSnapshot()
+                                pinnedLocally = false,
+                                mutedLocally = false,
+                                archivedLocally = false
                             )
                         }
                     }
