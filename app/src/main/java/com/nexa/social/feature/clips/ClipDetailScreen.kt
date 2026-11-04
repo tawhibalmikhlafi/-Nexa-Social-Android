@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -173,8 +174,9 @@ private fun ClipVideo(
     playing: Boolean,
     onTogglePlayback: () -> Unit
 ) {
+    val context = LocalContext.current
     val videoView = remember(uri) {
-        VideoView(androidx.compose.ui.platform.LocalContext.current)
+        VideoView(context)
     }
     AndroidView(
         modifier = Modifier.fillMaxSize().clickable(onClick = onTogglePlayback),
