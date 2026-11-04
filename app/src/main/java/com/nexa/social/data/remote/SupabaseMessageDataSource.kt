@@ -217,8 +217,7 @@ class SupabaseMessageDataSource(
     suspend fun getAcceptedMessageRequestIds(uid: String): Set<String>? {
         val token = accessToken() ?: return null
         val rows = fetchRows(
-            "message_request_decisions?select=conversation_id&user_id=eq.${encode(uid)}&status=eq.accepted",
-            token
+            "message_request_decisions?select=conversation_id&user_id=eq.${encode(uid)}&status=eq.accepted"
         ) ?: return null
         return rows.mapNotNull { it.string("conversation_id") }.toSet()
     }
