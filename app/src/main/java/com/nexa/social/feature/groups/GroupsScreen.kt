@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
@@ -62,7 +64,17 @@ fun GroupsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     Scaffold(
-        topBar = { NexaTopBar(title = stringResource(R.string.groups_title), onBack = onBack) },
+        topBar = {
+            NexaTopBar(
+                title = stringResource(R.string.groups_title),
+                onBack = onBack,
+                actions = {
+                    IconButton(onClick = viewModel::refresh) {
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.action_refresh))
+                    }
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = onCreateGroup) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.groups_new))
@@ -85,6 +97,9 @@ fun GroupsScreen(
                     .fillMaxWidth()
                     .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.sm),
             )
+            if (state.isLoading && state.searchQuery.isBlank()) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
             if (state.isSearching) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
