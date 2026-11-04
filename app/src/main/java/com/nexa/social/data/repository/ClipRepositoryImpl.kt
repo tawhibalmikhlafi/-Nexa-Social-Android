@@ -437,9 +437,6 @@ class ClipRepositoryImpl(
             }
         }
         persist()
-        } finally {
-            uploadExecutionLock.unlock()
-        }
     }
 
     private fun applyPending(
