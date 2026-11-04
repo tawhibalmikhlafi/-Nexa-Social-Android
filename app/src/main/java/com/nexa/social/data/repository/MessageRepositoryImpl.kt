@@ -558,16 +558,20 @@ class MessageRepositoryImpl(
     private val acceptedRequestIds = MutableStateFlow<Set<String>>(emptySet())
 
     override suspend fun setStarred(messageId: String, starred: Boolean): Resource<Unit> {
+        val session = prefs.session.first()
+        if (session is SessionState.RemoteAccount && remote != null) {
+            val action = if (starred) "star" else "unstar"
+            val success = remote.setStarred(messageId, session.userId, starred)
+            if (success) removeQueuedAction(session.userId, messageId, action)
+            else enqueueAction(session.userId, messageId, action, null)
+            remote.refresh()
+            return Resource.Success(Unit)
+        }
         var found = false
         _conversations.value = _conversations.value.map { conversation ->
-            val hasMessage = conversation.messages.any { it.id == messageId }
-            if (!hasMessage) return@map conversation
+            if (conversation.messages.none { it.id == messageId }) return@map conversation
             found = true
-            conversation.copy(
-                messages = conversation.messages.map { msg ->
-                    if (msg.id == messageId) msg.copy(isStarred = starred) else msg
-                }
-            )
+            conversation.copy(messages = conversation.messages.map { if (it.id == messageId) it.copy(isStarred = starred) else it })
         }
         if (!found) return Resource.Failure(FailureReason.GENERIC)
         persist()
@@ -637,7 +641,7 @@ class MessageRepositoryImpl(
     private suspend fun enqueueAction(userId: String, messageId: String, action: String, value: String?) {
         actionOutboxLock.lock()
         try {
-            val next = actionOutbox.value.filterNot { it.userId == userId && it.messageId == messageId && (it.action == action || action == "delete_all" || (action in setOf("react", "unreact") && it.action in setOf("react", "unreact"))) } +
+            val next = actionOutbox.value.filterNot { it.userId == userId && it.messageId == messageId && (it.action == action || action == "delete_all" || (action in setOf("react", "unreact", "star", "unstar") && it.action in setOf("react", "unreact", "star", "unstar"))) } +
                 PendingMessageAction(Ids.newId(), userId, "", messageId, action, value, System.currentTimeMillis())
             actionOutbox.value = next
             withContext(Dispatchers.IO) { local.writeActionOutbox(next) }
@@ -660,6 +664,8 @@ class MessageRepositoryImpl(
                 "delete_all" -> store.deleteForEveryone(item.messageId)
                 "react" -> store.reactToMessage(item.messageId, userId, item.value.orEmpty())
                 "unreact" -> store.unreactToMessage(item.messageId, userId)
+                "star" -> store.setStarred(item.messageId, userId, true)
+                "unstar" -> store.setStarred(item.messageId, userId, false)
                 else -> true
             }
             if (!success) break
