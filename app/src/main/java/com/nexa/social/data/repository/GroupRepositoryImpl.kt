@@ -288,22 +288,11 @@ class GroupRepositoryImpl(
 
     override suspend fun setGroupArchived(groupId: String, archived: Boolean): Resource<Unit> =
         withContext(Dispatchers.IO) {
-            val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-            val body = JsonObject().apply {
-                addProperty("p_group_id", groupId)
-                addProperty("p_archived", archived)
-            }
-            val request = http.authenticatedRequest("$base/rpc/set_group_archived", token)
-                .post(http.jsonBody(body))
-                .build()
-            when (val result = execute(request)) {
-                is Resource.Success -> {
-                    refreshMyGroups()
-                    Resource.Success(Unit)
-                }
-                is Resource.Failure -> Resource.Failure(result.reason)
-                Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
-            }
+            val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+            val body = JsonObject().apply { addProperty("p_group_id", groupId); addProperty("p_archived", archived) }
+            val result = submitAdminOperation(uid, "set_group_archived", body, accessToken.token())
+            if (result is Resource.Success && accessToken.token() != null) refreshMyGroups()
+            result
         }
 
     override suspend fun uploadGroupImage(
@@ -366,14 +355,19 @@ class GroupRepositoryImpl(
             val key = runCatching { JsonParser.parseString(item.payload).asJsonObject }.getOrNull()
             val groupId = key?.string("p_group_id")
             val userId = key?.string("p_user_id")
-            val next = adminOutbox.value.filterNot { old ->
-                if (old.userId != item.userId || old.rpc != item.rpc) false
-                else {
-                    val oldPayload = runCatching { JsonParser.parseString(old.payload).asJsonObject }.getOrNull()
-                    oldPayload?.string("p_group_id") == groupId &&
-                        (userId == null || oldPayload.string("p_user_id") == userId)
-                }
-            } + item
+            val coalescible = item.rpc in setOf("update_group_details", "set_member_role", "remove_member", "unban_member", "set_group_archived")
+            val next = if (!coalescible) {
+                adminOutbox.value + item
+            } else {
+                adminOutbox.value.filterNot { old ->
+                    if (old.userId != item.userId || old.rpc != item.rpc) false
+                    else {
+                        val oldPayload = runCatching { JsonParser.parseString(old.payload).asJsonObject }.getOrNull()
+                        oldPayload?.string("p_group_id") == groupId &&
+                            (userId == null || oldPayload.string("p_user_id") == userId)
+                    }
+                } + item
+            }
             adminOutbox.value = next
             withContext(Dispatchers.IO) { jsonStore?.writeList("group_admin_outbox.json", next) }
         } finally { adminOutboxLock.unlock() }
