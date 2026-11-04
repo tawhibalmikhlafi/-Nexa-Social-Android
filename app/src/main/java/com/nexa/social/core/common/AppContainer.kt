@@ -240,7 +240,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
                 config = supabaseConfig,
                 http = supabaseHttp,
                 accessToken = { supabaseAuth.currentAccessToken() },
-                currentUid = { supabaseAuth.currentUid() }
+                currentUid = { supabaseAuth.currentUid() },
+                mediaStorage = mediaStorage
             )
         } else {
             null
