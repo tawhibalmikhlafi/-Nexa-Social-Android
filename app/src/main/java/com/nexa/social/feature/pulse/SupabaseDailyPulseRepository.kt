@@ -5,6 +5,11 @@ import com.google.gson.JsonParser
 import com.nexa.social.core.supabase.SupabaseConfig
 import com.nexa.social.core.supabase.SupabaseHttp
 import com.nexa.social.core.supabase.string
+import com.nexa.social.core.common.Resource
+import com.nexa.social.data.media.MediaBucket
+import com.nexa.social.data.media.MediaStorage
+import android.net.Uri
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URLEncoder
@@ -26,6 +31,7 @@ data class DailyPulseEntry(
     val username: String,
     val avatarUrl: String?,
     val body: String,
+    val imageUrl: String?,
     val createdAt: String,
     val reactions: Int,
     val likedByMe: Boolean
@@ -42,7 +48,8 @@ class SupabaseDailyPulseRepository(
     private val config: SupabaseConfig,
     private val http: SupabaseHttp,
     private val accessToken: suspend () -> String?,
-    private val currentUid: suspend () -> String?
+    private val currentUid: suspend () -> String?,
+    private val mediaStorage: MediaStorage?
 ) {
     private val rest get() = config.restUrl
 
@@ -63,7 +70,7 @@ class SupabaseDailyPulseRepository(
             endsAt = promptRow.string("ends_at").orEmpty()
         )
         val entries = getRows(
-            "pulse_entries?select=id,user_id,body,created_at&prompt_id=eq.${enc(prompt.id)}&order=created_at.desc&limit=100",
+            "pulse_entries?select=id,user_id,body,image_path,created_at&prompt_id=eq.${enc(prompt.id)}&order=created_at.desc&limit=100",
             token
         ) ?: return@withContext null
         if (entries.isEmpty()) return@withContext DailyPulseFeed(prompt, emptyList(), null)
@@ -93,6 +100,7 @@ class SupabaseDailyPulseRepository(
                 username = username,
                 avatarUrl = profile?.string("avatar_url"),
                 body = row.string("body").orEmpty(),
+                imageUrl = row.string("image_path")?.let { publicImageUrl(it) },
                 createdAt = row.string("created_at").orEmpty(),
                 reactions = rowReactions.size,
                 likedByMe = rowReactions.any { it.string("user_id") == uid }
@@ -101,23 +109,44 @@ class SupabaseDailyPulseRepository(
         DailyPulseFeed(prompt, mapped, mapped.firstOrNull { it.userId == uid }?.id)
     }
 
-    suspend fun publish(promptId: String, bodyText: String): Boolean {
+    suspend fun publish(promptId: String, bodyText: String, imageUri: String? = null): Boolean {
         val uid = currentUid() ?: return false
         val token = accessToken() ?: return false
         val clean = bodyText.trim()
-        if (clean.isEmpty() || clean.length > 1000) return false
+        if (clean.length > 1000 || (clean.isEmpty() && imageUri.isNullOrBlank())) return false
+        var imagePath: String? = null
+        if (!imageUri.isNullOrBlank()) {
+            val storage = mediaStorage ?: return false
+            val extension = when (Uri.parse(imageUri).lastPathSegment?.substringAfterLast('.', "")?.lowercase()) {
+                "png" -> "png"
+                "webp" -> "webp"
+                else -> "jpg"
+            }
+            val path = "$uid/${UUID.randomUUID()}.$extension"
+            when (val uploaded = storage.uploadImage(imageUri, MediaBucket.PULSE, path)) {
+                is Resource.Success -> imagePath = path
+                else -> return false
+            }
+        }
         val body = JsonObject().apply {
             addProperty("prompt_id", promptId)
             addProperty("user_id", uid)
             addProperty("body", clean)
+            if (imagePath != null) addProperty("image_path", imagePath)
         }
         val response = http.execute(
             http.authenticatedRequest("$rest/pulse_entries", token)
                 .header("Prefer", "return=minimal")
                 .post(http.jsonBody(body)).build()
-        ).getOrNull() ?: return false
-        return response.successful
+        ).getOrNull()
+        if (response?.successful == true) return true
+        imagePath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
+        return false
     }
+
+    private fun publicImageUrl(path: String): String =
+        config.normalizedUrl + "/storage/v1/object/public/nexa-pulse/" +
+            path.split('/').joinToString("/") { Uri.encode(it) }
 
     suspend fun setReaction(entryId: String, enabled: Boolean): Boolean {
         val uid = currentUid() ?: return false
@@ -143,7 +172,12 @@ class SupabaseDailyPulseRepository(
         val request = http.authenticatedRequest(
             "$rest/pulse_entries?id=eq.${enc(entryId)}&user_id=eq.${enc(uid)}", token
         ).delete().build()
-        return http.execute(request).getOrNull()?.successful == true
+        val ok = http.execute(request).getOrNull()?.successful == true
+        if (ok) {
+            val rows = getRows("pulse_entries?select=image_path&id=eq.${enc(entryId)}&limit=1", token)
+            rows?.firstOrNull()?.string("image_path")?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
+        }
+        return ok
     }
 
     private suspend fun getRows(path: String, token: String): List<JsonObject>? {
