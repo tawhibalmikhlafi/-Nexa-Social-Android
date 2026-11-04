@@ -1141,4 +1141,5 @@
     <string name="post_comment_permission_no_one">No one</string>
     <string name="post_comments_locked">The author turned off comments.</string>
     <string name="post_comment_permission_saved">Comment permissions updated</string>
+    <string name="notif_follow_request_accepted">Your follow request was accepted</string>
 </resources>
