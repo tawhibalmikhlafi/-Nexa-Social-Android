@@ -65,6 +65,7 @@ import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
@@ -178,6 +179,7 @@ fun ConversationScreen(
     val attachmentUrls by viewModel.attachmentUrls.collectAsStateWithLifecycle()
     var input by rememberSaveable { mutableStateOf("") }
     var attachmentUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var previewImageUrl by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<Message?>(null) }
     var editing by remember { mutableStateOf<Message?>(null) }
     val listState = rememberLazyListState()
@@ -299,7 +301,10 @@ fun ConversationScreen(
                 MessageBubble(
                     message = message,
                     attachmentUrl = attachmentUrls[message.id],
+                    senderAvatarUrl = if (message.isMine) null else conversation?.participant?.avatarUri,
+                    senderDisplayName = conversation?.participant?.displayName.orEmpty(),
                     currentUserId = currentUserId,
+                    onOpenImage = { previewImageUrl = it },
                     isFirstInGroup = !joinsPrevious,
                     isLastInGroup = !joinsNext,
                     onOpenActions = { selected = message },
@@ -422,7 +427,7 @@ fun ConversationScreen(
                             }
                             input = ""
                         },
-                        enabled = canSend && input.isNotBlank() && !isRecording,
+                        enabled = canSend && (input.isNotBlank() || !attachmentUri.isNullOrBlank()) && !isRecording,
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
@@ -436,6 +441,28 @@ fun ConversationScreen(
                             ),
                             modifier = Modifier.size(20.dp)
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    previewImageUrl?.let { imageUrl ->
+        Dialog(onDismissRequest = { previewImageUrl = null }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = stringResource(R.string.message_attachment_image),
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxWidth().height(440.dp)
+                    )
+                    TextButton(onClick = { previewImageUrl = null }, modifier = Modifier.align(Alignment.End)) {
+                        Text("إغلاق")
                     }
                 }
             }
@@ -494,7 +521,10 @@ fun ConversationScreen(
 private fun MessageBubble(
     message: Message,
     attachmentUrl: String?,
+    senderAvatarUrl: String?,
+    senderDisplayName: String,
     currentUserId: String?,
+    onOpenImage: (String) -> Unit,
     isFirstInGroup: Boolean,
     isLastInGroup: Boolean,
     onOpenActions: () -> Unit,
@@ -528,8 +558,27 @@ private fun MessageBubble(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = if (isFirstInGroup) NexaSpacing.xs else 0.dp),
-        horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start
+        horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom
     ) {
+        if (!mine && isFirstInGroup) {
+            Box(
+                modifier = Modifier.size(30.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!senderAvatarUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = senderAvatarUrl,
+                        contentDescription = senderDisplayName,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().clip(CircleShape)
+                    )
+                } else {
+                    Text(initialsOf(senderDisplayName), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(Modifier.width(6.dp))
+        }
         Column(
             horizontalAlignment = if (mine) Alignment.End else Alignment.Start,
             modifier = Modifier.widthIn(max = 300.dp)
@@ -620,6 +669,7 @@ private fun MessageBubble(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clip(RoundedCornerShape(14.dp))
+                                    .clickable { onOpenImage(attachmentUrl) }
                             )
                             IconButton(
                                 onClick = {
