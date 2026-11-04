@@ -1,0 +1,6 @@
+drop policy if exists message_request_decisions_select_self on public.message_request_decisions;
+create policy message_request_decisions_select_self on public.message_request_decisions for select to authenticated using (user_id=auth.uid() and exists (select 1 from public.conversations c where c.id=message_request_decisions.conversation_id and auth.uid() in (c.user_a,c.user_b)));
+drop policy if exists message_request_decisions_insert_self on public.message_request_decisions;
+create policy message_request_decisions_insert_self on public.message_request_decisions for insert to authenticated with check (user_id=auth.uid() and exists (select 1 from public.conversations c where c.id=message_request_decisions.conversation_id and auth.uid() in (c.user_a,c.user_b)));
+drop policy if exists message_request_decisions_update_self on public.message_request_decisions;
+create policy message_request_decisions_update_self on public.message_request_decisions for update to authenticated using (user_id=auth.uid() and exists (select 1 from public.conversations c where c.id=message_request_decisions.conversation_id and auth.uid() in (c.user_a,c.user_b))) with check (user_id=auth.uid() and exists (select 1 from public.conversations c where c.id=message_request_decisions.conversation_id and auth.uid() in (c.user_a,c.user_b)));
