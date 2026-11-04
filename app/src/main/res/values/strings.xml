@@ -1130,4 +1130,5 @@
     <string name="comment_sending">Sending…</string>
     <string name="notifications_filter_all">All</string>
     <string name="notifications_filter_unread">Unread</string>
+    <string name="action_refresh">Refresh</string>
 </resources>
