@@ -175,6 +175,7 @@ class SupabaseNotificationDataSource(
             NotificationType.COMMENT_LIKE,
             NotificationType.MENTION -> postId
             NotificationType.FOLLOW,
+            NotificationType.FOLLOW_REQUEST_ACCEPTED,
             NotificationType.MESSAGE,
             NotificationType.STORY_REPLY -> actorId
             NotificationType.GROUP_JOIN_REQUEST,
@@ -198,6 +199,7 @@ class SupabaseNotificationDataSource(
                 NotificationType.COMMENT_LIKE,
                 NotificationType.MENTION -> NotificationTargetKind.POST
                 NotificationType.FOLLOW,
+                NotificationType.FOLLOW_REQUEST_ACCEPTED,
                 NotificationType.MESSAGE,
                 NotificationType.STORY_REPLY -> NotificationTargetKind.USER
                 NotificationType.GROUP_JOIN_REQUEST,
