@@ -304,7 +304,7 @@ class MessageRepositoryImpl(
         if (text.isBlank()) return Resource.Failure(FailureReason.REQUIRED)
         val session = prefs.session.first()
         val remoteStore = remote
-        if (isRemote(session) && remoteStore != null) {
+        if (session is SessionState.RemoteAccount && remoteStore != null) {
             val updated = runCatching { remoteStore.editMessage(messageId, text) }.getOrDefault(false)
             if (!updated) {
                 enqueueAction(session.userId, messageId, "edit", text.trim())
