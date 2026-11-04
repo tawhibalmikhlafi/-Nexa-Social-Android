@@ -392,6 +392,29 @@ class SupabaseUserDataSource(
         return acceptedByServer
     }
 
+    override suspend fun removeFollower(ownerUid: String, followerId: String): Boolean {
+        if (ownerUid.isBlank() || followerId.isBlank() || ownerUid == followerId ||
+            currentUid() != ownerUid
+        ) return false
+        val token = accessToken() ?: return false
+        val body = JsonObject().apply { addProperty("p_follower_id", followerId) }
+        val response = execute(
+            http.authenticatedRequest("$restUrl/rpc/nexa_remove_follower", token)
+                .header("Prefer", "return=representation")
+                .post(http.jsonBody(body))
+                .build()
+        ) ?: return false
+        if (!response.successful) {
+            Log.w(TAG, "removeFollower failed with HTTP ${response.code}")
+            return false
+        }
+        val removed = runCatching {
+            JsonParser.parseString(response.body.orEmpty()).asBoolean
+        }.getOrDefault(false)
+        if (removed) refresh()
+        return removed
+    }
+
     override suspend fun setFollowing(uid: String, targetId: String, following: Boolean): Boolean {
         if (uid == targetId) return false
         val token = accessToken() ?: return false
