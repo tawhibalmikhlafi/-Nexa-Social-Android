@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,6 +66,12 @@ fun PulseScreen(
     var entryText by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { selectedImageUri = it }
+    LaunchedEffect(daily.myEntryId) {
+        if (daily.myEntryId != null) {
+            entryText = ""
+            selectedImageUri = null
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         NexaTopBar(title = stringResource(R.string.pulse_title), onBack = onBack)
@@ -118,8 +125,6 @@ fun PulseScreen(
                                 Button(
                                     onClick = {
                                         viewModel.publish(entryText, selectedImageUri?.toString())
-                                        entryText = ""
-                                        selectedImageUri = null
                                     },
                                     enabled = (entryText.isNotBlank() || selectedImageUri != null) && !daily.submitting,
                                     modifier = Modifier.fillMaxWidth()
