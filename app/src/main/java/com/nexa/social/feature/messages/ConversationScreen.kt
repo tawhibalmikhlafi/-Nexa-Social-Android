@@ -1,10 +1,14 @@
 package com.nexa.social.feature.messages
 
 import android.Manifest
+import android.app.DownloadManager
+import android.content.Context
+import android.os.Environment
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.widget.MediaController
 import android.widget.VideoView
+import android.widget.Toast
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,6 +57,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
@@ -495,6 +500,7 @@ private fun MessageBubble(
     onToggleReaction: (String) -> Unit,
     onToggleStar: () -> Unit
 ) {
+    val contextForMessageSave = LocalContext.current
     val mine = message.isMine
     val bubbleColor = if (mine) {
         MaterialTheme.colorScheme.primary
@@ -609,9 +615,44 @@ private fun MessageBubble(
                             AsyncImage(
                                 model = attachmentUrl,
                                 contentDescription = stringResource(R.string.message_attachment_image),
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(14.dp))
                             )
+                            IconButton(
+                                onClick = {
+                                    runCatching {
+                                        val request = DownloadManager.Request(Uri.parse(attachmentUrl))
+                                            .setTitle("صورة من Nexa")
+                                            .setDescription("جارٍ حفظ الصورة في مجلد الصور")
+                                            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                            .setAllowedOverMetered(true)
+                                            .setAllowedOverRoaming(false)
+                                            .setDestinationInExternalPublicDir(
+                                                Environment.DIRECTORY_PICTURES,
+                                                "Nexa/message-${message.id.hashCode().toUInt()}.jpg"
+                                            )
+                                        val manager = contextForMessageSave.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                                        manager.enqueue(request)
+                                    }.onSuccess {
+                                        Toast.makeText(contextForMessageSave, "بدأ حفظ الصورة في مجلد الصور", Toast.LENGTH_SHORT).show()
+                                    }.onFailure {
+                                        Toast.makeText(contextForMessageSave, "تعذر حفظ الصورة", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .size(40.dp)
+                                    .background(Color.Black.copy(alpha = 0.58f), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Download,
+                                    contentDescription = "حفظ الصورة",
+                                    tint = Color.White
+                                )
+                            }
                         }
                     }
         NexaOptionRow(
