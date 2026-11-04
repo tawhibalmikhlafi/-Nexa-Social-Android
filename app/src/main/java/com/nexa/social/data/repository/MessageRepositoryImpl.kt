@@ -104,7 +104,7 @@ class MessageRepositoryImpl(
                         }
                 }
                 combine(
-                    remote.observeConversations(remoteUid),
+                    remote.observeConversations(remoteUid).onStart { emit(emptyList()) },
                     pendingMessages,
                     prefs.pinnedConversationIds,
                     prefs.mutedConversationIds,
