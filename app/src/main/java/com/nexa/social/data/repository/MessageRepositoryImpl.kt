@@ -763,6 +763,7 @@ class MessageRepositoryImpl(
                 else -> true
             }
             if (!success) break
+            if (item.action == "accept_request") acceptedRequestIds.update { it + item.conversationId }
             actionOutboxLock.lock()
             try {
                 val next = actionOutbox.value.filterNot { it.id == item.id }
