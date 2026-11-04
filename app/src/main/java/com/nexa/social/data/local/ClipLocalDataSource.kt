@@ -61,4 +61,4 @@ data class PendingClipComment(
 )
 
 
-data class PendingClipUpload(val id: String, val userId: String, val localVideoPath: String, val caption: String, val createdAt: Long)
+data class PendingClipUpload(val id: String, val userId: String, val localVideoPath: String, val caption: String, val createdAt: Long, val localCoverPath: String? = null)
