@@ -8,7 +8,8 @@ enum class MediaBucket(val id: String) {
     STORIES("story-media"),
     PROFILES("profile-media"),
     GROUPS("group-media"),
-    MESSAGES("message-media")
+    MESSAGES("message-media"),
+    CLIPS("clips-media")
 }
 
 data class StoredMedia(
@@ -35,6 +36,9 @@ interface MediaStorage {
         localUri: String,
         path: String
     ): Resource<StoredMedia>
+
+    suspend fun uploadVideo(localUri: String, path: String): Resource<String> =
+        Resource.Failure(com.nexa.social.core.common.FailureReason.NOT_CONFIGURED)
 
     suspend fun deleteByPublicUrl(url: String?)
 
