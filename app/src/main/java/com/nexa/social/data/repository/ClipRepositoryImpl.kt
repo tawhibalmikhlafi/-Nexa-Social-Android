@@ -129,7 +129,7 @@ class ClipRepositoryImpl(
         val currentId = (session as? SessionState.LocalAccount)?.userId ?: return false
         val existing = _clips.value.firstOrNull { it.id == clipId } ?: return false
         if (existing.author.id != currentId) return false
-        _clips.value = _clips.value.filterNot { it.id != clipId }
+        _clips.value = _clips.value.filterNot { it.id == clipId }
         persist()
         return true
     }
