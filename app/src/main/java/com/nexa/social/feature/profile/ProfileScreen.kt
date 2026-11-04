@@ -50,6 +50,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -145,6 +147,10 @@ fun ProfileScreen(
     val followingCount by viewModel.followingCount.collectAsStateWithLifecycle()
     val followBusy by viewModel.followBusy.collectAsStateWithLifecycle()
     val followError by viewModel.followError.collectAsStateWithLifecycle()
+    val incomingFollowRequests by viewModel.incomingFollowRequests.collectAsStateWithLifecycle()
+    val followRequestsLoading by viewModel.followRequestsLoading.collectAsStateWithLifecycle()
+    val followRequestError by viewModel.followRequestError.collectAsStateWithLifecycle()
+    val followRequestActionId by viewModel.followRequestActionId.collectAsStateWithLifecycle()
     val canMessage by viewModel.canMessage.collectAsStateWithLifecycle()
     val messageBusy by viewModel.messageBusy.collectAsStateWithLifecycle()
     val messageError by viewModel.messageError.collectAsStateWithLifecycle()
@@ -339,6 +345,76 @@ fun ProfileScreen(
 
                 IconButton(onClick = copyProfileLink) {
                     Icon(Icons.Filled.Link, contentDescription = stringResource(R.string.profile_copy_link))
+                }
+            }
+        }
+
+        if (showOwnerTools && remoteMode &&
+            (incomingFollowRequests.isNotEmpty() || followRequestsLoading || followRequestError)
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = NexaSpacing.md),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(NexaSpacing.md),
+                        verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("طلبات المتابعة", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(
+                                    if (incomingFollowRequests.isEmpty()) "لا توجد طلبات معلّقة"
+                                    else "${incomingFollowRequests.size} طلب بانتظار موافقتك",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            TextButton(onClick = viewModel::refreshIncomingFollowRequests) {
+                                Text("تحديث")
+                            }
+                        }
+                        if (followRequestsLoading) {
+                            Text("جارٍ تحميل الطلبات…", style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (followRequestError) {
+                            Text(
+                                "تعذر تحميل الطلبات أو تنفيذ الإجراء. تحقق من الاتصال وحاول مجددًا.",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        incomingFollowRequests.take(8).forEach { request ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(request.requester.displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                    Text("@${request.requester.username}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.respondToFollowRequest(request.id, approve = false) },
+                                    enabled = followRequestActionId == null
+                                ) { Text("رفض") }
+                                Button(
+                                    onClick = { viewModel.respondToFollowRequest(request.id, approve = true) },
+                                    enabled = followRequestActionId == null
+                                ) { Text(if (followRequestActionId == request.id) "..." else "قبول") }
+                            }
+                        }
+                        if (incomingFollowRequests.size > 8) {
+                            Text("يُعرض أحدث 8 طلبات. حدّث القائمة بعد معالجة الطلبات.", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                 }
             }
         }
