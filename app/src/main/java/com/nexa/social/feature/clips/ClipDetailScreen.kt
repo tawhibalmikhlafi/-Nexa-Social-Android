@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -66,10 +68,14 @@ fun ClipDetailScreen(
     val reduceMotion by viewModel.reduceMotion.collectAsStateWithLifecycle()
     val comments by viewModel.comments.collectAsStateWithLifecycle()
     val commentsLoading by viewModel.commentsLoading.collectAsStateWithLifecycle()
+    val currentUserId by viewModel.currentUserId.collectAsStateWithLifecycle()
     val clip = clips.firstOrNull { it.id == clipId }
     var playing by remember(clipId) { mutableStateOf(autoplay && !dataSaver && !reduceMotion) }
     var showComments by remember(clipId) { mutableStateOf(false) }
     var commentText by remember(clipId) { mutableStateOf("") }
+    var showEditCaption by remember(clipId) { mutableStateOf(false) }
+    var showDeleteConfirm by remember(clipId) { mutableStateOf(false) }
+    var editedCaption by remember(clipId) { mutableStateOf("") }
     LaunchedEffect(clipId) { viewModel.recordView(clipId) }
 
     Box(
@@ -165,10 +171,32 @@ fun ClipDetailScreen(
                         Icon(Icons.Filled.Comment, contentDescription = "Comments", tint = Color.White)
                     }
                     Text(clip.commentCount.toString(), color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
+                    if (clip.author.id == currentUserId) {
+                        IconButton(onClick = { editedCaption = clip.caption; showEditCaption = true }) { Icon(Icons.Filled.Edit, contentDescription = "Edit caption", tint = Color.White) }
+                        IconButton(onClick = { showDeleteConfirm = true }) { Icon(Icons.Filled.Delete, contentDescription = "Delete clip", tint = Color.White) }
+                    }
                 }
             }
         }
 
+        if (showEditCaption) {
+            AlertDialog(
+                onDismissRequest = { showEditCaption = false },
+                title = { Text("تعديل وصف الريلز") },
+                text = { OutlinedTextField(value = editedCaption, onValueChange = { editedCaption = it }, modifier = Modifier.fillMaxWidth(), maxLines = 5, label = { Text("الوصف") }) },
+                confirmButton = { TextButton(onClick = { viewModel.updateCaption(clip.id, editedCaption) { success -> if (success) showEditCaption = false } }) { Text("حفظ") } },
+                dismissButton = { TextButton(onClick = { showEditCaption = false }) { Text("إلغاء") } }
+            )
+        }
+        if (showDeleteConfirm) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = false },
+                title = { Text("حذف الريلز؟") },
+                text = { Text("لن يتمكن الآخرون من مشاهدة هذا الفيديو بعد حذفه.") },
+                confirmButton = { TextButton(onClick = { viewModel.deleteClip(clip.id) { deleted -> if (deleted) onBack() }; showDeleteConfirm = false }) { Text("حذف") } },
+                dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("إلغاء") } }
+            )
+        }
         if (showComments) {
             AlertDialog(
                 onDismissRequest = { showComments = false },
