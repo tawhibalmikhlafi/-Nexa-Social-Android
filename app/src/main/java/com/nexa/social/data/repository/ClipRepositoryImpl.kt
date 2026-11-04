@@ -69,7 +69,7 @@ class ClipRepositoryImpl(
     override fun observeClip(id: String): Flow<Clip?> =
         observeClips().map { list -> list.firstOrNull { it.id == id } }
 
-    override suspend fun addClip(videoUri: String, caption: String): Resource<Clip> {
+    override suspend fun addClip(videoUri: String, caption: String, coverUri: String?): Resource<Clip> {
         if (videoUri.isBlank()) return Resource.Failure(FailureReason.REQUIRED)
         val session = sessionFlow.first()
         if (session !is SessionState.LocalAccount && session !is SessionState.RemoteAccount) {
@@ -82,18 +82,35 @@ class ClipRepositoryImpl(
             val remoteStore = remote ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
             val clipId = Ids.newId()
             val backup = copyPendingVideo(videoUri, clipId) ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
+            val coverBackup = coverUri?.let { copyPendingAsset(it, "${clipId}-cover", "jpg") }
             val path = "${session.userId}/$clipId.mp4"
             when (val upload = storage.uploadVideo(backup, path)) {
                 is Resource.Success -> {
-                    val created = remoteStore.createClip(author, path, upload.data, caption, clipId)
+                    val coverUrl = if (coverBackup != null) {
+                        when (val coverUpload = storage.uploadImage(coverBackup, MediaBucket.CLIP_COVERS, "${session.userId}/$clipId.jpg")) {
+                            is Resource.Success -> coverUpload.data
+                            is Resource.Failure -> {
+                                if (coverUpload.reason == FailureReason.NETWORK) {
+                                    enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis(), coverBackup))
+                                    return Resource.Success(Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true))
+                                }
+                                File(Uri.parse(backup).path.orEmpty()).delete()
+                                File(Uri.parse(coverBackup).path.orEmpty()).delete()
+                                return coverUpload
+                            }
+                            Resource.Loading -> return Resource.Failure(FailureReason.GENERIC)
+                        }
+                    } else null
+                    val created = remoteStore.createClip(author, path, upload.data, caption, clipId, coverUrl)
                     if (created != null) {
                         File(Uri.parse(backup).path.orEmpty()).delete()
+                        coverBackup?.let { File(Uri.parse(it).path.orEmpty()).delete() }
                         achievements.record(CounterKind.CLIPS_CREATED)
                         remoteStore.notifyChanged()
                         return Resource.Success(created)
                     }
                     // Keep the source and stable clip ID; the retry is safe if the first insert committed.
-                    enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis()))
+                    enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis(), coverBackup))
                     return Resource.Success(Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true))
                 }
                 is Resource.Failure -> {
@@ -121,13 +138,15 @@ class ClipRepositoryImpl(
         return Resource.Success(clip)
     }
 
-    private suspend fun copyPendingVideo(source: String, id: String): String? {
+    private suspend fun copyPendingVideo(source: String, id: String): String? = copyPendingAsset(source, id, "mp4")
+
+    private suspend fun copyPendingAsset(source: String, id: String, extension: String): String? {
         val context = appContext ?: return null
         return runCatching {
             withContext(Dispatchers.IO) {
                 val directory = File(context.filesDir, "pending_clips")
                 if (!directory.exists() && !directory.mkdirs()) return@withContext null
-                val target = File(directory, "$id.mp4")
+                val target = File(directory, "$id.$extension")
                 val uri = Uri.parse(source)
                 val input = if (uri.scheme == "file") File(uri.path.orEmpty()).inputStream()
                     else context.contentResolver.openInputStream(uri) ?: return@withContext null
@@ -164,9 +183,17 @@ class ClipRepositoryImpl(
             val path = "${session.userId}/${item.id}.mp4"
             val uploaded = storage.uploadVideo(item.localVideoPath, path)
             if (uploaded !is Resource.Success) break
-            val clip = store.createClip(UserSummary.from(user), path, uploaded.data, item.caption, item.id)
+            val coverUrl = item.localCoverPath?.let { localCover ->
+                when (val coverUpload = storage.uploadImage(localCover, MediaBucket.CLIP_COVERS, "${session.userId}/${item.id}.jpg")) {
+                    is Resource.Success -> coverUpload.data
+                    else -> null
+                }
+            }
+            if (item.localCoverPath != null && coverUrl == null) break
+            val clip = store.createClip(UserSummary.from(user), path, uploaded.data, item.caption, item.id, coverUrl)
                 ?: break
             File(Uri.parse(item.localVideoPath).path.orEmpty()).delete()
+            item.localCoverPath?.let { File(Uri.parse(it).path.orEmpty()).delete() }
             removeUpload(item.id)
             _clips.value = listOf(clip) + _clips.value.filterNot { it.id == clip.id }
             achievements.record(CounterKind.CLIPS_CREATED)
