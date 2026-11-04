@@ -9,6 +9,7 @@ import com.nexa.social.core.common.FailureReason
 import com.nexa.social.core.common.Resource
 import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.domain.model.Post
+import com.nexa.social.domain.model.CommentPermission
 import com.nexa.social.domain.model.PostComment
 import com.nexa.social.domain.model.PostReaction
 import com.nexa.social.domain.model.ReportReason
@@ -26,6 +27,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -56,6 +60,28 @@ class PostDetailViewModel(
     private val currentUserId: StateFlow<String?> = authRepository.session
         .map { it.accountUserId }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private val authorRelationships: StateFlow<Pair<Set<String>, Set<String>>> = post
+        .flatMapLatest { current ->
+            if (current == null) flowOf(emptySet<String>() to emptySet())
+            else combine(
+                userRepository.observeFollowingOf(current.author.id),
+                userRepository.observeFollowersOf(current.author.id)
+            ) { following, followers ->
+                following.map { it.id }.toSet() to followers.map { it.id }.toSet()
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet<String>() to emptySet())
+
+    val canComment: StateFlow<Boolean> = combine(post, currentUserId, authorRelationships) { current, uid, relations ->
+        if (current == null || uid == null) false
+        else when (current.commentPermission) {
+            CommentPermission.EVERYONE -> true
+            CommentPermission.FOLLOWING -> uid in relations.first
+            CommentPermission.FOLLOWERS -> uid in relations.second
+            CommentPermission.NO_ONE -> false
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val canManage: StateFlow<Boolean> =
         kotlinx.coroutines.flow.combine(post, currentUserId) { p, id ->
