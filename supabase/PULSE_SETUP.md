@@ -1,34 +1,41 @@
 # Nexa Pulse daily challenge
 
-The Android MVP reads the currently active, published challenge from Supabase and supports:
-- one text entry per authenticated user per challenge (1000 characters maximum);
+The Android screen uses Supabase for live challenge and community data:
+- one entry per authenticated user per challenge (up to 1000 characters, text and/or one image);
+- image uploads to the `nexa-pulse` Storage bucket (JPEG, PNG, WebP; 5 MB maximum);
 - public entry feed for authenticated users;
 - one reaction per user per entry, with removal;
-- deletion of the current user's own entry.
+- deletion of the current user's own entry and its uploaded image.
 
-## Database
+## Database and security
 
-Migration: `migrations/20261105090000_nexa_pulse_daily_challenge.sql`.
+- `migrations/20261105090000_nexa_pulse_daily_challenge.sql` creates the challenge, entry, and reaction tables with RLS.
+- `migrations/20261105100000_nexa_pulse_images.sql` creates the Storage bucket/policies and image path.
+- `migrations/20261105110000_nexa_pulse_daily_scheduler.sql` seeds the challenge bank and schedules automatic publication through `pg_cron`.
 
-The migration has been applied to the Nexa Supabase project. Row Level Security is enabled on all three tables. The Android client uses the publishable/anon key and the signed-in user's access token; no service-role key is shipped in the app.
+The migrations above have been applied to the Nexa Supabase project. The Android client uses the publishable/anon key and the signed-in user's access token; no service-role key is shipped in the app.
 
-## Publishing the next daily challenge
+## Automatic scheduling
 
-Challenge creation is intentionally admin-only; there is no admin screen in this MVP. In Supabase SQL Editor, insert the next challenge before its start time. Example (replace the title and description):
+The `nexa-pulse-publish-daily` cron job runs at 00:05 UTC daily. It publishes the next challenge from `pulse_prompt_bank`, avoids repeating a title used in the last 30 days when possible, and keeps a single active challenge window. To inspect the schedule in Supabase SQL Editor:
 
 ```sql
-insert into public.pulse_prompts
-  (title, description, starts_at, ends_at, is_published)
-values
-  ('ما المهارة التي تريد تعلمها؟',
-   'شاركنا مهارة تتمنى إتقانها ولماذا.',
-   date_trunc('day', now()) + interval '1 day',
-   date_trunc('day', now()) + interval '2 days',
-   true);
+select jobname, schedule, command, active
+from cron.job
+where jobname = 'nexa-pulse-publish-daily';
 ```
 
-Use UTC timestamps consistently and ensure challenge windows do not overlap. Only a published challenge whose time window contains the current database time is displayed.
+To add a challenge, insert it into `pulse_prompt_bank`:
 
-## Current MVP limits
+```sql
+insert into public.pulse_prompt_bank (title, description)
+values ('سؤال جديد', 'وصف قصير للتحدي');
+```
 
-Entries are text-only. Image/video attachments, comments, challenge scheduling automation, and an in-app admin editor are not part of this first implementation. The existing Pulse analytics (trending tags, creators, and worlds) remains available below the challenge.
+Only database administrators should edit the challenge bank. The bank has no grants for anonymous or authenticated app users.
+
+## Current limits
+
+- Each entry supports one image plus text; image/video attachments on comments and an in-app admin editor are not included.
+- The feed is currently limited to the latest 100 entries for the active challenge.
+- Android build/test status must be verified separately after pulling this branch.
