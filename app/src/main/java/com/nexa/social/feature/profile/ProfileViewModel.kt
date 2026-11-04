@@ -125,13 +125,12 @@ class ProfileViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     val followersCount: StateFlow<Int> = combine(
-        user,
         user.flatMapLatest { resolved ->
             if (resolved == null) flowOf(emptyList())
             else userRepository.observeFollowersOf(resolved.id)
         },
         followersDelta
-    ) { resolved, followersList, delta ->
+    ) { followersList, delta ->
         (followersList.size + delta).coerceAtLeast(0)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
