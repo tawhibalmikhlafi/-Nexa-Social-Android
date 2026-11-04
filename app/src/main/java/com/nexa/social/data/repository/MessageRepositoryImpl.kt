@@ -108,9 +108,8 @@ class MessageRepositoryImpl(
                     pendingMessages,
                     prefs.pinnedConversationIds,
                     prefs.mutedConversationIds,
-                    prefs.archivedConversationIds,
-                    conversationOutbox
-                ) { list, pending, pinned, muted, archived, queuedConversations ->
+                    prefs.archivedConversationIds
+                ) { list, pending, pinned, muted, archived ->
                     val mergedList = list.map { conversation ->
                         val extras = pending[conversation.id].orEmpty()
                         val known = conversation.messages.mapTo(HashSet()) { it.id }
@@ -150,6 +149,27 @@ class MessageRepositoryImpl(
                         compareByDescending<Conversation> { it.pinnedLocally }
                             .thenByDescending { it.lastTimestamp }
                     )
+                }.combine(conversationOutbox) { conversations, queuedConversations ->
+                    val merged = conversations.toMutableList()
+                    queuedConversations.filter { it.userId == remoteUid }.forEach { queued ->
+                        if (merged.none { it.id == queued.id }) {
+                            val messages = pendingMessages.value[queued.id].orEmpty()
+                            val last = messages.maxByOrNull { it.timestamp }
+                            merged += Conversation(
+                                id = queued.id,
+                                participant = queued.participant,
+                                lastMessagePreview = last?.text.orEmpty(),
+                                lastTimestamp = last?.timestamp ?: queued.createdAt,
+                                unreadCount = 0,
+                                messages = messages,
+                                isLocalSample = false,
+                                pinnedLocally = queued.id in pinnedConversationIdsSnapshot(),
+                                mutedLocally = queued.id in mutedConversationIdsSnapshot(),
+                                archivedLocally = queued.id in archivedConversationIdsSnapshot()
+                            )
+                        }
+                    }
+                    merged.sortedWith(compareByDescending<Conversation> { it.pinnedLocally }.thenByDescending { it.lastTimestamp })
                 }
             } else {
                 _conversations.asStateFlow().map { list ->
