@@ -1,9 +1,6 @@
 package com.nexa.social.domain.model
 
-/**
- * A short vertical video. The video file is chosen from the device by the user or provided as a
- * clearly-labelled sample; there is no streaming library behind this yet.
- */
+/** A short-form video stored locally for offline playback or remotely in Supabase Storage. */
 data class Clip(
     val id: String,
     val author: UserSummary,
