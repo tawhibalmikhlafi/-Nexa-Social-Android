@@ -295,6 +295,22 @@ class UserRepositoryImpl(
         }.getOrNull()
     }
 
+    override suspend fun loadIncomingFollowRequests(): List<com.nexa.social.domain.model.FollowRequest>? {
+        val session = prefs.session.first()
+        val remoteStore = remote
+        if (session !is SessionState.RemoteAccount || remoteStore == null) return emptyList()
+        return runCatching { remoteStore.loadIncomingFollowRequests(session.userId) }.getOrNull()
+    }
+
+    override suspend fun respondToFollowRequest(requestId: String, approve: Boolean): Boolean {
+        val session = prefs.session.first()
+        val remoteStore = remote
+        if (session !is SessionState.RemoteAccount || remoteStore == null) return false
+        return runCatching {
+            remoteStore.respondToFollowRequest(requestId, approve)
+        }.getOrDefault(false)
+    }
+
     override suspend fun isFollowing(userId: String): Boolean {
         val session = prefs.session.first()
         val remoteStore = remote
