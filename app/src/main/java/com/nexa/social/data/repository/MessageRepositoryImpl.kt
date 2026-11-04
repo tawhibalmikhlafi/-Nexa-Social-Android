@@ -539,16 +539,16 @@ class MessageRepositoryImpl(
 
     override suspend fun startConversation(participantId: String): Conversation? {
         val session = prefs.session.first()
-        val existing = observeConversations().first().firstOrNull { it.participant.id == participantId }
-        if (existing != null) return existing
         val user = userRepository.getUser(participantId) ?: return null
         val participant = UserSummary.from(user)
         if (isRemote(session) && remote != null) {
             val uid = (session as SessionState.RemoteAccount).userId
-            val localId = Ids.newId()
+            val queued = conversationOutbox.value.firstOrNull { it.userId == uid && it.participant.id == participantId }
+            val localId = queued?.id ?: Ids.newId()
             val conversationId = remote.startConversation(uid, participantId, localId)
             val id = conversationId ?: localId
-            if (conversationId == null) enqueueConversation(PendingConversation(id, uid, participant, System.currentTimeMillis()))
+            if (conversationId == null && queued == null) enqueueConversation(PendingConversation(id, uid, participant, System.currentTimeMillis()))
+            else if (conversationId != null) removeQueuedConversation(localId)
             return Conversation(
                 id = id, participant = participant, lastMessagePreview = "",
                 lastTimestamp = System.currentTimeMillis(), unreadCount = 0,
