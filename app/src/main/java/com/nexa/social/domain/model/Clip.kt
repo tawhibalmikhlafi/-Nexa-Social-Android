@@ -12,7 +12,8 @@ data class Clip(
     val likedByMe: Boolean,
     val savedByMe: Boolean,
     val isLocal: Boolean,
-    val viewCount: Long = 0L
+    val viewCount: Long = 0L,
+    val coverUrl: String? = null
 )
 
 data class ClipComment(
