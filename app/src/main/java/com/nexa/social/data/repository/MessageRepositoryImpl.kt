@@ -282,6 +282,7 @@ class MessageRepositoryImpl(
                 enqueueAction(session.userId, messageId, "edit", text.trim())
                 return Resource.Success(Unit)
             }
+            removeQueuedAction(session.userId, messageId, "edit")
             pendingMessages.update { pending ->
                 pending.mapValues { (_, list) ->
                     list.map { if (it.id == messageId) it.copy(text = text.trim()) else it }
@@ -323,6 +324,8 @@ class MessageRepositoryImpl(
                 enqueueAction(uid, messageId, "delete_me", null)
                 return Resource.Success(Unit)
             }
+            removeQueuedAction(uid, messageId, "delete_me")
+            removeQueuedAction((session as SessionState.RemoteAccount).userId, messageId, "delete_all")
             pendingMessages.update { pending ->
                 pending.mapValues { (_, list) -> list.filterNot { it.id == messageId } }
             }
@@ -362,7 +365,7 @@ class MessageRepositoryImpl(
             val uid = (session as SessionState.RemoteAccount).userId
             val reacted = runCatching { remoteStore.reactToMessage(messageId, uid, emoji) }
                 .getOrDefault(false)
-            if (!reacted) enqueueAction(uid, messageId, "react", emoji)
+            if (!reacted) enqueueAction(uid, messageId, "react", emoji) else removeQueuedAction(uid, messageId, "react")
             return Resource.Success(Unit)
         }
         return Resource.Failure(FailureReason.NOT_CONFIGURED)
@@ -375,7 +378,7 @@ class MessageRepositoryImpl(
             val uid = (session as SessionState.RemoteAccount).userId
             val removed = runCatching { remoteStore.unreactToMessage(messageId, uid) }
                 .getOrDefault(false)
-            if (!removed) enqueueAction(uid, messageId, "unreact", null)
+            if (!removed) enqueueAction(uid, messageId, "unreact", null) else removeQueuedAction(uid, messageId, "unreact")
             return Resource.Success(Unit)
         }
         return Resource.Failure(FailureReason.NOT_CONFIGURED)
