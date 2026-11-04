@@ -2,6 +2,9 @@ package com.nexa.social.feature.clips
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.consume
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,12 +48,15 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.Slider
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -78,6 +84,7 @@ import com.nexa.social.R
 import com.nexa.social.core.common.TimeUtils
 import com.nexa.social.ui.components.NexaAvatar
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,7 +101,12 @@ fun ClipDetailScreen(
     val commentsLoading by viewModel.commentsLoading.collectAsStateWithLifecycle()
     val commentError by viewModel.commentError.collectAsStateWithLifecycle()
     val currentUserId by viewModel.currentUserId.collectAsStateWithLifecycle()
-    val clip = clips.firstOrNull { it.id == clipId }
+    val followStates by viewModel.followStates.collectAsStateWithLifecycle()
+    var clipIndex by remember(clipId) { mutableIntStateOf(-1) }
+    LaunchedEffect(clips, clipId) {
+        if (clipIndex < 0 && clips.isNotEmpty()) clipIndex = clips.indexOfFirst { it.id == clipId }.coerceAtLeast(0)
+    }
+    val clip = clips.getOrNull(clipIndex)
     var playing by remember(clipId) { mutableStateOf(autoplay && !dataSaver && !reduceMotion) }
     var showComments by remember(clipId) { mutableStateOf(false) }
     var resumeAfterComments by remember(clipId) { mutableStateOf(false) }
@@ -103,9 +115,29 @@ fun ClipDetailScreen(
     var showEditCaption by remember(clipId) { mutableStateOf(false) }
     var showDeleteConfirm by remember(clipId) { mutableStateOf(false) }
     var editedCaption by remember(clipId) { mutableStateOf("") }
-    LaunchedEffect(clipId) { viewModel.recordView(clipId) }
+    LaunchedEffect(clip?.id) { clip?.let { viewModel.recordView(it.id) } }
+    LaunchedEffect(clip?.author?.id, currentUserId) {
+        clip?.author?.id?.takeIf { it != currentUserId }?.let(viewModel::refreshAuthorFollowState)
+    }
 
-    Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.fillMaxSize().background(Color.Black).pointerInput(clips, clipIndex) {
+            var drag = 0f
+            detectVerticalDragGestures(
+                onVerticalDrag = { change, amount -> change.consume(); drag += amount },
+                onDragEnd = {
+                    if (kotlin.math.abs(drag) > 70f && clips.isNotEmpty()) {
+                        clipIndex = (clipIndex + if (drag < 0f) 1 else -1).coerceIn(0, clips.lastIndex)
+                        playing = autoplay && !dataSaver && !reduceMotion
+                        showComments = false
+                    }
+                    drag = 0f
+                },
+                onDragCancel = { drag = 0f }
+            )
+        },
+        contentAlignment = Alignment.Center
+    ) {
         if (clip == null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Filled.Videocam, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
@@ -139,9 +171,18 @@ fun ClipDetailScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         NexaAvatar(clip.author.displayName, clip.author.avatarUri, size = 38.dp)
                         Spacer(Modifier.width(10.dp))
-                        Column {
+                        Column(Modifier.weight(1f)) {
                             Text(clip.author.displayName, color = Color.White, style = MaterialTheme.typography.titleSmall)
                             Text(TimeUtils.relativeFromNow(clip.createdAt), color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
+                        }
+                        if (clip.author.id != currentUserId) {
+                            val followState = followStates[clip.author.id] ?: "follow"
+                            TextButton(
+                                enabled = followState == "follow",
+                                onClick = { viewModel.followAuthor(clip.author.id) }
+                            ) {
+                                Text(when (followState) { "following" -> "تتابعه"; "requested" -> "تم الطلب"; else -> "+ متابعة" }, color = Color.White)
+                            }
                         }
                     }
                     if (clip.caption.isNotBlank()) Text(clip.caption, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp))
@@ -316,6 +357,10 @@ private fun ClipVideo(uri: String, autoplay: Boolean, playing: Boolean, onToggle
     val lifecycleOwner = LocalLifecycleOwner.current
     val shouldPlay by rememberUpdatedState(playing)
     var playbackError by remember(uri) { mutableStateOf(false) }
+    var positionMs by remember(uri) { mutableStateOf(0L) }
+    var durationMs by remember(uri) { mutableStateOf(0L) }
+    var seeking by remember(uri) { mutableStateOf(false) }
+    var seekValue by remember(uri) { mutableStateOf(0f) }
     val player = remember(uri) {
         ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ONE
@@ -329,6 +374,15 @@ private fun ClipVideo(uri: String, autoplay: Boolean, playing: Boolean, onToggle
     }
     LaunchedEffect(playing, player) {
         if (playing) player.play() else player.pause()
+    }
+    LaunchedEffect(player) {
+        while (true) {
+            if (!seeking) {
+                positionMs = player.currentPosition.coerceAtLeast(0L)
+                durationMs = player.duration.takeIf { it > 0L && it != androidx.media3.common.C.TIME_UNSET } ?: 0L
+            }
+            delay(250)
+        }
     }
     DisposableEffect(player, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -355,6 +409,19 @@ private fun ClipVideo(uri: String, autoplay: Boolean, playing: Boolean, onToggle
                 view.keepScreenOn = playing
             }
         )
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.Black.copy(alpha = .45f)).padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Slider(
+                value = (if (seeking) seekValue else positionMs.toFloat()).coerceIn(0f, durationMs.coerceAtLeast(1L).toFloat()),
+                onValueChange = { seeking = true; seekValue = it },
+                onValueChangeFinished = { player.seekTo(seekValue.toLong()); positionMs = seekValue.toLong(); seeking = false },
+                valueRange = 0f..durationMs.coerceAtLeast(1L).toFloat(),
+                enabled = durationMs > 0L
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(formatClipTime(if (seeking) seekValue.toLong() else positionMs), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                Text(formatClipTime(durationMs), color = Color.White, style = MaterialTheme.typography.labelSmall)
+            }
+        }
         if (playbackError) Column(
             Modifier.align(Alignment.Center).background(Color.Black.copy(alpha = .75f)).padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -368,4 +435,12 @@ private fun ClipVideo(uri: String, autoplay: Boolean, playing: Boolean, onToggle
             }) { Text("إعادة المحاولة", color = Color.White) }
         }
     }
+}
+
+
+private fun formatClipTime(milliseconds: Long): String {
+    val totalSeconds = (milliseconds.coerceAtLeast(0L) / 1000L)
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return String.format(java.util.Locale.ROOT, "%d:%02d", minutes, seconds)
 }
