@@ -389,7 +389,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val spaceRepository: SpaceRepository =
         SpaceRepositoryImpl(spaceLocal, userRepository, preferenceStorage.session)
     override val clipRepository: ClipRepository =
-        ClipRepositoryImpl(clipLocal, userRepository, preferenceStorage.session, achievementRepository, mediaStorage, remoteClips)
+        ClipRepositoryImpl(clipLocal, userRepository, preferenceStorage.session, achievementRepository, mediaStorage, remoteClips, appContext)
     override val messageRepository: MessageRepository =
         MessageRepositoryImpl(
             preferenceStorage,
