@@ -103,6 +103,17 @@ class PostDetailViewModel(
         runCatching { postRepository.toggleSave(postId) }
     }
 
+    fun updateCommentPermission(
+        permission: com.nexa.social.domain.model.CommentPermission,
+        onResult: (Boolean) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            onResult(runCatching {
+                postRepository.updateCommentPermission(postId, permission)
+            }.getOrDefault(false))
+        }
+    }
+
     fun togglePin(onResult: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
             onResult(runCatching { postRepository.togglePin(postId) }.isSuccess)
