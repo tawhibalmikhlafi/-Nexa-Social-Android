@@ -2,6 +2,7 @@ package com.nexa.social.data.remote
 
 import com.nexa.social.core.common.Resource
 import com.nexa.social.domain.model.User
+import com.nexa.social.domain.model.FollowRequest
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -50,6 +51,8 @@ interface UserRemoteDataSource {
     suspend fun isFollowing(uid: String, targetId: String): Boolean
     suspend fun setFollowing(uid: String, targetId: String, following: Boolean): Boolean
     suspend fun hasPendingFollowRequest(uid: String, targetId: String): Boolean? = null
+    suspend fun loadIncomingFollowRequests(uid: String): List<FollowRequest>? = null
+    suspend fun respondToFollowRequest(requestId: String, approve: Boolean): Boolean = false
 
     /** Builds a unique username for a new account (Google or email sign-up). */
     suspend fun uniqueUsername(preferred: String): String
