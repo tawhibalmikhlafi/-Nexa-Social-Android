@@ -22,6 +22,7 @@ import com.nexa.social.domain.repository.PostRepository
 import com.nexa.social.domain.repository.SafetyRepository
 import com.nexa.social.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +40,7 @@ data class PostReactionsUiState(
     val error: FailureReason? = null
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class PostDetailViewModel(
     private val postId: String,
     private val postRepository: PostRepository,
