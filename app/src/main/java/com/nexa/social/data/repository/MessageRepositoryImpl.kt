@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 
 /**
  * Message delivery is server-backed for Supabase accounts: messages are written to the
@@ -717,6 +718,11 @@ class MessageRepositoryImpl(
                 val list = current[queued.conversationId].orEmpty()
                 current + (queued.conversationId to (list.filterNot { it.id == queued.id } + sent).takeLast(50))
             }
+        }
+        if (conversationOutbox.value.any { it.userId == session.userId } ||
+            actionOutbox.value.any { it.userId == session.userId } ||
+            outbox.value.any { it.senderId == session.userId }) {
+            throw IOException("Message outbox still has pending items")
         }
     }
 
