@@ -4,6 +4,7 @@ import com.nexa.social.core.storage.JsonFileStore
 import com.nexa.social.data.sample.SampleData
 import com.nexa.social.domain.model.Conversation
 import com.nexa.social.domain.model.Message
+import com.nexa.social.domain.model.UserSummary
 
 /** Persists conversations. Seeded once from local sample conversations. */
 class MessageLocalDataSource(private val store: JsonFileStore) {
@@ -58,7 +59,7 @@ data class PendingMessage(
 data class PendingConversation(
     val id: String,
     val userId: String,
-    val participantId: String,
+    val participant: UserSummary,
     val createdAt: Long
 )
 
