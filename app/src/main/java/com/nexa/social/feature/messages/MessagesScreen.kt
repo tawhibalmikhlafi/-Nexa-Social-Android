@@ -37,6 +37,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -115,7 +116,7 @@ fun MessagesScreen(
                     shape = CircleShape,
                     modifier = Modifier.padding(16.dp)
                 ) {
-                    Icon(Icons.Outlined.Edit, contentDescription = "رسالة جديدة", tint = Color.White)
+                    Icon(Icons.Outlined.Edit, contentDescription = "رسالة جديدة", tint = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         ) { paddingValues ->
