@@ -164,6 +164,10 @@ class MessageRepositoryImpl(
                     when (val upload = storage.uploadAttachment(localUri = backup.path, path = "$senderId/$clientMessageId")) {
                         is Resource.Success -> { deleteLocalAttachment(backup.path); upload.data }
                         is Resource.Failure -> {
+                            if (upload.reason != FailureReason.NETWORK) {
+                                deleteLocalAttachment(backup.path)
+                                return upload
+                            }
                             val item = PendingMessage(clientMessageId, conversationId, senderId, text.trim(), System.currentTimeMillis(), localAttachmentUri = backup.path, attachmentMime = backup.mimeType, attachmentName = backup.displayName)
                             enqueue(item)
                             val optimistic = Message(clientMessageId, conversationId, senderId, text.trim(), item.createdAt, true, true, true, backup.path, backup.mimeType, backup.displayName)
