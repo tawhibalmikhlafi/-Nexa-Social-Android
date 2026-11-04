@@ -107,11 +107,11 @@ fun MessagesScreen(
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(
-            containerColor = DarkBackground,
+            containerColor = MaterialTheme.colorScheme.background,
             floatingActionButton = {
                 FloatingActionButton(
                     onClick = onNewMessage,
-                    containerColor = PrimaryPurple,
+                    containerColor = MaterialTheme.colorScheme.primary,
                     shape = CircleShape,
                     modifier = Modifier.padding(16.dp)
                 ) {
@@ -167,7 +167,7 @@ fun MessagesScreen(
                         ) {
                             Text(
                                 text = "لا توجد رسائل حالياً",
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 14.sp
                             )
                         }
@@ -217,14 +217,14 @@ fun TopBarSection(
                     modifier = Modifier
                         .size(12.dp)
                         .background(OnlineGreen, CircleShape)
-                        .border(2.dp, DarkBackground, CircleShape)
+                        .border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
                         .align(Alignment.BottomEnd)
                 )
             }
             
             IconButton(onClick = onNotifications) {
                 Box {
-                    Icon(Icons.Outlined.Notifications, contentDescription = "Notifications", tint = TextSecondary)
+                    Icon(Icons.Outlined.Notifications, contentDescription = "Notifications", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (unreadCount > 0) {
                         Box(
                             modifier = Modifier
@@ -240,20 +240,20 @@ fun TopBarSection(
             }
             
             IconButton(onClick = onOpenProfile) {
-                Icon(Icons.Default.MoreVert, contentDescription = "More", tint = TextSecondary)
+                Icon(Icons.Default.MoreVert, contentDescription = "More", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = "الرسائل",
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = "تواصل مع أصدقائك بكل سهولة",
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
             )
         }
@@ -273,16 +273,16 @@ fun SearchBarSection(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable(onClick = onSearchClick),
-        placeholder = { Text("البحث في الرسائل أو الأصدقاء...", color = TextSecondary) },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = TextSecondary) },
+        placeholder = { Text("البحث في الرسائل أو الأصدقاء...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.onSurfaceVariant) },
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = PrimaryPurple,
-            unfocusedBorderColor = SurfaceDark,
-            focusedContainerColor = SurfaceDark,
-            unfocusedContainerColor = SurfaceDark,
-            focusedTextColor = TextPrimary,
-            unfocusedTextColor = TextPrimary
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
         )
     )
 }
@@ -295,10 +295,10 @@ fun QuickActionsSection(
     onOpenGroups: () -> Unit
 ) {
     val actions = listOf(
-        QuickAction("رسالة جديدة", "ابدأ محادثة", Icons.Outlined.Edit, Color(0xFF8A2BE2), Color(0xFF1E1B3A), onClick = onNewMessage),
-        QuickAction("الطلبات", "الأصدقاء والطلبات", Icons.Outlined.Security, Color(0xFF00C853), Color(0xFF1B2E22), onClick = onOpenFriends),
-        QuickAction("الرسائل المميزة", "المحفوظات", Icons.Outlined.Star, Color(0xFF8A2BE2), Color(0xFF1E1B3A), onClick = onOpenSaved),
-        QuickAction("المجموعات", "قنواتك ومجموعاتك", Icons.Outlined.People, Color(0xFF8A2BE2), Color(0xFF1E1B3A), true, onClick = onOpenGroups)
+        QuickAction("رسالة جديدة", "ابدأ محادثة", Icons.Outlined.Edit, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.surfaceVariant, onClick = onNewMessage),
+        QuickAction("الطلبات", "الأصدقاء والطلبات", Icons.Outlined.Security, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.surfaceVariant, onClick = onOpenFriends),
+        QuickAction("الرسائل المميزة", "المحفوظات", Icons.Outlined.Star, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.surfaceVariant, onClick = onOpenSaved),
+        QuickAction("المجموعات", "قنواتك ومجموعاتك", Icons.Outlined.People, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.surfaceVariant, true, onClick = onOpenGroups)
     )
 
     Row(
@@ -334,8 +334,8 @@ fun QuickActionsSection(
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(action.title, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                Text(action.subtitle, color = TextSecondary, fontSize = 10.sp)
+                Text(action.title, color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text(action.subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
             }
         }
     }
@@ -350,23 +350,23 @@ fun NotificationBanner(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .background(DarkPurpleBanner, RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-            Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
         }
         
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("ابق على اتصال دائم", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("فعل إشعارات الرسائل لتصللك فوراً", color = TextSecondary, fontSize = 12.sp)
+                Text("ابق على اتصال دائم", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("فعل إشعارات الرسائل لتصللك فوراً", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
             Button(
                 onClick = onEnable,
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(8.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
@@ -375,7 +375,7 @@ fun NotificationBanner(
         }
         
         IconButton(onClick = onEnable, modifier = Modifier.size(24.dp)) {
-            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = PrimaryPurple, modifier = Modifier.size(18.dp))
+            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -409,7 +409,7 @@ fun ChatListItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = participant.displayName,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )
@@ -418,14 +418,14 @@ fun ChatListItem(
                     Icon(
                         imageVector = Icons.Default.DoneAll,
                         contentDescription = "Read",
-                        tint = PrimaryPurple,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                 }
                 Text(
                     text = conversation.lastMessagePreview.ifBlank { "..." },
-                    color = if (conversation.unreadCount > 0) TextPrimary else TextSecondary,
+                    color = if (conversation.unreadCount > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -436,7 +436,7 @@ fun ChatListItem(
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = TimeUtils.relativeFromNow(conversation.lastTimestamp),
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -444,7 +444,7 @@ fun ChatListItem(
                 Box(
                     modifier = Modifier
                         .size(20.dp)
-                        .background(PrimaryPurple, CircleShape),
+                        .background(MaterialTheme.colorScheme.primary, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
