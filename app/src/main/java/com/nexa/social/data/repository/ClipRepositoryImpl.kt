@@ -189,7 +189,10 @@ class ClipRepositoryImpl(
     override suspend fun deleteComment(commentId: String): Boolean {
         val session = sessionFlow.first()
         if (session !is SessionState.RemoteAccount || remote == null) return false
-        return remote.deleteComment(commentId)
+        val deleted = remote.deleteComment(commentId)
+        if (!deleted) enqueueAction(session.userId, commentId, "delete_comment", true)
+        else removePending(session.userId, commentId, "delete_comment")
+        return true
     }
 
     override suspend fun recordView(clipId: String) {
@@ -206,8 +209,13 @@ class ClipRepositoryImpl(
     override suspend fun deleteClip(clipId: String): Boolean {
         val session = sessionFlow.first()
         if (session is SessionState.RemoteAccount && remote != null) {
-            val path = remote.deleteClip(clipId) ?: return false
+            val path = remote.deleteClip(clipId)
+            if (path == null) {
+                enqueueAction(session.userId, clipId, "delete_clip", true)
+                return true
+            }
             mediaStorage?.deleteObject(MediaBucket.CLIPS, path)
+            removePending(session.userId, clipId, "delete_clip")
             remote.notifyChanged()
             return true
         }
@@ -296,6 +304,11 @@ class ClipRepositoryImpl(
             val success = when (action.relation) {
                 "like" -> store.setLike(action.clipId, action.enabled)
                 "save" -> store.setSave(action.clipId, action.enabled)
+                "delete_comment" -> store.deleteComment(action.clipId)
+                "delete_clip" -> {
+                    val path = store.deleteClip(action.clipId)
+                    if (path != null) { mediaStorage?.deleteObject(MediaBucket.CLIPS, path); true } else false
+                }
                 else -> true
             }
             if (success) removePending(session.userId, action.clipId, action.relation) else break
