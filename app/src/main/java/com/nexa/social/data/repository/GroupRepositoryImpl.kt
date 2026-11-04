@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.nexa.social.core.common.FailureReason
 import com.nexa.social.core.common.Resource
+import com.nexa.social.core.storage.JsonFileStore
 import com.nexa.social.core.supabase.AccessTokenProvider
 import com.nexa.social.core.supabase.CurrentUidProvider
 import com.nexa.social.core.supabase.SupabaseHttp
@@ -42,10 +43,13 @@ class GroupRepositoryImpl(
     private val accessToken: AccessTokenProvider,
     private val currentUid: CurrentUidProvider,
     private val mediaStorage: MediaStorage? = null,
+    private val jsonStore: JsonFileStore? = null,
 ) : GroupRepository {
 
     private val base get() = http.config.restUrl
     private val _myGroups = MutableStateFlow<List<Group>>(emptyList())
+    private val reactionOutboxLock = kotlinx.coroutines.sync.Mutex()
+    private val reactionOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupReaction>("group_reaction_outbox.json").orEmpty())
 
     override fun observeMyGroups(): Flow<List<Group>> = _myGroups.asStateFlow()
 
@@ -57,6 +61,7 @@ class GroupRepositoryImpl(
             "&select=role,status,group:groups(*)&order=joined_at.desc"
         when (val result = executeJsonArray(http.authenticatedRequest(url, token).get().build())) {
             is Resource.Success -> {
+                drainReactionOutbox(uid, token)
                 _myGroups.value = result.data.mapNotNull { element ->
                     val row = element.asJsonObject
                     val group = row.getAsJsonObject("group") ?: return@mapNotNull null
@@ -606,29 +611,68 @@ class GroupRepositoryImpl(
     override suspend fun reactToPost(postId: String, kind: ReactionKind?): Resource<Unit> =
         withContext(Dispatchers.IO) {
             val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-            val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-            val request = if (kind == null) {
-                http.authenticatedRequest(
-                    "$base/group_post_reactions?post_id=eq.${encode(postId)}&user_id=eq.${encode(uid)}",
-                    token,
-                ).delete().build()
-            } else {
-                val body = JsonObject().apply {
-                    addProperty("post_id", postId)
-                    addProperty("user_id", uid)
-                    addProperty("kind", kind.wire)
-                }
-                http.authenticatedRequest("$base/group_post_reactions", token)
-                    .addHeader("Prefer", "resolution=merge-duplicates,return=minimal")
-                    .post(http.jsonBody(body))
-                    .build()
+            val token = accessToken.token()
+            if (token != null && sendGroupReaction(uid, postId, kind, token)) {
+                removeQueuedReaction(uid, postId)
+                return@withContext Resource.Success(Unit)
             }
-            when (val result = execute(request)) {
-                is Resource.Success -> Resource.Success(Unit)
-                is Resource.Failure -> Resource.Failure(result.reason)
-                Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
-            }
+            queueGroupReaction(uid, postId, kind)
+            Resource.Success(Unit)
         }
+
+    private suspend fun sendGroupReaction(uid: String, postId: String, kind: ReactionKind?, token: String): Boolean {
+        val request = if (kind == null) {
+            http.authenticatedRequest(
+                "$base/group_post_reactions?post_id=eq.${encode(postId)}&user_id=eq.${encode(uid)}",
+                token,
+            ).delete().build()
+        } else {
+            val body = JsonObject().apply {
+                addProperty("post_id", postId)
+                addProperty("user_id", uid)
+                addProperty("kind", kind.wire)
+            }
+            http.authenticatedRequest("$base/group_post_reactions", token)
+                .addHeader("Prefer", "resolution=merge-duplicates,return=minimal")
+                .post(http.jsonBody(body)).build()
+        }
+        return execute(request) is Resource.Success
+    }
+
+    private suspend fun queueGroupReaction(uid: String, postId: String, kind: ReactionKind?) {
+        reactionOutboxLock.lock()
+        try {
+            val next = reactionOutbox.value.filterNot { it.userId == uid && it.postId == postId } +
+                PendingGroupReaction(uid, postId, kind?.wire, System.currentTimeMillis())
+            reactionOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_reaction_outbox.json", next) }
+        } finally {
+            reactionOutboxLock.unlock()
+        }
+    }
+
+    private suspend fun removeQueuedReaction(uid: String, postId: String) {
+        reactionOutboxLock.lock()
+        try {
+            val next = reactionOutbox.value.filterNot { it.userId == uid && it.postId == postId }
+            reactionOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_reaction_outbox.json", next) }
+        } finally {
+            reactionOutboxLock.unlock()
+        }
+    }
+
+    private suspend fun drainReactionOutbox(uid: String, token: String) {
+        for (item in reactionOutbox.value.filter { it.userId == uid }) {
+            val kind = ReactionKind.fromWire(item.kind)
+            if (item.kind != null && kind == null) {
+                removeQueuedReaction(uid, item.postId)
+                continue
+            }
+            if (!sendGroupReaction(uid, item.postId, kind, token)) break
+            removeQueuedReaction(uid, item.postId)
+        }
+    }
 
     // ── Comments ───────────────────────────────────────────────────────────
     override suspend fun getPostComments(postId: String): Resource<List<GroupComment>> =
@@ -854,3 +898,11 @@ class GroupRepositoryImpl(
             .getOrNull()
     }
 }
+
+
+data class PendingGroupReaction(
+    val userId: String,
+    val postId: String,
+    val kind: String?,
+    val createdAt: Long
+)
