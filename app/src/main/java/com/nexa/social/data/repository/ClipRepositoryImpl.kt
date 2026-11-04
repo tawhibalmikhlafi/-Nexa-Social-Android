@@ -91,8 +91,11 @@ class ClipRepositoryImpl(
                             is Resource.Success -> coverUpload.data
                             is Resource.Failure -> {
                                 if (coverUpload.reason == FailureReason.NETWORK) {
+                                    val pending = Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true, coverUrl = coverBackup)
                                     enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis(), author, coverBackup))
-                                    return Resource.Success(Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true))
+                                    _clips.value = listOf(pending) + _clips.value.filterNot { it.id == clipId }
+                                    persist()
+                                    return Resource.Success(pending)
                                 }
                                 File(Uri.parse(backup).path.orEmpty()).delete()
                                 File(Uri.parse(coverBackup).path.orEmpty()).delete()
@@ -110,12 +113,16 @@ class ClipRepositoryImpl(
                         return Resource.Success(created)
                     }
                     // Keep the source and stable clip ID; the retry is safe if the first insert committed.
-                    enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis(), coverBackup))
-                    return Resource.Success(Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true))
+                    val pending = Clip(clipId, author, backup, caption.trim(), System.currentTimeMillis(), 0, 0, false, false, true, coverUrl = coverBackup)
+                    enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis(), author, coverBackup))
+                    _clips.value = listOf(pending) + _clips.value.filterNot { it.id == clipId }
+                    persist()
+                    return Resource.Success(pending)
                 }
                 is Resource.Failure -> {
                     if (upload.reason != FailureReason.NETWORK) {
                         File(Uri.parse(backup).path.orEmpty()).delete()
+                        coverBackup?.let { File(Uri.parse(it).path.orEmpty()).delete() }
                         return upload
                     }
                     enqueueUpload(PendingClipUpload(clipId, session.userId, backup, caption.trim(), System.currentTimeMillis(), author, coverBackup))
@@ -178,7 +185,6 @@ class ClipRepositoryImpl(
         val session = sessionFlow.first() as? SessionState.RemoteAccount ?: return
         val storage = mediaStorage ?: return
         val store = remote ?: return
-        val user = userRepository.currentUser.first() ?: return
         for (item in pendingUploads.value.filter { it.userId == session.userId }.sortedBy { it.createdAt }) {
             val path = "${session.userId}/${item.id}.mp4"
             val uploaded = storage.uploadVideo(item.localVideoPath, path)
