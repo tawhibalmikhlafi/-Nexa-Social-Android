@@ -1132,4 +1132,11 @@
     <string name="notifications_filter_unread">Unread</string>
     <string name="action_refresh">Refresh</string>
     <string name="action_remove_follower">Remove follower</string>
+    <string name="post_comment_settings">Who can comment?</string>
+    <string name="post_comment_permission_following">People this author follows</string>
+    <string name="post_comment_permission_followers">Followers</string>
+    <string name="post_comment_permission_everyone">Everyone</string>
+    <string name="post_comment_permission_no_one">No one</string>
+    <string name="post_comments_locked">The author turned off comments.</string>
+    <string name="post_comment_permission_saved">Comment permissions updated</string>
 </resources>
