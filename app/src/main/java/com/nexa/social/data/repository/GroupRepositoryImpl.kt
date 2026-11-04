@@ -56,6 +56,8 @@ class GroupRepositoryImpl(
     private val postOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupPost>("group_post_outbox.json").orEmpty())
     private val membershipOutboxLock = kotlinx.coroutines.sync.Mutex()
     private val membershipOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupMembership>("group_membership_outbox.json").orEmpty())
+    private val deleteOutboxLock = kotlinx.coroutines.sync.Mutex()
+    private val deleteOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupDelete>("group_delete_outbox.json").orEmpty())
 
     override fun observeMyGroups(): Flow<List<Group>> = _myGroups.asStateFlow()
 
@@ -71,6 +73,7 @@ class GroupRepositoryImpl(
                 drainReactionOutbox(uid, token)
                 drainPostOutbox(uid, token)
                 drainCommentOutbox(uid, token)
+                drainDeleteOutbox(uid, token)
                 _myGroups.value = result.data.mapNotNull { element ->
                     val row = element.asJsonObject
                     val group = row.getAsJsonObject("group") ?: return@mapNotNull null
@@ -674,16 +677,53 @@ class GroupRepositoryImpl(
         }
     }
     override suspend fun deletePost(postId: String): Resource<Unit> = withContext(Dispatchers.IO) {
-        val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val token = accessToken.token()
+        if (token != null) {
+            when (val result = sendGroupDelete("post", postId, token)) {
+                is Resource.Success -> { removeGroupDelete(postId); return@withContext Resource.Success(Unit) }
+                is Resource.Failure -> if (result.reason != FailureReason.NETWORK) return@withContext Resource.Failure(result.reason)
+                Resource.Loading -> Unit
+            }
+        }
+        queueGroupDelete(PendingGroupDelete(java.util.UUID.randomUUID().toString(), uid, "post", postId, System.currentTimeMillis()))
+        Resource.Success(Unit)
+    }
+
+    private suspend fun sendGroupDelete(kind: String, id: String, token: String): Resource<Unit> {
+        val table = if (kind == "post") "group_posts" else "group_post_comments"
         val body = JsonObject().apply { addProperty("is_deleted", true) }
-        val request = http.authenticatedRequest("$base/group_posts?id=eq.${encode(postId)}", token)
-            .addHeader("Prefer", "return=minimal")
-            .patch(http.jsonBody(body))
-            .build()
-        when (val result = execute(request)) {
+        val request = http.authenticatedRequest("$base/$table?id=eq.${encode(id)}", token)
+            .addHeader("Prefer", "return=minimal").patch(http.jsonBody(body)).build()
+        return when (val result = execute(request)) {
             is Resource.Success -> Resource.Success(Unit)
             is Resource.Failure -> Resource.Failure(result.reason)
             Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
+        }
+    }
+
+    private suspend fun queueGroupDelete(item: PendingGroupDelete) {
+        deleteOutboxLock.lock()
+        try {
+            val next = deleteOutbox.value.filterNot { it.userId == item.userId && it.kind == item.kind && it.targetId == item.targetId } + item
+            deleteOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_delete_outbox.json", next) }
+        } finally { deleteOutboxLock.unlock() }
+    }
+
+    private suspend fun removeGroupDelete(id: String) {
+        deleteOutboxLock.lock()
+        try {
+            val next = deleteOutbox.value.filterNot { it.targetId == id }
+            deleteOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_delete_outbox.json", next) }
+        } finally { deleteOutboxLock.unlock() }
+    }
+
+    private suspend fun drainDeleteOutbox(uid: String, token: String) {
+        for (item in deleteOutbox.value.filter { it.userId == uid }) {
+            if (sendGroupDelete(item.kind, item.targetId, token) !is Resource.Success) break
+            removeGroupDelete(item.targetId)
         }
     }
 
@@ -843,17 +883,17 @@ class GroupRepositoryImpl(
     }
 
     override suspend fun deleteComment(commentId: String): Resource<Unit> = withContext(Dispatchers.IO) {
-        val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-        val body = JsonObject().apply { addProperty("is_deleted", true) }
-        val request = http.authenticatedRequest("$base/group_post_comments?id=eq.${encode(commentId)}", token)
-            .addHeader("Prefer", "return=minimal")
-            .patch(http.jsonBody(body))
-            .build()
-        when (val result = execute(request)) {
-            is Resource.Success -> Resource.Success(Unit)
-            is Resource.Failure -> Resource.Failure(result.reason)
-            Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
+        val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val token = accessToken.token()
+        if (token != null) {
+            when (val result = sendGroupDelete("comment", commentId, token)) {
+                is Resource.Success -> { removeGroupDelete(commentId); return@withContext Resource.Success(Unit) }
+                is Resource.Failure -> if (result.reason != FailureReason.NETWORK) return@withContext Resource.Failure(result.reason)
+                Resource.Loading -> Unit
+            }
         }
+        queueGroupDelete(PendingGroupDelete(java.util.UUID.randomUUID().toString(), uid, "comment", commentId, System.currentTimeMillis()))
+        Resource.Success(Unit)
     }
 
     // ── Invites ────────────────────────────────────────────────────────────
@@ -1037,5 +1077,14 @@ data class PendingGroupMembership(
     val groupId: String,
     val action: String,
     val message: String?,
+    val createdAt: Long
+)
+
+
+data class PendingGroupDelete(
+    val id: String,
+    val userId: String,
+    val kind: String,
+    val targetId: String,
     val createdAt: Long
 )
