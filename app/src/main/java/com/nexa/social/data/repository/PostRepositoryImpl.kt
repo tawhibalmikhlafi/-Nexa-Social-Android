@@ -470,6 +470,22 @@ class PostRepositoryImpl(
         persist()
     }
 
+    override suspend fun updateCommentPermission(
+        postId: String,
+        permission: com.nexa.social.domain.model.CommentPermission
+    ): Boolean {
+        val session = prefs.session.first()
+        val remoteStore = remote
+        if (session is SessionState.RemoteAccount && remoteStore != null) {
+            return runCatching { remoteStore.updateCommentPermission(postId, permission) }.getOrDefault(false)
+        }
+        _posts.value = _posts.value.map { post ->
+            if (post.id == postId && post.author.id == session.accountUserId) post.copy(commentPermission = permission) else post
+        }
+        persist()
+        return _posts.value.any { it.id == postId && it.commentPermission == permission }
+    }
+
     override suspend fun togglePin(postId: String) {
         val session = prefs.session.first()
         if (isRemote(session)) {
