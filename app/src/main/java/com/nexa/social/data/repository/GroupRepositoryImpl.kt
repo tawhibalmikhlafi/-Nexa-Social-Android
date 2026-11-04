@@ -364,8 +364,12 @@ class GroupRepositoryImpl(
             // Coalesce replaceable desired-state operations so the last offline choice wins.
             val key = runCatching { JsonParser.parseString(item.payload).asJsonObject }.getOrNull()
             val groupId = key?.string("p_group_id")
-            val userId = key?.string("p_user_id")
-            val coalescible = item.rpc in setOf("update_group_details", "set_member_role", "remove_member", "unban_member", "set_group_archived")
+            val targetId = key?.string("p_user_id") ?: key?.string("p_invitee_id") ?:
+                key?.string("p_request_id") ?: key?.string("p_invite_id")
+            val coalescible = item.rpc in setOf(
+                "update_group_details", "set_member_role", "remove_member", "unban_member",
+                "set_group_archived", "approve_join_request", "invite_to_group", "respond_to_invite"
+            )
             val next = if (!coalescible) {
                 adminOutbox.value + item
             } else {
@@ -374,7 +378,8 @@ class GroupRepositoryImpl(
                     else {
                         val oldPayload = runCatching { JsonParser.parseString(old.payload).asJsonObject }.getOrNull()
                         oldPayload?.string("p_group_id") == groupId &&
-                            (userId == null || oldPayload.string("p_user_id") == userId)
+                            (targetId == null || (oldPayload.string("p_user_id") ?: oldPayload.string("p_invitee_id") ?:
+                                oldPayload.string("p_request_id") ?: oldPayload.string("p_invite_id")) == targetId)
                     }
                 } + item
             }
