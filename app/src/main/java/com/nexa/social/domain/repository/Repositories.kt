@@ -146,6 +146,8 @@ interface UserRepository {
     fun observeFollowingOf(userId: String): Flow<List<User>>
 
     suspend fun setFollowing(userId: String, following: Boolean): Boolean
+    /** Removes a user from the signed-in user's followers list (remote accounts only). */
+    suspend fun removeFollower(followerId: String): Boolean = false
     suspend fun isFollowing(userId: String): Boolean
     suspend fun hasPendingFollowRequest(userId: String): Boolean? = null
     suspend fun loadIncomingFollowRequests(): List<FollowRequest>? = null
