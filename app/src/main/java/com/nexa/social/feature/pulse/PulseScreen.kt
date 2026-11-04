@@ -17,10 +17,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +58,8 @@ fun PulseScreen(
     viewModel: PulseViewModel = viewModel(factory = PulseViewModel.Factory)
 ) {
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
+    val daily by viewModel.dailyState.collectAsStateWithLifecycle()
+    var entryText by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
         NexaTopBar(title = stringResource(R.string.pulse_title), onBack = onBack)
@@ -56,6 +68,83 @@ fun PulseScreen(
             contentPadding = PaddingValues(bottom = NexaSpacing.xxxl),
             verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)
         ) {
+            item {
+                NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
+                    Text("⚡ نبض اليوم", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+                    when {
+                        daily.loading -> Text("جارٍ تحميل تحدي اليوم…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        daily.prompt == null -> Text(
+                            daily.message ?: "لا يوجد تحدٍ منشور الآن. سيظهر التحدي هنا عندما ينشره فريق Nexa.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        else -> {
+                            Text(daily.prompt.title, style = MaterialTheme.typography.titleMedium)
+                            if (daily.prompt.description.isNotBlank()) {
+                                Text(daily.prompt.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text(
+                                if (daily.myEntryId != null) "شاركت في تحدي اليوم — يمكنك استكشاف مشاركات المجتمع."
+                                else "شارك بإجابة واحدة، واجعل نبض Nexa يبدأ منك.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (daily.myEntryId == null) {
+                                OutlinedTextField(
+                                    value = entryText,
+                                    onValueChange = { if (it.length <= 1000) entryText = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    label = { Text("اكتب مشاركتك") },
+                                    minLines = 2,
+                                    maxLines = 4
+                                )
+                                Button(
+                                    onClick = {
+                                        viewModel.publish(entryText)
+                                        entryText = ""
+                                    },
+                                    enabled = entryText.isNotBlank() && !daily.submitting,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (daily.submitting) "جارٍ النشر…" else "انشر مشاركتك")
+                                }
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("مشاركتك منشورة", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.primary)
+                                    IconButton(onClick = { viewModel.deleteMyEntry() }) {
+                                        Icon(Icons.Filled.Delete, contentDescription = "حذف مشاركتي")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    daily.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    if (!daily.loading && daily.prompt != null) {
+                        Text(
+                            "المشاركات: ${daily.entries.size}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            items(daily.entries, key = { it.id }) { entry ->
+                NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(entry.displayName, style = MaterialTheme.typography.titleSmall)
+                            Text("@${entry.username}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        IconButton(onClick = { viewModel.toggleReaction(entry) }) {
+                            Icon(
+                                if (entry.likedByMe) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                contentDescription = "إعجاب"
+                            )
+                        }
+                        Text(entry.reactions.toString(), style = MaterialTheme.typography.labelMedium)
+                    }
+                    Text(entry.body, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
             item {
                 Text(
                     text = stringResource(R.string.pulse_subtitle),
