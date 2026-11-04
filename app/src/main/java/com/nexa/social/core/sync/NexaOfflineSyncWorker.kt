@@ -21,19 +21,28 @@ class NexaOfflineSyncWorker(
 
     override suspend fun doWork(): Result {
         val app = applicationContext as? NexaApplication ?: return Result.failure()
-        return try {
+        var shouldRetry = false
+        try {
             app.container.messageRepository.refresh()
+        } catch (_: Exception) {
+            shouldRetry = true
+        }
+        try {
             app.container.clipRepository.refresh()
+        } catch (_: Exception) {
+            shouldRetry = true
+        }
+        try {
             when (val groups = app.container.groupRepository.refreshMyGroups()) {
                 is Resource.Failure -> if (groups.reason == com.nexa.social.core.common.FailureReason.NETWORK) {
-                    return Result.retry()
+                    shouldRetry = true
                 }
                 else -> Unit
             }
-            Result.success()
         } catch (_: Exception) {
-            Result.retry()
+            shouldRetry = true
         }
+        return if (shouldRetry) Result.retry() else Result.success()
     }
 
     companion object {
