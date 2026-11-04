@@ -127,12 +127,12 @@ fun NotificationsScreen(
         ) {
             FilterChip(
                 selected = !unreadOnly,
-                onClick = { unreadOnly = false },
+                onClick = { unreadOnly = false; showFollowRequests = false },
                 label = { Text(stringResource(R.string.notifications_filter_all)) }
             )
             FilterChip(
                 selected = unreadOnly,
-                onClick = { unreadOnly = true },
+                onClick = { unreadOnly = true; showFollowRequests = false },
                 label = { Text(stringResource(R.string.notifications_filter_unread) + " (" + notifications.count { !it.isRead } + ")") }
             )
             FilterChip(
