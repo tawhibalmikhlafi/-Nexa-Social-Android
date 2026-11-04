@@ -369,6 +369,15 @@ class ClipRepositoryImpl(
     override suspend fun deleteClip(clipId: String): Boolean {
         val session = sessionFlow.first()
         if (session is SessionState.RemoteAccount && remote != null) {
+            val pendingUpload = pendingUploads.value.firstOrNull { it.id == clipId && it.userId == session.userId }
+            if (pendingUpload != null) {
+                removeUpload(clipId)
+                File(Uri.parse(pendingUpload.localVideoPath).path.orEmpty()).delete()
+                pendingUpload.localCoverPath?.let { File(Uri.parse(it).path.orEmpty()).delete() }
+                _clips.value = _clips.value.filterNot { it.id == clipId }
+                persist()
+                return true
+            }
             val path = remote.deleteClip(clipId)
             if (path == null) {
                 enqueueAction(session.userId, clipId, "delete_clip", true)
