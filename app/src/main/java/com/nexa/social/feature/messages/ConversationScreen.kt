@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -221,6 +222,9 @@ fun ConversationScreen(
     val pickAttachment = rememberImagePicker { uri ->
         if (uri != null) attachmentUri = uri.toString()
     }
+    val pickVideo = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) attachmentUri = uri.toString()
+    }
 
     val messages = conversation?.messages.orEmpty()
 
@@ -377,6 +381,13 @@ fun ConversationScreen(
                             contentDescription = stringResource(R.string.message_attachment_add),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                    IconButton(
+                        onClick = { pickVideo.launch("video/*") },
+                        enabled = canSend && editing == null && !isRecording,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(Icons.Filled.VideoLibrary, contentDescription = "Send video", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     OutlinedTextField(
                         value = input,
