@@ -52,7 +52,7 @@ class SupabaseClipDataSource(
         }
     }
 
-    suspend fun createClip(author: UserSummary, videoPath: String, videoUrl: String, caption: String, clipId: String = Ids.newId()): Clip? {
+    suspend fun createClip(author: UserSummary, videoPath: String, videoUrl: String, caption: String, clipId: String = Ids.newId(), coverUrl: String? = null): Clip? {
         val uid = currentUid() ?: return null
         val token = accessToken() ?: return null
         if (uid != author.id) return null
@@ -61,14 +61,14 @@ class SupabaseClipDataSource(
         val body = JsonObject().apply {
             addProperty("id", id); addProperty("author_id", uid)
             addProperty("video_path", videoPath); addProperty("video_url", videoUrl)
-            addProperty("caption", caption.trim()); addProperty("created_at", now.toString())
+            addProperty("caption", caption.trim()); addProperty("created_at", now.toString()); if (!coverUrl.isNullOrBlank()) addProperty("cover_url", coverUrl)
         }
         val response = http.execute(http.authenticatedRequest("$restUrl/clips", token)
             .header("Prefer", "return=minimal").post(http.jsonBody(body)).build()).getOrNull()
             ?: return null
         if (!response.successful) return null
         notifyChanged()
-        return Clip(id, author, videoUrl, caption.trim(), now.toEpochMilli(), 0, 0, false, false, false)
+        return Clip(id, author, videoUrl, caption.trim(), now.toEpochMilli(), 0, 0, false, false, false, coverUrl = coverUrl)
     }
 
     suspend fun recordView(clipId: String): Boolean {
@@ -217,7 +217,8 @@ class SupabaseClipDataSource(
             likeCount = row.long("like_count")?.toInt() ?: 0,
             commentCount = row.long("comment_count")?.toInt() ?: 0,
             likedByMe = id in likes, savedByMe = id in saves, isLocal = false,
-            viewCount = row.long("view_count") ?: 0L
+            viewCount = row.long("view_count") ?: 0L,
+            coverUrl = row.string("cover_url")
         )
     }
 
