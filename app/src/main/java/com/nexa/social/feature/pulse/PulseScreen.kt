@@ -94,6 +94,8 @@ fun PulseScreen(
         }
     }
 
+    val prompt = daily.prompt
+
     Column(modifier = Modifier.fillMaxSize()) {
         NexaTopBar(title = stringResource(R.string.pulse_title), onBack = onBack)
         LazyColumn(
@@ -106,16 +108,16 @@ fun PulseScreen(
                     Text("⚡ نبض اليوم", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                     when {
                         daily.loading -> Text("جارٍ تحميل تحدي اليوم…", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        daily.prompt == null -> Text(
+                        prompt == null -> Text(
                             daily.message ?: "لا يوجد تحدٍ منشور الآن. سيظهر التحدي هنا عندما ينشره فريق Nexa.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         else -> {
-                            Text(daily.prompt.title, style = MaterialTheme.typography.titleMedium)
-                            if (daily.prompt.description.isNotBlank()) {
+                            Text(prompt.title, style = MaterialTheme.typography.titleMedium)
+                            if (prompt.description.isNotBlank()) {
                                 Text(daily.prompt.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            val remaining = runCatching { Duration.between(Instant.now(), Instant.parse(daily.prompt.endsAt)).toMinutes().coerceAtLeast(0) }.getOrNull()
+                            val remaining = runCatching { Duration.between(Instant.now(), Instant.parse(prompt.endsAt)).toMinutes().coerceAtLeast(0) }.getOrNull()
                             Text(
                                 remaining?.let { "ينتهي التحدي بعد ${it / 60} ساعة و${it % 60} دقيقة" } ?: "تحدٍ يومي من مجتمع Nexa",
                                 style = MaterialTheme.typography.labelMedium,
