@@ -1132,4 +1132,6 @@
     <string name="reactions_load_failed">تعذر تحميل التفاعلات.</string>
     <string name="reactions_retry">إعادة المحاولة</string>
     <string name="comment_sending">جارٍ الإرسال…</string>
+    <string name="notifications_filter_all">الكل</string>
+    <string name="notifications_filter_unread">غير المقروءة</string>
 </resources>
