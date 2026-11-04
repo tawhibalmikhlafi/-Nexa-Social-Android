@@ -16,6 +16,7 @@ import com.nexa.social.domain.model.AccountOrigin
 import com.nexa.social.domain.model.AccountStatus
 import com.nexa.social.domain.model.EmailVerificationStatus
 import com.nexa.social.domain.model.User
+import com.nexa.social.domain.model.FollowRequest
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -338,6 +339,54 @@ class SupabaseUserDataSource(
                 "&target_id=eq.${encode(targetId)}&status=eq.pending&limit=1"
         ) ?: return null
         return rows.isNotEmpty()
+    }
+
+    override suspend fun loadIncomingFollowRequests(uid: String): List<FollowRequest>? {
+        if (currentUid() != uid) return null
+        val rows = fetchRows(
+            "follow_requests?select=id,requester_id,created_at&target_id=eq.${encode(uid)}" +
+                "&status=eq.pending&order=created_at.desc&limit=100"
+        ) ?: return null
+        if (rows.isEmpty()) return emptyList()
+        val requesterIds = rows.mapNotNull { it.string("requester_id") }.distinct()
+        if (requesterIds.isEmpty()) return emptyList()
+        val profiles = fetchProfiles(
+            "select=*&id=in.(${requesterIds.joinToString(",") { encode(it) }})"
+        ) ?: return null
+        val usersById = profiles.mapNotNull { row ->
+            SupabaseUserMapper.toUser(row)?.let { it.id to it }
+        }.toMap()
+        return rows.mapNotNull { row ->
+            val requestId = row.string("id") ?: return@mapNotNull null
+            val requesterId = row.string("requester_id") ?: return@mapNotNull null
+            val requester = usersById[requesterId] ?: return@mapNotNull null
+            FollowRequest(
+                id = requestId,
+                requester = requester,
+                createdAt = row.string("created_at").orEmpty()
+            )
+        }
+    }
+
+    override suspend fun respondToFollowRequest(requestId: String, approve: Boolean): Boolean {
+        if (requestId.isBlank()) return false
+        val token = accessToken() ?: return false
+        val body = JsonObject().apply {
+            addProperty("request_id", requestId)
+            addProperty("approve", approve)
+        }
+        val response = execute(
+            http.authenticatedRequest("$restUrl/rpc/nexa_respond_follow_request", token)
+                .header("Prefer", "return=representation")
+                .post(http.jsonBody(body))
+                .build()
+        ) ?: return false
+        if (!response.successful) {
+            Log.w(TAG, "respondToFollowRequest failed with HTTP ${response.code}")
+            return false
+        }
+        refresh()
+        return true
     }
 
     override suspend fun setFollowing(uid: String, targetId: String, following: Boolean): Boolean {
