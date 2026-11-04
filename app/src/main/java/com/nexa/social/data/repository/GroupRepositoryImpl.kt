@@ -378,8 +378,8 @@ class GroupRepositoryImpl(
                     else {
                         val oldPayload = runCatching { JsonParser.parseString(old.payload).asJsonObject }.getOrNull()
                         oldPayload?.string("p_group_id") == groupId &&
-                            (targetId == null || (oldPayload.string("p_user_id") ?: oldPayload.string("p_invitee_id") ?:
-                                oldPayload.string("p_request_id") ?: oldPayload.string("p_invite_id")) == targetId)
+                            (targetId == null || ((oldPayload?.string("p_user_id") ?: oldPayload?.string("p_invitee_id") ?:
+                                oldPayload?.string("p_request_id") ?: oldPayload?.string("p_invite_id")) == targetId))
                     }
                 } + item
             }
@@ -400,11 +400,13 @@ class GroupRepositoryImpl(
 
     private suspend fun drainAdminOutbox(uid: String, token: String) {
         for (item in adminOutbox.value.filter { it.userId == uid }.sortedBy { it.createdAt }) {
-            val payload = runCatching { JsonParser.parseString(item.payload).asJsonObject }.getOrNull() ?: run {
-                removeAdminOperation(item.id); continue
+            val payload = runCatching { JsonParser.parseString(item.payload).asJsonObject }.getOrNull()
+            if (payload == null) {
+                removeAdminOperation(item.id)
+            } else {
+                if (sendAdminOperation(item.rpc, payload, token) !is Resource.Success) break
+                removeAdminOperation(item.id)
             }
-            if (sendAdminOperation(item.rpc, payload, token) !is Resource.Success) break
-            removeAdminOperation(item.id)
         }
     }
 
