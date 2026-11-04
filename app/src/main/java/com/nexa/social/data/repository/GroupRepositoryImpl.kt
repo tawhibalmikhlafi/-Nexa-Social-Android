@@ -50,6 +50,8 @@ class GroupRepositoryImpl(
     private val _myGroups = MutableStateFlow<List<Group>>(emptyList())
     private val reactionOutboxLock = kotlinx.coroutines.sync.Mutex()
     private val reactionOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupReaction>("group_reaction_outbox.json").orEmpty())
+    private val commentOutboxLock = kotlinx.coroutines.sync.Mutex()
+    private val commentOutbox = MutableStateFlow(jsonStore?.readList<PendingGroupComment>("group_comment_outbox.json").orEmpty())
 
     override fun observeMyGroups(): Flow<List<Group>> = _myGroups.asStateFlow()
 
@@ -62,6 +64,7 @@ class GroupRepositoryImpl(
         when (val result = executeJsonArray(http.authenticatedRequest(url, token).get().build())) {
             is Resource.Success -> {
                 drainReactionOutbox(uid, token)
+                drainCommentOutbox(uid, token)
                 _myGroups.value = result.data.mapNotNull { element ->
                     val row = element.asJsonObject
                     val group = row.getAsJsonObject("group") ?: return@mapNotNull null
@@ -714,27 +717,54 @@ class GroupRepositoryImpl(
         parentId: String?,
     ): Resource<String> = withContext(Dispatchers.IO) {
         val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-        val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        if (content.isBlank()) return@withContext Resource.Failure(FailureReason.REQUIRED)
+        val id = java.util.UUID.randomUUID().toString()
+        val token = accessToken.token()
+        if (token != null && sendGroupComment(uid, id, postId, content, parentId, token)) {
+            return@withContext Resource.Success(id)
+        }
+        if (token == null || token.isNotBlank()) {
+            queueGroupComment(PendingGroupComment(id, uid, postId, content.trim(), parentId, System.currentTimeMillis()))
+            Resource.Success(id)
+        } else Resource.Failure(FailureReason.NETWORK)
+    }
+
+    private suspend fun sendGroupComment(uid: String, id: String, postId: String, content: String, parentId: String?, token: String): Boolean {
         val body = JsonObject().apply {
+            addProperty("id", id)
             addProperty("post_id", postId)
             addProperty("author_id", uid)
             addProperty("content", content.trim())
             if (!parentId.isNullOrBlank()) addProperty("parent_id", parentId)
         }
         val request = http.authenticatedRequest("$base/group_post_comments", token)
-            .addHeader("Prefer", "return=representation")
-            .post(http.jsonBody(body))
-            .build()
-        when (val result = execute(request)) {
-            is Resource.Success -> {
-                val id = runCatching {
-                    JsonParser.parseString(result.data.body).asJsonArray.firstOrNull()
-                        ?.asJsonObject?.string("id")
-                }.getOrNull()
-                if (id.isNullOrBlank()) Resource.Failure(FailureReason.GENERIC) else Resource.Success(id)
-            }
-            is Resource.Failure -> Resource.Failure(result.reason)
-            Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
+            .addHeader("Prefer", "resolution=ignore-duplicates,return=minimal")
+            .post(http.jsonBody(body)).build()
+        return execute(request) is Resource.Success
+    }
+
+    private suspend fun queueGroupComment(item: PendingGroupComment) {
+        commentOutboxLock.lock()
+        try {
+            val next = commentOutbox.value.filterNot { it.id == item.id } + item
+            commentOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_comment_outbox.json", next) }
+        } finally { commentOutboxLock.unlock() }
+    }
+
+    private suspend fun removeGroupComment(id: String) {
+        commentOutboxLock.lock()
+        try {
+            val next = commentOutbox.value.filterNot { it.id == id }
+            commentOutbox.value = next
+            withContext(Dispatchers.IO) { jsonStore?.writeList("group_comment_outbox.json", next) }
+        } finally { commentOutboxLock.unlock() }
+    }
+
+    private suspend fun drainCommentOutbox(uid: String, token: String) {
+        for (item in commentOutbox.value.filter { it.userId == uid }) {
+            if (!sendGroupComment(uid, item.id, item.postId, item.content, item.parentId, token)) break
+            removeGroupComment(item.id)
         }
     }
 
@@ -904,5 +934,15 @@ data class PendingGroupReaction(
     val userId: String,
     val postId: String,
     val kind: String?,
+    val createdAt: Long
+)
+
+
+data class PendingGroupComment(
+    val id: String,
+    val userId: String,
+    val postId: String,
+    val content: String,
+    val parentId: String?,
     val createdAt: Long
 )
