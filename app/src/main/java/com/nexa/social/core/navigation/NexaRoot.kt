@@ -359,6 +359,7 @@ fun NexaRoot() {
                 composable(NexaDestinations.NOTIFICATIONS) {
                     NotificationsScreen(
                         onBack = { navController.popBackStack() },
+                        onOpenProfile = { id -> navController.navigate(NexaDestinations.user(id)) },
                         onOpen = { notification ->
                             val targetId = notification.targetId
                             if (!targetId.isNullOrBlank()) {
