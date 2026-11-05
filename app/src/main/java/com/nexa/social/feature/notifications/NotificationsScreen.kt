@@ -85,6 +85,7 @@ private fun notificationIcon(type: NotificationType?): ImageVector = when (type)
 @Composable
 fun NotificationsScreen(
     onBack: () -> Unit,
+    onOpenProfile: (String) -> Unit = {},
     onOpen: (NexaNotification) -> Unit = {},
     viewModel: NotificationsViewModel = viewModel(factory = NotificationsViewModel.Factory)
 ) {
@@ -168,8 +169,17 @@ fun NotificationsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
                     ) {
-                        NexaAvatar(displayName = request.requester.displayName, avatarUri = request.requester.avatarUri, size = 44.dp)
-                        Column(modifier = Modifier.weight(1f)) {
+                        NexaAvatar(
+                            displayName = request.requester.displayName,
+                            avatarUri = request.requester.avatarUri,
+                            size = 44.dp,
+                            modifier = Modifier.clickable { onOpenProfile(request.requester.id) }
+                        )
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onOpenProfile(request.requester.id) }
+                        ) {
                             Text(request.requester.displayName + " طلب متابعتك", style = MaterialTheme.typography.bodyMedium)
                             Text("@" + request.requester.username, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
