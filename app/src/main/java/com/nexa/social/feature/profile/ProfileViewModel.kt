@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
@@ -156,9 +158,18 @@ class ProfileViewModel(
             }
         } else {
             viewModelScope.launch {
-                preferences.session.collect { session ->
-                    if (session is SessionState.RemoteAccount) refreshIncomingFollowRequests()
-                    else _incomingFollowRequests.value = emptyList()
+                preferences.session.collectLatest { session ->
+                    if (session is SessionState.RemoteAccount) {
+                        // Keep incoming private-account requests current while the owner
+                        // remains on their profile; otherwise an initially empty card
+                        // would never appear when another user sends a request.
+                        while (true) {
+                            refreshIncomingFollowRequests()
+                            delay(FOLLOW_REQUEST_REFRESH_MS)
+                        }
+                    } else {
+                        _incomingFollowRequests.value = emptyList()
+                    }
                 }
             }
         }
@@ -269,6 +280,8 @@ class ProfileViewModel(
     }
 
     companion object {
+        private const val FOLLOW_REQUEST_REFRESH_MS = 15_000L
+
         fun factory(targetUserId: String?): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val container = nexaApplication().container
