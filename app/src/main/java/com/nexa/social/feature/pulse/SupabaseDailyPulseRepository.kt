@@ -59,7 +59,8 @@ data class PulseFriendChallenge(
     val challengedName: String,
     val message: String,
     val status: String,
-    val createdAt: String
+    val createdAt: String,
+    val isIncoming: Boolean
 )
 
 data class PulseComment(
@@ -368,7 +369,8 @@ class SupabaseDailyPulseRepository(
             val receiver = row.string("challenged_user_id") ?: return@mapNotNull null
             PulseFriendChallenge(
                 id, sender, receiver, names[sender] ?: "مستخدم", names[receiver] ?: "مستخدم",
-                row.string("message").orEmpty(), row.string("status").orEmpty(), row.string("created_at").orEmpty()
+                row.string("message").orEmpty(), row.string("status").orEmpty(), row.string("created_at").orEmpty(),
+                receiver == uid
             )
         }
     }
