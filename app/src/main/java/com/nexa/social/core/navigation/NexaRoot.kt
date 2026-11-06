@@ -305,7 +305,8 @@ fun NexaRoot() {
                 composable(NexaDestinations.WORLDS) {
                     WorldsScreen(
                         onOpenCommunity = { id -> navController.navigate(NexaDestinations.community(id)) },
-                        onCreateWorld = { navController.navigate(NexaDestinations.CREATE_WORLD) }
+                        onCreateWorld = { navController.navigate(NexaDestinations.CREATE_WORLD) },
+                        onOpenGatherings = { navController.navigate(NexaDestinations.GATHERINGS) }
                     )
                 }
 
