@@ -7,8 +7,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.domain.model.Community
-import com.nexa.social.domain.model.Post
 import com.nexa.social.domain.model.UserSummary
+import com.nexa.social.domain.model.AccountOrigin
 import com.nexa.social.domain.repository.CommunityRepository
 import com.nexa.social.domain.repository.PostRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,9 +16,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.util.Calendar
+import java.time.Instant
 
 data class PulseTag(
     val name: String,
@@ -211,16 +212,16 @@ class PulseViewModel(
         }
     }
 
-    val snapshot: StateFlow<PulseSnapshot> = combine(
-        postRepository.observeFeed(),
-        communityRepository.observeCommunities()
-    ) { posts, communities ->
-        compute(posts, communities)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PulseSnapshot())
+    val snapshot: StateFlow<PulseSnapshot> = dailyState
+        .map { state -> computePulseStats(state.entries) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PulseSnapshot())
 
-    private fun compute(posts: List<Post>, communities: List<Community>): PulseSnapshot {
-        if (posts.isEmpty()) return PulseSnapshot()
-
+    /**
+     * Pulse analytics are computed only from rows returned by pulse_entries and
+     * pulse_reactions. The worlds list stays empty until worlds are cloud-backed and
+     * Pulse entries can be linked to a real world id; never substitute local feed counts.
+     */
+    private fun computePulseStats(entries: List<DailyPulseEntry>): PulseSnapshot {
         val startOfDay = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
@@ -229,56 +230,46 @@ class PulseViewModel(
         }.timeInMillis
 
         val tagScores = mutableMapOf<String, Pair<Int, Int>>()
-        posts.forEach { post ->
-            val engagement = engagementOf(post)
-            val tags = (post.tags + hashtagsOf(post.text)).distinct()
-            tags.map { it.trim().lowercase() }.filter { it.isNotBlank() }.forEach { tag ->
-                val current = tagScores[tag] ?: (0 to 0)
-                tagScores[tag] = (current.first + 1) to (current.second + engagement)
+        entries.forEach { entry ->
+            hashtagsOf(entry.body).distinct().forEach { raw ->
+                val tag = raw.trim().lowercase()
+                if (tag.isNotBlank()) {
+                    val current = tagScores[tag] ?: (0 to 0)
+                    tagScores[tag] = (current.first + 1) to (current.second + entry.reactions)
+                }
             }
         }
 
-        val creatorScores = posts
-            .groupBy { it.author.id }
-            .map { (_, authored) ->
-                PulseCreator(
-                    user = authored.first().author,
-                    posts = authored.size,
-                    engagement = authored.sumOf { engagementOf(it) }
-                )
-            }
-            .sortedWith(
-                compareByDescending<PulseCreator> { it.engagement }
-                    .thenByDescending { it.posts }
+        val creators = entries.groupBy { it.userId }.map { (userId, authored) ->
+            val first = authored.first()
+            PulseCreator(
+                user = UserSummary(
+                    id = userId,
+                    username = first.username,
+                    displayName = first.displayName,
+                    avatarUri = first.avatarUrl,
+                    accountOrigin = AccountOrigin.REMOTE_ACCOUNT
+                ),
+                posts = authored.size,
+                engagement = authored.sumOf { it.reactions }
             )
-            .take(5)
-
-        val postCounts = posts.groupBy { it.communityId }.mapValues { it.value.size }
-        val worldScores = communities
-            .map { PulseWorld(it, postCounts[it.id] ?: 0) }
-            .sortedWith(
-                compareByDescending<PulseWorld> { it.posts }
-                    .thenByDescending { it.community.sampleMemberCount }
-            )
-            .take(5)
+        }.sortedWith(
+            compareByDescending<PulseCreator> { it.engagement }
+                .thenByDescending { it.posts }
+        ).take(5)
 
         return PulseSnapshot(
-            totalPosts = posts.size,
-            activeToday = posts.count { it.createdAt >= startOfDay },
-            tags = tagScores.entries
-                .map { PulseTag(it.key, it.value.first, it.value.second) }
-                .sortedWith(
-                    compareByDescending<PulseTag> { it.engagement }
-                        .thenByDescending { it.posts }
-                )
+            totalPosts = entries.size,
+            activeToday = entries.count { entry ->
+                runCatching { Instant.parse(entry.createdAt).toEpochMilli() >= startOfDay }.getOrDefault(false)
+            },
+            tags = tagScores.map { (name, score) -> PulseTag(name, score.first, score.second) }
+                .sortedWith(compareByDescending<PulseTag> { it.engagement }.thenByDescending { it.posts })
                 .take(12),
-            creators = creatorScores,
-            worlds = worldScores
+            creators = creators,
+            worlds = emptyList()
         )
     }
-
-    private fun engagementOf(post: Post): Int =
-        post.likeCount + post.commentCount * 2 + post.shareCount * 3
 
     private fun hashtagsOf(text: String): List<String> =
         Regex("#([\\p{L}\\p{N}_]{2,30})")
