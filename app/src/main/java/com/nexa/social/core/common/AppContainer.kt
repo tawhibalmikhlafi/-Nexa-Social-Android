@@ -62,6 +62,7 @@ import com.nexa.social.data.remote.SupabaseClipDataSource
 import com.nexa.social.data.remote.SupabaseMessageDataSource
 import com.nexa.social.data.remote.SupabaseNotificationDataSource
 import com.nexa.social.data.remote.SupabaseNotesDataSource
+import com.nexa.social.data.remote.SupabaseLifeDataSource
 import com.nexa.social.data.remote.SupabasePostDataSource
 import com.nexa.social.data.remote.SupabaseSafetyDataSource
 import com.nexa.social.data.remote.SupabaseStorageDataSource
@@ -273,6 +274,9 @@ class DefaultAppContainer(context: Context) : AppContainer {
                         messageRepository.refresh()
                         notificationRepository.refresh()
                         groupRepository.refreshMyGroups()
+                        gatheringRepository.refresh()
+                        capsuleRepository.refresh()
+                        wellbeingRepository.refresh()
                     }
                 },
             ),
@@ -339,6 +343,17 @@ class DefaultAppContainer(context: Context) : AppContainer {
     }
     private val remoteNotes = if (supabaseHttp != null && supabaseTokens != null) {
         SupabaseNotesDataSource(
+            config = supabaseConfig,
+            http = supabaseHttp,
+            accessToken = { supabaseTokens.currentSession()?.accessToken },
+            currentUid = { supabaseTokens.currentSession()?.userId }
+        )
+    } else {
+        null
+    }
+
+    private val remoteLife = if (supabaseHttp != null && supabaseTokens != null) {
+        SupabaseLifeDataSource(
             config = supabaseConfig,
             http = supabaseHttp,
             accessToken = { supabaseTokens.currentSession()?.accessToken },
@@ -448,14 +463,19 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val gatheringRepository: GatheringRepository = GatheringRepositoryImpl(
         gatheringLocal,
         userRepository,
-        preferenceStorage.session
+        preferenceStorage.session,
+        remoteLife
     )
     override val capsuleRepository: CapsuleRepository = CapsuleRepositoryImpl(
         capsuleLocal,
         userRepository,
-        preferenceStorage.session
+        preferenceStorage.session,
+        remoteLife
     )
-    override val wellbeingRepository: WellbeingRepository = WellbeingRepositoryImpl(wellbeingLocal)
+    override val wellbeingRepository: WellbeingRepository = WellbeingRepositoryImpl(
+        wellbeingLocal,
+        remoteLife
+    )
 
     override val privacyRepository: PrivacyRepository =
         if (supabaseHttp != null && supabaseAuth != null) {
@@ -499,5 +519,12 @@ class DefaultAppContainer(context: Context) : AppContainer {
         if (backgroundSyncStarted) return
         backgroundSyncStarted = true
         authRepositoryImpl.startSessionSync(applicationScope)
+        applicationScope.launch {
+            // Initial account restore can complete before the first network-restored callback.
+            // These migrations are idempotent and retain local files on any failed request.
+            gatheringRepository.refresh()
+            capsuleRepository.refresh()
+            wellbeingRepository.refresh()
+        }
     }
 }
