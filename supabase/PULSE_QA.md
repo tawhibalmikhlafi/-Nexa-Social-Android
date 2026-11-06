@@ -25,7 +25,8 @@ Run the automated suite before manual verification:
 - [ ] With two mutual-follow accounts, send a challenge from A to B; verify B sees it and can accept or decline.
 - [ ] Verify a non-mutual account cannot be challenged through direct REST and cannot read another user's challenge rows.
 - [ ] Verify a challenge recipient cannot alter the sender, recipient, prompt, message, or creation time when responding.
-- [ ] Verify Pulse tag and creator statistics change only when Pulse entries/reactions change, not when general posts change.
+- [ ] Verify Pulse tag, creator, and world statistics change only when Pulse entries/reactions change, not when general posts or local community post counts change.
+- [ ] Publish entries with and without a selected world; verify world_id/world_name persist and world counts match Pulse entries only.
 - [ ] Disable network before opening Pulse; verify an actionable error appears and the app stays responsive.
 - [ ] Disable network while publishing/commenting; verify no false success is shown, then reconnect and retry.
 - [ ] Attempt a 501-character comment and 1,001-character entry; verify client-side rejection.
