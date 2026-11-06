@@ -242,7 +242,7 @@ fun GroupDetailScreen(
                                     viewModel.createPost(postText, null)
                                     postText = ""
                                 },
-                                modifier = Modifier.padding(horizontal = NexaSpacing.md),
+                                modifier = Modifier.padding(horizontal = NexaSpacing.lg),
                             )
                         }
                     }
@@ -250,7 +250,7 @@ fun GroupDetailScreen(
                     item {
                         SectionHeader(
                             title = stringResource(R.string.groups_posts_title),
-                            modifier = Modifier.padding(horizontal = NexaSpacing.md),
+                            modifier = Modifier.padding(horizontal = NexaSpacing.lg),
                         )
                     }
 
@@ -265,7 +265,7 @@ fun GroupDetailScreen(
                                 onComments = { onOpenComments(groupId, post.id) },
                                 onDelete = { postToDelete = post },
                                 onOpenProfile = onOpenProfile,
-                                modifier = Modifier.padding(horizontal = NexaSpacing.md),
+                                modifier = Modifier.padding(horizontal = NexaSpacing.lg),
                             )
                         }
                     }
@@ -651,7 +651,7 @@ private fun GroupPostCard(
                 NexaAvatar(
                     displayName = post.authorName,
                     avatarUri = post.authorAvatarUrl,
-                    size = 42.dp,
+                    size = 46.dp,
                 )
                 Spacer(Modifier.width(NexaSpacing.md))
                 Column(modifier = Modifier.weight(1f)) {
@@ -699,18 +699,18 @@ private fun GroupPostCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = NexaSpacing.lg)
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(NexaRadius.card)),
+                    .height(230.dp)
+                    .clip(RoundedCornerShape(20.dp)),
             )
         }
 
         Spacer(Modifier.height(NexaSpacing.md))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = NexaSpacing.sm, vertical = 2.dp),
+                .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.xs),
         ) {
             ReactionAction(
                 post = post,
@@ -740,8 +740,9 @@ private fun ReactionAction(
     }
     Row(
         modifier = modifier
-            .height(40.dp)
-            .clip(RoundedCornerShape(NexaRadius.chip))
+            .height(44.dp)
+            .clip(RoundedCornerShape(NexaRadius.pill))
+            .background(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .clickable { onReact(if (active) null else ReactionKind.LIKE) },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -779,8 +780,9 @@ private fun CommentAction(
 ) {
     Row(
         modifier = modifier
-            .height(40.dp)
-            .clip(RoundedCornerShape(NexaRadius.chip))
+            .height(44.dp)
+            .clip(RoundedCornerShape(NexaRadius.pill))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .clickable(onClick = onComments),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
