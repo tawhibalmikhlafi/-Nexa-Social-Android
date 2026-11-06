@@ -91,6 +91,7 @@ class CapsuleRepositoryImpl(
         // is successfully fetched and merged.
         mine.forEach { source.saveCapsule(it.toCloud(uid)) }
         val cloud = source.loadCapsules().filter { it.userId == uid }
+        val displayName = userRepository.currentUser.first()?.displayName ?: "أنا"
         val cloudLocal = cloud.mapNotNull { value ->
             // CapsuleCipher uses this device's Android Keystore key. Never show undecryptable
             // ciphertext as an empty message on a different device.
@@ -98,12 +99,12 @@ class CapsuleRepositoryImpl(
             StoredCapsule(
                 id = value.id, title = value.title, cipherText = value.cipherText, iv = value.iv,
                 createdAt = value.createdAt, unlockAt = value.unlockAt,
-                authorId = value.userId, authorName = userRepository.currentUser.first()?.displayName ?: "أنا",
-                openedAt = value.openedAt
+                authorId = value.userId, authorName = displayName, openedAt = value.openedAt
             )
         }
-        if (cloud.isEmpty() && mine.isNotEmpty()) return
-        val merged = (cloudLocal + mine.filter { localItem -> cloudLocal.none { it.id == localItem.id } })
+        if (cloud.isEmpty() && stored.isNotEmpty()) return
+        val otherAccounts = stored.filter { it.authorId != uid }
+        val merged = (cloudLocal + mine.filter { localItem -> cloudLocal.none { it.id == localItem.id } } + otherAccounts)
             .distinctBy { it.id }
         write(merged)
     }
