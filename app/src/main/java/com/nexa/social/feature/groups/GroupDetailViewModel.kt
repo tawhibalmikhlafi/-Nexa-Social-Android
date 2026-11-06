@@ -160,8 +160,8 @@ class GroupDetailViewModel(
         }
     }
 
-    fun reportPost(postId: String, reason: String, note: String) = viewModelScope.launch {
-        when (repo.submitGroupPostReport(groupId, postId, reason, note)) {
+    fun reportPost(postId: String, postPreview: String, reason: String, note: String) = viewModelScope.launch {
+        when (repo.submitGroupPostReport(groupId, postId, postPreview, reason, note)) {
             is Resource.Success -> _state.update { it.copy(successMessage = "report_sent") }
             is Resource.Failure -> _state.update { it.copy(error = "report_failed") }
             Resource.Loading -> Unit
