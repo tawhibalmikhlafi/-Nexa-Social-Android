@@ -7,6 +7,8 @@ internal object PulseInputRules {
             !( !imageUri.isNullOrBlank() && !videoUri.isNullOrBlank()) &&
             (body.trim().isNotEmpty() || !imageUri.isNullOrBlank() || !videoUri.isNullOrBlank())
 
-    fun validComment(body: String): Boolean =
-        body.trim().isNotEmpty() && body.trim().length <= 500
+    fun validComment(body: String, imageUri: String? = null, videoUri: String? = null): Boolean =
+        body.trim().length <= 500 &&
+            !( !imageUri.isNullOrBlank() && !videoUri.isNullOrBlank()) &&
+            (body.trim().isNotEmpty() || !imageUri.isNullOrBlank() || !videoUri.isNullOrBlank())
 }
