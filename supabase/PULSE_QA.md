@@ -19,6 +19,12 @@ Run the automated suite before manual verification:
 - [ ] Verify account B cannot delete account A's entry/comment by direct REST request.
 - [ ] Verify an account can publish only one entry per challenge.
 - [ ] Publish an image-only entry; verify upload, public image rendering, and delete cleanup.
+- [ ] Publish a video entry (MP4/MOV/WebM/3GP, at most 50 MB); verify upload, playback in the feed and detail dialog, and delete cleanup.
+- [ ] Verify an image and video cannot be attached to the same entry.
+- [ ] With two mutual-follow accounts, send a challenge from A to B; verify B sees it and can accept or decline.
+- [ ] Verify a non-mutual account cannot be challenged through direct REST and cannot read another user's challenge rows.
+- [ ] Verify a challenge recipient cannot alter the sender, recipient, prompt, message, or creation time when responding.
+- [ ] Verify Pulse tag and creator statistics change only when Pulse entries/reactions change, not when general posts change.
 - [ ] Disable network before opening Pulse; verify an actionable error appears and the app stays responsive.
 - [ ] Disable network while publishing/commenting; verify no false success is shown, then reconnect and retry.
 - [ ] Attempt a 501-character comment and 1,001-character entry; verify client-side rejection.
