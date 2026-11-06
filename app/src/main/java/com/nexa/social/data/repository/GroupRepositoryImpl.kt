@@ -23,6 +23,7 @@ import com.nexa.social.domain.model.GroupInvite
 import com.nexa.social.domain.model.GroupMember
 import com.nexa.social.domain.model.GroupMemberStatus
 import com.nexa.social.domain.model.GroupPost
+import com.nexa.social.domain.model.GroupPostReport
 import com.nexa.social.domain.model.GroupPrivacy
 import com.nexa.social.domain.model.GroupRole
 import com.nexa.social.domain.model.GroupSearchResult
@@ -763,6 +764,74 @@ class GroupRepositoryImpl(
             removeGroupDelete(item.targetId)
         }
     }
+
+    override suspend fun submitGroupPostReport(
+        groupId: String,
+        postId: String,
+        reason: String,
+        note: String,
+    ): Resource<Unit> = withContext(Dispatchers.IO) {
+        val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val body = JsonObject().apply {
+            addProperty("reporter_id", uid)
+            addProperty("target_type", "group_post")
+            addProperty("target_id", postId)
+            addProperty("group_id", groupId)
+            addProperty("reason", reason.trim())
+            addProperty("note", note.trim())
+        }
+        val request = http.authenticatedRequest("$base/content_reports", token)
+            .addHeader("Prefer", "return=minimal")
+            .post(http.jsonBody(body)).build()
+        when (val result = execute(request)) {
+            is Resource.Success -> Resource.Success(Unit)
+            is Resource.Failure -> Resource.Failure(result.reason)
+            Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
+        }
+    }
+
+    override suspend fun getGroupPostReports(groupId: String): Resource<List<GroupPostReport>> =
+        withContext(Dispatchers.IO) {
+            val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+            val url = "$base/content_reports?group_id=eq.${encode(groupId)}&target_type=eq.group_post&status=eq.pending&select=id,target_id,reporter_id,reason,note,created_at,status&order=created_at.desc"
+            val request = http.authenticatedRequest(url, token).get().build()
+            when (val result = executeJsonArray(request)) {
+                is Resource.Success -> Resource.Success(result.data.map { element ->
+                    val row = element.asJsonObject
+                    GroupPostReport(
+                        id = row.string("id").orEmpty(),
+                        postId = row.string("target_id").orEmpty(),
+                        reporterId = row.string("reporter_id").orEmpty(),
+                        reason = row.string("reason").orEmpty(),
+                        note = row.string("note").orEmpty(),
+                        createdAt = parseMillis(row.string("created_at")),
+                        status = row.string("status").orEmpty(),
+                    )
+                })
+                is Resource.Failure -> Resource.Failure(result.reason)
+                Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
+            }
+        }
+
+    override suspend fun reviewGroupPostReport(reportId: String): Resource<Unit> =
+        withContext(Dispatchers.IO) {
+            val uid = currentUid.uid() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+            val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+            val body = JsonObject().apply {
+                addProperty("status", "reviewed")
+                addProperty("reviewed_by", uid)
+                addProperty("reviewed_at", Instant.now().toString())
+            }
+            val request = http.authenticatedRequest("$base/content_reports?id=eq.${encode(reportId)}", token)
+                .addHeader("Prefer", "return=minimal")
+                .patch(http.jsonBody(body)).build()
+            when (val result = execute(request)) {
+                is Resource.Success -> Resource.Success(Unit)
+                is Resource.Failure -> Resource.Failure(result.reason)
+                Resource.Loading -> Resource.Failure(FailureReason.GENERIC)
+            }
+        }
 
     override suspend fun reactToPost(postId: String, kind: ReactionKind?): Resource<Unit> =
         withContext(Dispatchers.IO) {
