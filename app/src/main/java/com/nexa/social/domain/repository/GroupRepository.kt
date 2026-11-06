@@ -6,6 +6,7 @@ import com.nexa.social.domain.model.GroupComment
 import com.nexa.social.domain.model.GroupInvite
 import com.nexa.social.domain.model.GroupMember
 import com.nexa.social.domain.model.GroupPost
+import com.nexa.social.domain.model.GroupPostReport
 import com.nexa.social.domain.model.GroupSearchResult
 import com.nexa.social.domain.model.GroupStats
 import com.nexa.social.domain.model.JoinRequest
@@ -67,6 +68,9 @@ interface GroupRepository {
 
     suspend fun createPost(groupId: String, content: String, mediaUrl: String?): Resource<String>
     suspend fun deletePost(postId: String): Resource<Unit>
+    suspend fun submitGroupPostReport(groupId: String, postId: String, reason: String, note: String): Resource<Unit>
+    suspend fun getGroupPostReports(groupId: String): Resource<List<GroupPostReport>>
+    suspend fun reviewGroupPostReport(reportId: String): Resource<Unit>
     suspend fun reactToPost(postId: String, kind: ReactionKind?): Resource<Unit>
 
     suspend fun getPostComments(postId: String): Resource<List<GroupComment>>
