@@ -368,7 +368,7 @@ fun GroupDetailScreen(
                                     Text(report.note, style = MaterialTheme.typography.bodySmall)
                                 }
                                 Text(
-                                    text = stringResource(R.string.groups_reporter_reference, report.reporterId.take(8)),
+                                    text = stringResource(R.string.groups_reporter_member),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
