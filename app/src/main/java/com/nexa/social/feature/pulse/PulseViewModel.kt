@@ -116,13 +116,13 @@ class PulseViewModel(
 
     fun refreshFriends(promptId: String) {
         viewModelScope.launch {
-            _friendsState.value = _friendsState.value.copy(loading = true, message = null)
+            _friendsState.value = _friendsState.value.copy(loading = true)
             val friends = dailyRepository?.loadMutualFriends()
             val challenges = dailyRepository?.loadFriendChallenges(promptId)
             _friendsState.value = if (friends == null || challenges == null) {
-                FriendsState(message = "تعذر تحميل الأصدقاء والتحديات. تحقق من الاتصال.")
+                _friendsState.value.copy(loading = false, message = "تعذر تحميل الأصدقاء والتحديات. تحقق من الاتصال.")
             } else {
-                FriendsState(friends = friends, challenges = challenges)
+                _friendsState.value.copy(loading = false, friends = friends, challenges = challenges)
             }
         }
     }
