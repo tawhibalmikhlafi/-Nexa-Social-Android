@@ -33,6 +33,8 @@ data class DailyPulseEntry(
     val body: String,
     val imageUrl: String?,
     val videoUrl: String?,
+    val worldId: String?,
+    val worldName: String?,
     val createdAt: String,
     val reactions: Int,
     val likedByMe: Boolean
@@ -134,7 +136,7 @@ class SupabaseDailyPulseRepository(
             endsAt = promptRow.string("ends_at").orEmpty()
         )
         val entries = getRows(
-            "pulse_entries?select=id,user_id,body,image_path,video_path,created_at&prompt_id=eq.${enc(prompt.id)}&order=created_at.desc&limit=100",
+            "pulse_entries?select=id,user_id,body,image_path,video_path,world_id,world_name,created_at&prompt_id=eq.${enc(prompt.id)}&order=created_at.desc&limit=100",
             token
         ) ?: return@withContext null
         if (entries.isEmpty()) return@withContext DailyPulseFeed(prompt, emptyList(), null)
@@ -166,6 +168,8 @@ class SupabaseDailyPulseRepository(
                 body = row.string("body").orEmpty(),
                 imageUrl = row.string("image_path")?.let { publicImageUrl(it) },
                 videoUrl = row.string("video_path")?.let { publicVideoUrl(it) },
+                worldId = row.string("world_id"),
+                worldName = row.string("world_name"),
                 createdAt = row.string("created_at").orEmpty(),
                 reactions = rowReactions.size,
                 likedByMe = rowReactions.any { it.string("user_id") == uid }
@@ -178,7 +182,9 @@ class SupabaseDailyPulseRepository(
         promptId: String,
         bodyText: String,
         imageUri: String? = null,
-        videoUri: String? = null
+        videoUri: String? = null,
+        worldId: String? = null,
+        worldName: String? = null
     ): Boolean {
         val uid = currentUid() ?: return false
         val token = accessToken() ?: return false
@@ -214,6 +220,10 @@ class SupabaseDailyPulseRepository(
             addProperty("body", clean)
             if (imagePath != null) addProperty("image_path", imagePath)
             if (videoPath != null) addProperty("video_path", videoPath)
+            if (!worldId.isNullOrBlank() && !worldName.isNullOrBlank()) {
+                addProperty("world_id", worldId)
+                addProperty("world_name", worldName.take(100))
+            }
         }
         val response = http.execute(
             http.authenticatedRequest("$rest/pulse_entries", token)
