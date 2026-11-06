@@ -55,9 +55,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexa.social.R
 import java.time.Duration
 import java.time.Instant
-import com.nexa.social.domain.model.Community
 import com.nexa.social.domain.model.UserSummary
-import com.nexa.social.feature.worlds.categoryLabel
 import com.nexa.social.ui.components.NexaAvatar
 import com.nexa.social.ui.components.NexaCard
 import com.nexa.social.ui.components.NexaEmptyState
@@ -76,12 +74,16 @@ fun PulseScreen(
     val daily by viewModel.dailyState.collectAsStateWithLifecycle()
     val commentsState by viewModel.commentsState.collectAsStateWithLifecycle()
     val friendsState by viewModel.friendsState.collectAsStateWithLifecycle()
+    val availableWorlds by viewModel.availableWorlds.collectAsStateWithLifecycle()
     var entryText by remember { mutableStateOf("") }
     var commentText by remember { mutableStateOf("") }
     var selectedEntry by remember { mutableStateOf<DailyPulseEntry?>(null) }
     var popularFirst by remember { mutableStateOf(false) }
     var showFriendChallengeDialog by remember { mutableStateOf(false) }
     var friendChallengeMessage by remember { mutableStateOf("") }
+    var showWorldPicker by remember { mutableStateOf(false) }
+    var selectedWorldId by remember { mutableStateOf<String?>(null) }
+    var selectedWorldName by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var selectedVideoUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -96,6 +98,8 @@ fun PulseScreen(
             entryText = ""
             selectedImageUri = null
             selectedVideoUri = null
+            selectedWorldId = null
+            selectedWorldName = null
         }
     }
     LaunchedEffect(selectedEntry?.id) {
@@ -177,6 +181,13 @@ fun PulseScreen(
                                     enabled = !daily.submitting && selectedImageUri == null,
                                     modifier = Modifier.fillMaxWidth()
                                 ) { Text(if (selectedVideoUri == null) "إرفاق فيديو (حتى 50MB)" else "تغيير الفيديو") }
+                                TextButton(
+                                    onClick = { showWorldPicker = true },
+                                    enabled = !daily.submitting,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(selectedWorldName?.let { "العالم: $it" } ?: "إضافة المشاركة إلى عالم (اختياري)")
+                                }
                                 selectedImageUri?.let { uri ->
                                     AsyncImage(
                                         model = uri,
@@ -191,7 +202,13 @@ fun PulseScreen(
                                 }
                                 Button(
                                     onClick = {
-                                        viewModel.publish(entryText, selectedImageUri?.toString(), selectedVideoUri?.toString())
+                                        viewModel.publish(
+                                            entryText,
+                                            selectedImageUri?.toString(),
+                                            selectedVideoUri?.toString(),
+                                            selectedWorldId,
+                                            selectedWorldName
+                                        )
                                     },
                                     enabled = (entryText.isNotBlank() || selectedImageUri != null || selectedVideoUri != null) && !daily.submitting,
                                     modifier = Modifier.fillMaxWidth()
@@ -404,13 +421,43 @@ fun PulseScreen(
 
             item {
                 Text(
-                    text = "إحصاءات الوسوم والمبدعين هنا محسوبة من مشاركات نبض الفعلية للتحدي الحالي. لن نعرض إحصاءات للعوالم حتى تصبح بيانات العوالم مرتبطة بمصدر سحابي موثوق.",
+                    text = "إحصاءات الوسوم والمبدعين والعوالم هنا محسوبة من مشاركات نبض الفعلية للتحدي الحالي، وليست من المنشورات العامة.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = NexaSpacing.lg)
                 )
             }
         }
+    }
+    if (showWorldPicker) {
+        AlertDialog(
+            onDismissRequest = { showWorldPicker = false },
+            title = { Text("اختر عالماً للمشاركة") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
+                    TextButton(
+                        onClick = {
+                            selectedWorldId = null
+                            selectedWorldName = null
+                            showWorldPicker = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("بدون عالم") }
+                    availableWorlds.forEach { world ->
+                        TextButton(
+                            onClick = {
+                                selectedWorldId = world.id
+                                selectedWorldName = world.name
+                                showWorldPicker = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(world.name) }
+                    }
+                    if (availableWorlds.isEmpty()) Text("لا توجد عوالم متاحة حالياً.")
+                }
+            },
+            confirmButton = { TextButton(onClick = { showWorldPicker = false }) { Text("إغلاق") } }
+        )
     }
     if (showFriendChallengeDialog) {
         AlertDialog(
@@ -589,22 +636,12 @@ private fun WorldRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val community: Community = world.community
     NexaCard(modifier = modifier, onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = community.name, style = MaterialTheme.typography.titleSmall)
+                Text(text = world.name, style = MaterialTheme.typography.titleSmall)
                 Text(
-                    text = categoryLabel(community.category),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = stringResource(
-                        R.string.pulse_world_meta,
-                        community.sampleMemberCount,
-                        world.posts
-                    ),
+                    text = "مشاركات نبض: ${world.posts} • التفاعلات: ${world.engagement}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -615,8 +652,6 @@ private fun WorldRow(
                 color = MaterialTheme.colorScheme.primary
             )
         }
-
-
     }
 }
 
