@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -144,19 +146,20 @@ fun MessagesScreen(
                     }
                 },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Text("إعدادات الرسائل", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                        MessagePreferenceRow(
-                            title = "إشعارات الرسائل",
-                            subtitle = "تشغيل أو إيقاف جميع إشعارات التطبيق",
-                            checked = notificationsEnabled,
-                            onCheckedChange = messageSettingsViewModel::setNotificationsEnabled
+                        Text(
+                            if (notificationsEnabled) "يمكنك تخصيص التنبيهات لكل نوع أدناه" else "إشعارات التطبيق متوقفة من الإعدادات العامة",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp
                         )
                         MessagePreferenceRow(
                             title = "الرسائل الجديدة",
                             subtitle = "تنبيهات عند وصول رسالة",
                             checked = notificationCategories[NotificationType.MESSAGE] != false,
-                            enabled = notificationsEnabled,
                             onCheckedChange = { messageSettingsViewModel.setNotificationCategory(NotificationType.MESSAGE, it) }
                         )
                         androidx.compose.material3.HorizontalDivider()
@@ -172,7 +175,6 @@ fun MessagesScreen(
                             MessagePreferenceRow(
                                 title = label,
                                 checked = notificationCategories[type] != false,
-                                enabled = notificationsEnabled,
                                 onCheckedChange = { messageSettingsViewModel.setNotificationCategory(type, it) }
                             )
                         }
