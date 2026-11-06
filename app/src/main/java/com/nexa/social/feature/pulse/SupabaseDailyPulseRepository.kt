@@ -259,7 +259,7 @@ class SupabaseDailyPulseRepository(
                 username = username,
                 body = row.string("body").orEmpty(),
                 imageUrl = row.string("image_path")?.let { publicImageUrl(it) },
-                videoUrl = row.string("video_path")?.let { publicImageUrl(it) },
+                videoUrl = row.string("video_path")?.let { publicVideoUrl(it) },
                 createdAt = row.string("created_at").orEmpty()
             )
         }
@@ -317,7 +317,7 @@ class SupabaseDailyPulseRepository(
         ).getOrNull()
         if (response?.successful == true) return@withContext true
         imagePath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
-        videoPath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
+        videoPath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE_VIDEO, it) }
         false
     }
 
@@ -366,7 +366,7 @@ class SupabaseDailyPulseRepository(
         val ok = http.execute(request).getOrNull()?.successful == true
         if (ok) {
             imagePath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
-            videoPath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
+            videoPath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE_VIDEO, it) }
         }
         return ok
     }
