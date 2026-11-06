@@ -326,10 +326,14 @@ class SupabaseDailyPulseRepository(
 
     suspend fun loadMutualFriends(): List<PulseFriend>? = withContext(Dispatchers.IO) {
         val token = accessToken() ?: return@withContext null
-        val profiles = getRows(
-            "pulse_mutual_friends?select=id,username,display_name,avatar_url&order=display_name.asc&limit=1000",
-            token
-        ) ?: return@withContext null
+        val response = http.execute(
+            http.authenticatedRequest("$rest/rpc/pulse_get_mutual_friends", token)
+                .post(http.jsonBody(JsonObject())).build()
+        ).getOrNull() ?: return@withContext null
+        if (!response.successful) return@withContext null
+        val profiles = runCatching {
+            JsonParser.parseString(response.body).asJsonArray.map { it.asJsonObject }
+        }.getOrNull() ?: return@withContext null
         profiles.mapNotNull { row ->
             val id = row.string("id") ?: return@mapNotNull null
             val username = row.string("username") ?: "user"
