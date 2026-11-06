@@ -298,7 +298,7 @@ class SupabaseDailyPulseRepository(
                 else -> "mp4"
             }
             val path = "$uid/comments/${UUID.randomUUID()}.$extension"
-            when (storage?.uploadVideoToBucket(videoUri, MediaBucket.PULSE, path, 50L * 1024L * 1024L)) {
+            when (storage?.uploadVideoToBucket(videoUri, MediaBucket.PULSE_VIDEO, path, 50L * 1024L * 1024L)) {
                 is Resource.Success -> videoPath = path
                 else -> return@withContext false
             }
