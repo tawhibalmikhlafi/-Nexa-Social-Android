@@ -1158,4 +1158,6 @@
     <string name="groups_report_mark_reviewed">Mark as reviewed</string>
     <string name="groups_reports_close">Close</string>
     <string name="groups_reporter_member">Reported by a group member</string>
+    <string name="notif_type_group_post_report">Reports on group posts</string>
+    <string name="notif_group_post_report">A group member reported a post. Please review it.</string>
 </resources>
