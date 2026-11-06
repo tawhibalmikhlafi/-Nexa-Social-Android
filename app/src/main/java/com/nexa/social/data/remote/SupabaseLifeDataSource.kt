@@ -139,12 +139,13 @@ class SupabaseLifeDataSource(
             .delete().build()).getOrNull()?.successful == true
     }
 
-    suspend fun loadWellbeing(): WellbeingPlan? {
-        val uid = currentUid() ?: return null
-        val token = accessToken() ?: return null
-        val row = getRows(rest + "/nexa_wellbeing_plans?select=*&user_id=eq." + encode(uid) + "&limit=1", token)
-            ?.firstOrNull() ?: return null
-        return WellbeingPlan(
+    suspend fun loadWellbeing(): Result<WellbeingPlan?> {
+        val uid = currentUid() ?: return Result.failure(IllegalStateException("No authenticated user"))
+        val token = accessToken() ?: return Result.failure(IllegalStateException("No access token"))
+        val rows = getRows(rest + "/nexa_wellbeing_plans?select=*&user_id=eq." + encode(uid) + "&limit=1", token)
+            ?: return Result.failure(IllegalStateException("Could not load wellbeing plan"))
+        val row = rows.firstOrNull() ?: return Result.success(null)
+        return Result.success(WellbeingPlan(
             dailyIntention = row.string("daily_intention").orEmpty(),
             focusMode = valueBoolean(row, "focus_mode", false),
             quietHoursEnabled = valueBoolean(row, "quiet_hours_enabled", true),
@@ -153,7 +154,7 @@ class SupabaseLifeDataSource(
             dailyGoalMinutes = valueInt(row, "daily_goal_minutes", 45).coerceIn(5, 1440),
             mindfulReminders = valueBoolean(row, "mindful_reminders", true),
             weeklyReflection = valueBoolean(row, "weekly_reflection", true)
-        )
+        ))
     }
 
     suspend fun saveWellbeing(plan: WellbeingPlan): Boolean {
