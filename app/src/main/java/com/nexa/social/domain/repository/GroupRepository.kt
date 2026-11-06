@@ -68,7 +68,7 @@ interface GroupRepository {
 
     suspend fun createPost(groupId: String, content: String, mediaUrl: String?): Resource<String>
     suspend fun deletePost(postId: String): Resource<Unit>
-    suspend fun submitGroupPostReport(groupId: String, postId: String, reason: String, note: String): Resource<Unit>
+    suspend fun submitGroupPostReport(groupId: String, postId: String, postPreview: String, reason: String, note: String): Resource<Unit>
     suspend fun getGroupPostReports(groupId: String): Resource<List<GroupPostReport>>
     suspend fun reviewGroupPostReport(reportId: String): Resource<Unit>
     suspend fun reactToPost(postId: String, kind: ReactionKind?): Resource<Unit>
