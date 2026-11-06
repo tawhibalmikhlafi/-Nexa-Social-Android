@@ -96,7 +96,7 @@ fun PostCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(NexaRadius.card))
+                    .clip(RoundedCornerShape(NexaRadius.chip))
                     .clickable { onOpenProfile(post.author.id) }
                     .padding(vertical = NexaSpacing.xs, horizontal = NexaSpacing.xxs),
                 verticalAlignment = Alignment.CenterVertically
@@ -215,7 +215,7 @@ fun PostCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.xs)
-                .clip(RoundedCornerShape(NexaRadius.card))
+                .clip(RoundedCornerShape(NexaRadius.chip))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f))
                 .padding(horizontal = NexaSpacing.xs, vertical = 2.dp)
         ) {
