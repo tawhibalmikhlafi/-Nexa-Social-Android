@@ -162,14 +162,14 @@ class PulseViewModel(
         worldName: String? = null
     ) {
         val prompt = _dailyState.value.prompt ?: return
-        if (_dailyState.value.submitting || (text.isBlank() && imageUri.isNullOrBlank())) return
+        if (_dailyState.value.submitting || (text.isBlank() && imageUri.isNullOrBlank() && videoUri.isNullOrBlank())) return
         viewModelScope.launch {
             _dailyState.value = _dailyState.value.copy(submitting = true, message = null)
             val ok = dailyRepository?.publish(prompt.id, text, imageUri, videoUri, worldId, worldName) == true
             if (ok) refreshDaily()
             else _dailyState.value = _dailyState.value.copy(
                 submitting = false,
-                message = "لم تُنشر المشاركة. تحقق من الصورة والاتصال، أو ربما شاركت بالفعل في تحدي اليوم."
+                message = "لم تُنشر المشاركة. تحقق من النص أو الوسائط والاتصال، أو ربما شاركت بالفعل في تحدي اليوم."
             )
         }
     }
