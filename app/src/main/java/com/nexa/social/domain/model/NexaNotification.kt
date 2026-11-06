@@ -29,6 +29,7 @@ enum class NotificationType {
     GROUP_JOIN_REQUEST,
     GROUP_JOIN_APPROVED,
     GROUP_JOIN_REJECTED,
+    GROUP_POST_REPORT,
     SYSTEM;
 
     companion object {
@@ -46,6 +47,7 @@ enum class NotificationType {
             "group_join_request" -> GROUP_JOIN_REQUEST
             "group_join_approved" -> GROUP_JOIN_APPROVED
             "group_join_rejected" -> GROUP_JOIN_REJECTED
+            "group_post_report" -> GROUP_POST_REPORT
             "system" -> SYSTEM
             else -> null
         }
