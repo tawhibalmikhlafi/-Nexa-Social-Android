@@ -4,7 +4,7 @@ import com.nexa.social.core.common.Resource
 import com.nexa.social.domain.model.Gathering
 import kotlinx.coroutines.flow.Flow
 
-/** Device-local gatherings with RSVP. No remote events service is required for the local build. */
+/** Supabase-backed gatherings with a durable local cache and retryable local-to-cloud migration. */
 interface GatheringRepository {
     fun observeGatherings(): Flow<List<Gathering>>
     fun observeGathering(id: String): Flow<Gathering?>
