@@ -233,14 +233,6 @@ fun MessagesScreen(
                     )
                 }
                 item {
-                    QuickActionsSection(
-                        onNewMessage = onNewMessage,
-                        onOpenFriends = onOpenFriends,
-                        onOpenSaved = onOpenSaved,
-                        onOpenGroups = onOpenGroups
-                    )
-                }
-                item {
                     NotesSection(
                         notes = notes,
                         currentUserId = viewModel.currentUserId,
@@ -301,67 +293,47 @@ fun TopBarSection(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = 18.dp, vertical = 18.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .clickable(onClick = onOpenProfile)
-            ) {
-                AsyncImage(
-                    model = "https://i.pravatar.cc/150?img=11",
-                    contentDescription = "Profile",
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .background(OnlineGreen, CircleShape)
-                        .border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
-                        .align(Alignment.BottomEnd)
-                )
-            }
-            
-            IconButton(onClick = onNotifications) {
-                Box {
-                    Icon(Icons.Outlined.Notifications, contentDescription = "Notifications", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (unreadCount > 0) {
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .background(BadgeRed, CircleShape)
-                                .align(Alignment.TopEnd),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(unreadCount.toString(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-            
-            IconButton(onClick = onOpenProfile) {
-                Icon(Icons.Default.MoreVert, contentDescription = "More", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = "الرسائل",
                 color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 28.sp,
+                fontSize = 27.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "تواصل مع أصدقائك بكل سهولة",
+                text = "محادثاتك وأصدقاؤك في مكان واحد",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
             )
+        }
+        IconButton(onClick = onNotifications) {
+            Box {
+                Icon(
+                    Icons.Outlined.Notifications,
+                    contentDescription = "الإشعارات",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (unreadCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(17.dp)
+                            .background(BadgeRed, CircleShape)
+                            .align(Alignment.TopEnd),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            if (unreadCount > 99) "99+" else unreadCount.toString(),
+                            color = Color.White,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -377,8 +349,7 @@ fun SearchBarSection(
         onValueChange = onSearchChange,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clickable(onClick = onSearchClick),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         placeholder = { Text("البحث في الرسائل أو الأصدقاء...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.onSurfaceVariant) },
         shape = RoundedCornerShape(12.dp),
@@ -391,60 +362,6 @@ fun SearchBarSection(
             unfocusedTextColor = MaterialTheme.colorScheme.onSurface
         )
     )
-}
-
-@Composable
-fun QuickActionsSection(
-    onNewMessage: () -> Unit,
-    onOpenFriends: () -> Unit,
-    onOpenSaved: () -> Unit,
-    onOpenGroups: () -> Unit
-) {
-    val actions = listOf(
-        QuickAction("رسالة جديدة", "ابدأ محادثة", Icons.Outlined.Edit, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.surfaceVariant, onClick = onNewMessage),
-        QuickAction("الطلبات", "الأصدقاء والطلبات", Icons.Outlined.Security, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.surfaceVariant, onClick = onOpenFriends),
-        QuickAction("الرسائل المميزة", "المحفوظات", Icons.Outlined.Star, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.surfaceVariant, onClick = onOpenSaved),
-        QuickAction("المجموعات", "قنواتك ومجموعاتك", Icons.Outlined.People, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.surfaceVariant, true, onClick = onOpenGroups)
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        actions.forEach { action ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = action.onClick)
-                    .padding(4.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .background(action.bgColor, RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(action.icon, contentDescription = action.title, tint = action.iconColor)
-                    if (action.hasBadge) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .background(BadgeRed, CircleShape)
-                                .align(Alignment.TopEnd)
-                                .offset(x = (-4).dp, y = 4.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(action.title, color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                Text(action.subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
-            }
-        }
-    }
 }
 
 @Composable
@@ -480,9 +397,6 @@ fun NotificationBanner(
             }
         }
         
-        IconButton(onClick = onEnable, modifier = Modifier.size(24.dp)) {
-            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-        }
     }
 }
 
