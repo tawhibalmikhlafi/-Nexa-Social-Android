@@ -325,7 +325,7 @@ fun GroupDetailScreen(
                 TextButton(
                     enabled = reportReason.isNotBlank(),
                     onClick = {
-                        postToReport?.let { viewModel.reportPost(it.id, reportReason.trim(), reportNote.trim()) }
+                        postToReport?.let { viewModel.reportPost(it.id, it.content, reportReason.trim(), reportNote.trim()) }
                         postToReport = null
                         reportReason = "spam"
                         reportNote = ""
@@ -356,6 +356,9 @@ fun GroupDetailScreen(
                     } else {
                         state.groupPostReports.forEach { report ->
                             NexaCard(padding = NexaSpacing.md) {
+                                if (report.postPreview.isNotBlank()) {
+                                    Text(report.postPreview, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                }
                                 Text(
                                     text = report.reason,
                                     style = MaterialTheme.typography.titleSmall,
