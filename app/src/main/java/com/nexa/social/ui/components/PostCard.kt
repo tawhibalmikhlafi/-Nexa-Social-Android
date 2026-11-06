@@ -129,17 +129,20 @@ fun PostCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(Modifier.height(4.dp))
+                    AudienceBadge(post.audience)
                 }
-                Spacer(Modifier.width(NexaSpacing.sm))
-                IconButton(onClick = onOpenPost) {
+                IconButton(
+                    onClick = onOpenPost,
+                    modifier = Modifier.size(38.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Filled.MoreVert,
                         contentDescription = stringResource(R.string.post_menu),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                AudienceBadge(post.audience)
             }
 
             if (!post.title.isNullOrBlank()) {
@@ -207,17 +210,16 @@ fun PostCard(
         }
 
         HorizontalDivider(
-            modifier = Modifier.padding(top = NexaSpacing.sm),
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+            modifier = Modifier.padding(top = NexaSpacing.md),
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.20f)
         )
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.xs)
-                .clip(RoundedCornerShape(NexaRadius.chip))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f))
-                .padding(horizontal = NexaSpacing.xs, vertical = 2.dp)
+                .padding(horizontal = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             ReactionLikeButton(
                 likedByMe = post.likedByMe,
@@ -265,21 +267,21 @@ fun PostCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f))
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f))
                             .clickable { onOpenPost() }
-                            .padding(NexaSpacing.sm),
+                            .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.sm),
                         verticalAlignment = Alignment.Top
                     ) {
                         NexaAvatar(
-                            displayName = comment.author.displayName,
+                            displayName = comment.author.displayName.ifBlank { comment.author.username },
                             avatarUri = comment.author.avatarUri,
-                            size = 30.dp
+                            size = 34.dp
                         )
                         Spacer(Modifier.width(NexaSpacing.sm))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = comment.author.displayName,
+                                text = comment.author.displayName.ifBlank { comment.author.username },
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary,
@@ -322,30 +324,30 @@ private fun PostStats(post: Post) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = NexaSpacing.lg),
+            .padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (post.likeCount > 0) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center
+                    .clip(RoundedCornerShape(NexaRadius.pill))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                    .padding(horizontal = NexaSpacing.sm, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.Filled.Favorite,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(11.dp)
+                    modifier = Modifier.size(13.dp)
+                )
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    text = post.likeCount.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(Modifier.width(NexaSpacing.xs))
-            Text(
-                text = post.likeCount.toString(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
         Spacer(Modifier.weight(1f))
         if (post.commentCount > 0) {
