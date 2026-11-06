@@ -111,10 +111,10 @@ fun GroupCommentsScreen(
                         .fillMaxWidth()
                         .weight(1f),
                     contentPadding = PaddingValues(
-                        horizontal = NexaSpacing.md,
-                        vertical = NexaSpacing.md,
+                        horizontal = NexaSpacing.lg,
+                        vertical = NexaSpacing.lg,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(NexaSpacing.md),
+                    verticalArrangement = Arrangement.spacedBy(NexaSpacing.lg),
                 ) {
                     if (state.error != null) {
                         item {
@@ -270,7 +270,7 @@ private fun CommentItem(
         NexaAvatar(
             displayName = comment.authorName,
             avatarUri = comment.authorAvatarUrl,
-            size = if (isReply) 32.dp else 38.dp,
+            size = if (isReply) 34.dp else 42.dp,
             modifier = Modifier.clickable(onClick = onOpenProfile),
         )
         Spacer(Modifier.width(NexaSpacing.sm))
@@ -279,18 +279,17 @@ private fun CommentItem(
                 modifier = Modifier
                     .clip(
                         RoundedCornerShape(
-                            topStart = 4.dp,
-                            topEnd = NexaRadius.chip,
-                            bottomEnd = NexaRadius.chip,
-                            bottomStart = NexaRadius.chip,
+                            topStart = if (isReply) 18.dp else 6.dp,
+                            topEnd = 20.dp,
+                            bottomEnd = 20.dp,
+                            bottomStart = 20.dp,
                         )
                     )
                     .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(
-                            alpha = if (isReply) 0.55f else 0.85f
-                        )
+                        if (isReply) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.78f)
                     )
-                    .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.sm),
+                    .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.md),
             ) {
                 Text(
                     text = comment.authorName,
@@ -399,11 +398,12 @@ private fun Composer(
     enabled: Boolean,
     onSend: () -> Unit,
 ) {
-    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.sm),
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f))
+            .padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.md),
         verticalAlignment = Alignment.Bottom,
     ) {
         OutlinedTextField(
@@ -412,7 +412,7 @@ private fun Composer(
             placeholder = { Text(stringResource(R.string.groups_comment_hint)) },
             modifier = Modifier.weight(1f),
             maxLines = 4,
-            shape = RoundedCornerShape(NexaRadius.pill),
+            shape = RoundedCornerShape(22.dp),
         )
         Spacer(Modifier.width(NexaSpacing.sm))
         FilledIconButton(
