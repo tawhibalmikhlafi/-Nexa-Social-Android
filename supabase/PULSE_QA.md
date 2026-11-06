@@ -21,6 +21,13 @@ Run the automated suite before manual verification:
 - [ ] Publish an image-only entry; verify upload, public image rendering, and delete cleanup.
 - [ ] Publish a video entry (MP4/MOV/WebM/3GP, at most 50 MB); verify upload, playback in the feed and detail dialog, and delete cleanup.
 - [ ] Verify an image and video cannot be attached to the same entry.
+- [ ] Add an image-only and a video-only comment; verify media renders and invalid dual-media comments are rejected.
+- [ ] With two mutual-follow accounts, send a challenge from A to B; verify B sees it and can accept or decline.
+- [ ] Verify a non-mutual account cannot be challenged through direct REST and cannot read another user's challenge rows.
+- [ ] Verify a challenge recipient cannot alter the sender, recipient, prompt, message, or creation time when responding.
+- [ ] Verify Pulse tag and creator statistics change only when Pulse entries/reactions change, not when general posts change.
+- [ ] Publish a video entry (MP4/MOV/WebM/3GP, at most 50 MB); verify upload, playback in the feed and detail dialog, and delete cleanup.
+- [ ] Verify an image and video cannot be attached to the same entry.
 - [ ] With two mutual-follow accounts, send a challenge from A to B; verify B sees it and can accept or decline.
 - [ ] Verify a non-mutual account cannot be challenged through direct REST and cannot read another user's challenge rows.
 - [ ] Verify a challenge recipient cannot alter the sender, recipient, prompt, message, or creation time when responding.
