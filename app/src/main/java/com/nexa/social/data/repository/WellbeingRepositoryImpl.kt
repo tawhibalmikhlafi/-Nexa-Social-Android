@@ -37,7 +37,16 @@ class WellbeingRepositoryImpl(
         val owner = local.readOwnerId()
 
         if (owner == null) {
-            // One-time migration of the pre-cloud local plan to the first signed-in account.
+            // Prefer an existing cloud plan (e.g. reinstall/new device). Only migrate local
+            // settings when the account has no cloud row, preventing default local values from
+            // overwriting a previously synchronized plan.
+            val existingCloud = source.loadWellbeing().getOrElse { return }
+            if (existingCloud != null) {
+                withContext(Dispatchers.IO) { local.writePlan(existingCloud) }
+                local.writeOwnerId(uid)
+                _plan.value = existingCloud
+                return
+            }
             if (!source.saveWellbeing(_plan.value)) return
             local.writeOwnerId(uid)
         } else if (owner != uid) {
