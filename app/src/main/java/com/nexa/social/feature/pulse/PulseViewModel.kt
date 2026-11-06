@@ -11,7 +11,6 @@ import com.nexa.social.domain.model.UserSummary
 import com.nexa.social.domain.model.AccountOrigin
 import com.nexa.social.domain.model.WorldPrivacy
 import com.nexa.social.domain.repository.CommunityRepository
-import com.nexa.social.domain.repository.PostRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,7 +54,6 @@ data class PulseSnapshot(
  * world_id/world_name values stored on those same Pulse entry rows.
  */
 class PulseViewModel(
-    postRepository: PostRepository,
     communityRepository: CommunityRepository,
     private val dailyRepository: SupabaseDailyPulseRepository?
 ) : ViewModel() {
@@ -92,6 +90,9 @@ class PulseViewModel(
     val commentsState = _commentsState.asStateFlow()
     private val _friendsState = MutableStateFlow(FriendsState())
     val friendsState = _friendsState.asStateFlow()
+    val availableWorlds: StateFlow<List<Community>> = communityRepository.observeCommunities()
+        .map { worlds -> worlds.filter { !it.createdByMe && it.privacy == WorldPrivacy.PUBLIC_LISTED } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init { refreshDaily() }
 
@@ -233,8 +234,7 @@ class PulseViewModel(
 
     /**
      * Pulse analytics are computed only from rows returned by pulse_entries and
-     * pulse_reactions. The worlds list stays empty until worlds are cloud-backed and
-     * Pulse entries can be linked to a real world id; never substitute local feed counts.
+     * pulse_reactions. World activity uses world_id/world_name stored on those same entry rows.
      */
     private fun computePulseStats(entries: List<DailyPulseEntry>): PulseSnapshot {
         val startOfDay = Calendar.getInstance().apply {
@@ -313,7 +313,6 @@ class PulseViewModel(
             initializer {
                 val container = nexaApplication().container
                 PulseViewModel(
-                    postRepository = container.postRepository,
                     communityRepository = container.communityRepository,
                     dailyRepository = container.dailyPulseRepository
                 )
