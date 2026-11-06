@@ -100,7 +100,7 @@ class GatheringRepositoryImpl(
         // Idempotent upsert is the migration checkpoint: do not replace local data until it succeeds.
         localOwned.forEach { source.saveGathering(it) }
         val cloud = source.loadGatherings()
-        if (cloud.isEmpty() && localOwned.isNotEmpty()) return
+        if (cloud.isEmpty() && _gatherings.value.isNotEmpty()) return
         val merged = (cloud + localOwned.filter { localItem -> cloud.none { it.id == localItem.id } })
             .distinctBy { it.id }.sortedBy { it.startsAt }
         _gatherings.value = merged
