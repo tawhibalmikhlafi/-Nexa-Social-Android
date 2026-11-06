@@ -70,6 +70,7 @@ import com.nexa.social.data.remote.SupabaseStoryDataSource
 import com.nexa.social.data.remote.SupabaseUserDataSource
 import com.nexa.social.feature.pulse.SupabaseDailyPulseRepository
 import com.nexa.social.domain.model.UserSession
+import com.nexa.social.domain.model.accountUserId
 import com.nexa.social.domain.repository.AchievementRepository
 import com.nexa.social.domain.repository.AiRepository
 import com.nexa.social.domain.repository.AccountRepository
@@ -102,6 +103,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 
 /** Manual dependency container. Keeps construction in one place without a DI framework. */
 interface AppContainer {
@@ -521,11 +523,30 @@ class DefaultAppContainer(context: Context) : AppContainer {
         backgroundSyncStarted = true
         authRepositoryImpl.startSessionSync(applicationScope)
         applicationScope.launch {
-            // Initial account restore can complete before the first network-restored callback.
-            // These migrations are idempotent and retain local files on any failed request.
             gatheringRepository.refresh()
             capsuleRepository.refresh()
             wellbeingRepository.refresh()
+        }
+    }
+
+    init {
+        // Network may already be online when a user signs in. Observe account changes as well
+        // as network-restored events so local migration always runs after authentication.
+        applicationScope.launch {
+            var lastUserId: String? = null
+            preferenceStorage.session.collect { state ->
+                val userId = state.accountUserId
+                if (userId == null) {
+                    lastUserId = null
+                } else if (userId != lastUserId) {
+                    lastUserId = userId
+                    launch {
+                        gatheringRepository.refresh()
+                        capsuleRepository.refresh()
+                        wellbeingRepository.refresh()
+                    }
+                }
+            }
         }
     }
 }
