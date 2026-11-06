@@ -209,7 +209,7 @@ private fun EmptyState(text: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.xl)
-            .clip(RoundedCornerShape(NexaRadius.card))
+            .clip(RoundedCornerShape(20.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
             .padding(28.dp),
         contentAlignment = Alignment.Center,
