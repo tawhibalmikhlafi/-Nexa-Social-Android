@@ -2,7 +2,7 @@
 
 The Android screen uses Supabase for live challenge and community data:
 - one entry per authenticated user per challenge (up to 1000 characters, text-only, image, or video; image and video cannot be attached together);
-- image uploads to the `nexa-pulse` Storage bucket (JPEG, PNG, WebP; 5 MB maximum) and video uploads (MP4, MOV, WebM, 3GP; 50 MB maximum);
+- image uploads to `nexa-pulse` (JPEG, PNG, WebP; 5 MB maximum) and video uploads to `nexa-pulse-video` (MP4, MOV, WebM, 3GP; 50 MB maximum);
 - public entry feed for authenticated users;
 - one reaction per user per entry, with removal;
 - comments up to 500 characters with optional image or video attachments, ownership and active-challenge RLS;
@@ -19,7 +19,7 @@ The Android screen uses Supabase for live challenge and community data:
 - `migrations/20261105130000_nexa_pulse_comments_badges.sql` adds authenticated comments, RLS, and server-side badge awards.
 - `migrations/20261105140000_nexa_pulse_image_only_entries.sql` aligns the entry constraint with image-only submissions;
 - `migrations/20261106151000_nexa_pulse_video_and_friend_challenges.sql` adds video paths and mutual-follow challenge invitations;
-- `migrations/20261106152000_nexa_pulse_mutual_friends_view.sql`, `20261106153000_nexa_pulse_invite_policy_use_mutual_view.sql`, `20261106154000_nexa_pulse_friend_challenge_update_guard.sql`, `20261106155000_nexa_pulse_mutual_friends_private_rpc.sql`, `20261106160000_nexa_pulse_user_activity_indexes.sql`, `20261106161000_nexa_pulse_comment_media.sql`, and `20261106162000_nexa_pulse_media_path_ownership.sql` secure mutual-friend lookup, harden challenge responses, add activity indexes, and support comment media.
+- `migrations/20261106152000_nexa_pulse_mutual_friends_view.sql`, `20261106153000_nexa_pulse_invite_policy_use_mutual_view.sql`, `20261106154000_nexa_pulse_friend_challenge_update_guard.sql`, `20261106155000_nexa_pulse_mutual_friends_private_rpc.sql`, `20261106160000_nexa_pulse_user_activity_indexes.sql`, `20261106161000_nexa_pulse_comment_media.sql`, `20261106162000_nexa_pulse_media_path_ownership.sql`, and `20261106163000_nexa_pulse_separate_video_storage_bucket.sql` secure mutual-friend lookup, harden challenge responses, support comment media, and isolate video size limits from images.
 
 The migrations above have been applied to the Nexa Supabase project. The Android client uses the publishable/anon key and the signed-in user's access token; no service-role key is shipped in the app.
 
