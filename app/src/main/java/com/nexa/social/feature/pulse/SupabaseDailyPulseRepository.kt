@@ -165,7 +165,7 @@ class SupabaseDailyPulseRepository(
                 avatarUrl = profile?.string("avatar_url"),
                 body = row.string("body").orEmpty(),
                 imageUrl = row.string("image_path")?.let { publicImageUrl(it) },
-                videoUrl = row.string("video_path")?.let { publicImageUrl(it) },
+                videoUrl = row.string("video_path")?.let { publicVideoUrl(it) },
                 createdAt = row.string("created_at").orEmpty(),
                 reactions = rowReactions.size,
                 likedByMe = rowReactions.any { it.string("user_id") == uid }
@@ -203,7 +203,7 @@ class SupabaseDailyPulseRepository(
             val mime = runCatching { Uri.parse(videoUri).lastPathSegment?.substringAfterLast('.', "")?.lowercase() }.getOrNull()
             val extension = when (mime) { "mov" -> "mov"; "webm" -> "webm"; "3gp" -> "3gp"; else -> "mp4" }
             val path = "$uid/${UUID.randomUUID()}.$extension"
-            when (storage?.uploadVideoToBucket(videoUri, MediaBucket.PULSE, path, 50L * 1024L * 1024L)) {
+            when (storage?.uploadVideoToBucket(videoUri, MediaBucket.PULSE_VIDEO, path, 50L * 1024L * 1024L)) {
                 is Resource.Success -> videoPath = path
                 else -> return false
             }
@@ -222,12 +222,16 @@ class SupabaseDailyPulseRepository(
         ).getOrNull()
         if (response?.successful == true) return true
         imagePath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
-        videoPath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
+        videoPath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE_VIDEO, it) }
         return false
     }
 
     private fun publicImageUrl(path: String): String =
         config.normalizedUrl + "/storage/v1/object/public/nexa-pulse/" +
+            path.split('/').joinToString("/") { Uri.encode(it) }
+
+    private fun publicVideoUrl(path: String): String =
+        config.normalizedUrl + "/storage/v1/object/public/nexa-pulse-video/" +
             path.split('/').joinToString("/") { Uri.encode(it) }
 
     suspend fun loadComments(entryId: String): List<PulseComment>? = withContext(Dispatchers.IO) {
