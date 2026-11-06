@@ -6,6 +6,8 @@ import com.nexa.social.core.common.Resource
 import com.nexa.social.core.security.CapsuleCipher
 import com.nexa.social.data.local.CapsuleLocalDataSource
 import com.nexa.social.data.local.StoredCapsule
+import com.nexa.social.data.remote.CloudCapsule
+import com.nexa.social.data.remote.SupabaseLifeDataSource
 import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.model.TimeCapsule
 import com.nexa.social.domain.model.accountUserId
@@ -22,7 +24,8 @@ import kotlinx.coroutines.withContext
 class CapsuleRepositoryImpl(
     private val local: CapsuleLocalDataSource,
     private val userRepository: UserRepository,
-    private val sessionFlow: Flow<SessionState>
+    private val sessionFlow: Flow<SessionState>,
+    private val remote: SupabaseLifeDataSource? = null
 ) : CapsuleRepository {
 
     private val stored = local.readCapsules().toMutableList()
@@ -33,13 +36,10 @@ class CapsuleRepositoryImpl(
             list.sortedWith(compareBy<TimeCapsule> { it.isLocked() }.thenBy { it.unlockAt })
         }
 
-    override suspend fun createCapsule(
-        title: String,
-        message: String,
-        unlockAt: Long
-    ): Resource<TimeCapsule> {
-        if (title.trim().length < 3) return Resource.Failure(FailureReason.REQUIRED)
-        if (message.trim().length < 3) return Resource.Failure(FailureReason.REQUIRED)
+    override suspend fun createCapsule(title: String, message: String, unlockAt: Long): Resource<TimeCapsule> {
+        if (title.trim().length < 3 || message.trim().length < 3) {
+            return Resource.Failure(FailureReason.REQUIRED)
+        }
         if (unlockAt <= System.currentTimeMillis()) {
             return Resource.Failure(FailureReason.OPERATION_NOT_ALLOWED)
         }
@@ -50,16 +50,12 @@ class CapsuleRepositoryImpl(
         val payload = CapsuleCipher.encrypt(message.trim())
             ?: return Resource.Failure(FailureReason.GENERIC)
         val record = StoredCapsule(
-            id = Ids.newId(),
-            title = title.trim(),
-            cipherText = payload.cipherText,
-            iv = payload.iv,
-            createdAt = System.currentTimeMillis(),
-            unlockAt = unlockAt,
-            authorId = user.id.ifBlank { userId },
-            authorName = user.displayName
+            id = Ids.newId(), title = title.trim(), cipherText = payload.cipherText, iv = payload.iv,
+            createdAt = System.currentTimeMillis(), unlockAt = unlockAt,
+            authorId = user.id.ifBlank { userId }, authorName = user.displayName
         )
         replace(record)
+        remote?.saveCapsule(record.toCloud(userId))
         return Resource.Success(record.toDomain())
     }
 
@@ -70,7 +66,10 @@ class CapsuleRepositoryImpl(
         if (capsule.openedAt == null) {
             val record = stored.firstOrNull { it.id == id }
                 ?: return Resource.Failure(FailureReason.GENERIC)
-            replace(record.copy(openedAt = System.currentTimeMillis()))
+            val updated = record.copy(openedAt = System.currentTimeMillis())
+            replace(updated)
+            val uid = sessionFlow.first().accountUserId
+            if (uid != null) remote?.saveCapsule(updated.toCloud(uid))
         }
         return Resource.Success(_capsules.value.first { it.id == id })
     }
@@ -79,20 +78,41 @@ class CapsuleRepositoryImpl(
         val userId = sessionFlow.first().accountUserId ?: return false
         val capsule = _capsules.value.firstOrNull { it.id == id } ?: return false
         if (capsule.authorId != userId) return false
+        if (remote != null && !remote.deleteCapsule(id)) return false
         remove(id)
         return true
     }
 
-    private suspend fun replace(record: StoredCapsule) {
-        val nextStored = stored
-            .filterNot { it.id == record.id }
-            .plus(record)
-        write(nextStored)
+    override suspend fun refresh() {
+        val source = remote ?: return
+        val uid = sessionFlow.first().accountUserId ?: return
+        val mine = stored.filter { it.authorId == uid }
+        // Upload local encrypted payloads first; local files are retained until the cloud snapshot
+        // is successfully fetched and merged.
+        mine.forEach { source.saveCapsule(it.toCloud(uid)) }
+        val cloud = source.loadCapsules().filter { it.userId == uid }
+        val cloudLocal = cloud.mapNotNull { value ->
+            // CapsuleCipher uses this device's Android Keystore key. Never show undecryptable
+            // ciphertext as an empty message on a different device.
+            if (CapsuleCipher.decrypt(value.cipherText, value.iv) == null) return@mapNotNull null
+            StoredCapsule(
+                id = value.id, title = value.title, cipherText = value.cipherText, iv = value.iv,
+                createdAt = value.createdAt, unlockAt = value.unlockAt,
+                authorId = value.userId, authorName = userRepository.currentUser.first()?.displayName ?: "أنا",
+                openedAt = value.openedAt
+            )
+        }
+        if (cloud.isEmpty() && mine.isNotEmpty()) return
+        val merged = (cloudLocal + mine.filter { localItem -> cloudLocal.none { it.id == localItem.id } })
+            .distinctBy { it.id }
+        write(merged)
     }
 
-    private suspend fun remove(id: String) {
+    private suspend fun replace(record: StoredCapsule) =
+        write(stored.filterNot { it.id == record.id } + record)
+
+    private suspend fun remove(id: String) =
         write(stored.filterNot { it.id == id })
-    }
 
     private suspend fun write(nextStored: List<StoredCapsule>) {
         withContext(Dispatchers.IO) { local.writeCapsules(nextStored) }
@@ -101,14 +121,14 @@ class CapsuleRepositoryImpl(
         _capsules.value = nextStored.map { it.toDomain() }
     }
 
+    private fun StoredCapsule.toCloud(uid: String) = CloudCapsule(
+        id = id, userId = uid, title = title, cipherText = cipherText, iv = iv,
+        unlockAt = unlockAt, openedAt = openedAt, createdAt = createdAt
+    )
+
     private fun StoredCapsule.toDomain(): TimeCapsule = TimeCapsule(
-        id = id,
-        title = title,
-        message = CapsuleCipher.decrypt(cipherText, iv).orEmpty(),
-        createdAt = createdAt,
-        unlockAt = unlockAt,
-        authorId = authorId,
-        authorName = authorName,
-        openedAt = openedAt
+        id = id, title = title, message = CapsuleCipher.decrypt(cipherText, iv).orEmpty(),
+        createdAt = createdAt, unlockAt = unlockAt, authorId = authorId,
+        authorName = authorName, openedAt = openedAt
     )
 }
