@@ -42,6 +42,13 @@ interface MediaStorage {
     suspend fun uploadVideo(localUri: String, path: String): Resource<String> =
         Resource.Failure(com.nexa.social.core.common.FailureReason.NOT_CONFIGURED)
 
+    suspend fun uploadVideoToBucket(
+        localUri: String,
+        bucket: MediaBucket,
+        path: String,
+        maxBytes: Long
+    ): Resource<String> = uploadVideo(localUri, path)
+
     suspend fun uploadVideoResumable(
         localUri: String,
         path: String,
