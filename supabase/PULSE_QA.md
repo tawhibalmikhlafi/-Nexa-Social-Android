@@ -7,9 +7,10 @@ Run the automated suite before manual verification:
 ```
 
 ## Automated coverage
-- Empty entry without an image is rejected.
-- Image-only entry is allowed; text length is capped at 1,000 characters.
-- Blank comments are rejected; comments are capped at 500 characters.
+- Empty entry without media is rejected.
+- Image-only and video-only entries are accepted; text length is capped at 1,000 characters.
+- Image and video cannot be attached to the same entry.
+- Blank comments are rejected unless they include one image or one video; comments are capped at 500 characters.
 - A refused local HTTP connection is returned as a network failure rather than escaping as an uncaught exception.
 - HTTP 401, 413, 429, and 5xx responses map to the expected error categories.
 
@@ -20,14 +21,7 @@ Run the automated suite before manual verification:
 - [ ] Verify an account can publish only one entry per challenge.
 - [ ] Publish an image-only entry; verify upload, public image rendering, and delete cleanup.
 - [ ] Publish a video entry (MP4/MOV/WebM/3GP, at most 50 MB); verify upload, playback in the feed and detail dialog, and delete cleanup.
-- [ ] Verify an image and video cannot be attached to the same entry.
 - [ ] Add an image-only and a video-only comment; verify media renders and invalid dual-media comments are rejected.
-- [ ] With two mutual-follow accounts, send a challenge from A to B; verify B sees it and can accept or decline.
-- [ ] Verify a non-mutual account cannot be challenged through direct REST and cannot read another user's challenge rows.
-- [ ] Verify a challenge recipient cannot alter the sender, recipient, prompt, message, or creation time when responding.
-- [ ] Verify Pulse tag and creator statistics change only when Pulse entries/reactions change, not when general posts change.
-- [ ] Publish a video entry (MP4/MOV/WebM/3GP, at most 50 MB); verify upload, playback in the feed and detail dialog, and delete cleanup.
-- [ ] Verify an image and video cannot be attached to the same entry.
 - [ ] With two mutual-follow accounts, send a challenge from A to B; verify B sees it and can accept or decline.
 - [ ] Verify a non-mutual account cannot be challenged through direct REST and cannot read another user's challenge rows.
 - [ ] Verify a challenge recipient cannot alter the sender, recipient, prompt, message, or creation time when responding.
