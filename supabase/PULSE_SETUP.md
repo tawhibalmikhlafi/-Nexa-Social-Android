@@ -1,13 +1,15 @@
 # Nexa Pulse daily challenge
 
 The Android screen uses Supabase for live challenge and community data:
-- one entry per authenticated user per challenge (up to 1000 characters, text and/or one image);
-- image uploads to the `nexa-pulse` Storage bucket (JPEG, PNG, WebP; 5 MB maximum);
+- one entry per authenticated user per challenge (up to 1000 characters, text-only, image, or video; image and video cannot be attached together);
+- image uploads to the `nexa-pulse` Storage bucket (JPEG, PNG, WebP; 5 MB maximum) and video uploads (MP4, MOV, WebM, 3GP; 50 MB maximum);
 - public entry feed for authenticated users;
 - one reaction per user per entry, with removal;
 - comments up to 500 characters, with ownership and active-challenge RLS;
 - server-awarded badges: first entry, five entries, first comment, ten comments, and ten received reactions;
-- deletion of the current user's own entry and its uploaded image.
+- deletion of the current user's own entry and its uploaded image or video;
+- challenges sent to mutual-follow friends, with incoming accept/decline actions and participant-only RLS;
+- tag and creator metrics derived from actual Pulse entries/reactions for the active challenge. World activity metrics are intentionally not shown until worlds are stored remotely and entries can reference a stable world id.
 
 ## Database and security
 
@@ -15,7 +17,9 @@ The Android screen uses Supabase for live challenge and community data:
 - `migrations/20261105100000_nexa_pulse_images.sql` creates the Storage bucket/policies and image path.
 - `migrations/20261105110000_nexa_pulse_daily_scheduler.sql` seeds the challenge bank and schedules automatic publication through `pg_cron`.
 - `migrations/20261105130000_nexa_pulse_comments_badges.sql` adds authenticated comments, RLS, and server-side badge awards.
-- `migrations/20261105140000_nexa_pulse_image_only_entries.sql` aligns the entry constraint with image-only submissions.
+- `migrations/20261105140000_nexa_pulse_image_only_entries.sql` aligns the entry constraint with image-only submissions;
+- `migrations/20261106151000_nexa_pulse_video_and_friend_challenges.sql` adds video paths and mutual-follow challenge invitations;
+- `migrations/20261106152000_nexa_pulse_mutual_friends_view.sql`, `20261106153000_nexa_pulse_invite_policy_use_mutual_view.sql`, `20261106154000_nexa_pulse_friend_challenge_update_guard.sql`, and `20261106155000_nexa_pulse_mutual_friends_private_rpc.sql` scope friend lookup and harden challenge responses.
 
 The migrations above have been applied to the Nexa Supabase project. The Android client uses the publishable/anon key and the signed-in user's access token; no service-role key is shipped in the app.
 
@@ -40,7 +44,7 @@ Only database administrators should edit the challenge bank. The bank has no gra
 
 ## Release scope
 
-- Each entry supports one image plus text (or image only); video attachments, friend challenges, and video challenges are deferred to release 1.2.
+- Each entry supports text, one image, or one video plus optional text. Friend challenges use mutual follows; the invitation itself does not automatically create a second entry.
 - Comments currently support text only and are limited to the latest 100 comments per entry.
 - The feed is limited to the latest 100 entries for the active challenge.
 - The Android workflow runs unit tests, including input-boundary and connection-refused handling, before building the debug APK. CI results must pass before release.
