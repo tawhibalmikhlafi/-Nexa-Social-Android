@@ -768,6 +768,7 @@ class GroupRepositoryImpl(
     override suspend fun submitGroupPostReport(
         groupId: String,
         postId: String,
+        postPreview: String,
         reason: String,
         note: String,
     ): Resource<Unit> = withContext(Dispatchers.IO) {
@@ -777,6 +778,7 @@ class GroupRepositoryImpl(
             addProperty("reporter_id", uid)
             addProperty("target_type", "group_post")
             addProperty("target_id", postId)
+            addProperty("target_preview", postPreview.take(240))
             addProperty("group_id", groupId)
             val allowedReasons = setOf(
                 "spam", "harassment", "hate_speech", "misinformation",
@@ -784,7 +786,7 @@ class GroupRepositoryImpl(
             )
             val normalizedReason = reason.trim().lowercase().takeIf { it in allowedReasons } ?: "other"
             val details = if (normalizedReason == "other" && reason.trim().lowercase() !in allowedReasons) {
-                listOf("سبب البلاغ: ${reason.trim()}", note.trim()).filter(String::isNotBlank).joinToString("\\n")
+                listOf("سبب البلاغ: ${reason.trim()}", note.trim()).filter(String::isNotBlank).joinToString("\n")
             } else note.trim()
             addProperty("reason", normalizedReason)
             addProperty("note", details.take(1000))
@@ -802,7 +804,7 @@ class GroupRepositoryImpl(
     override suspend fun getGroupPostReports(groupId: String): Resource<List<GroupPostReport>> =
         withContext(Dispatchers.IO) {
             val token = accessToken.token() ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
-            val url = "$base/content_reports?group_id=eq.${encode(groupId)}&target_type=eq.group_post&status=eq.pending&select=id,target_id,reporter_id,reason,note,created_at,status&order=created_at.desc"
+            val url = "$base/content_reports?group_id=eq.${encode(groupId)}&target_type=eq.group_post&status=eq.pending&select=id,target_id,target_preview,reporter_id,reason,note,created_at,status&order=created_at.desc"
             val request = http.authenticatedRequest(url, token).get().build()
             when (val result = executeJsonArray(request)) {
                 is Resource.Success -> Resource.Success(result.data.map { element ->
@@ -810,6 +812,7 @@ class GroupRepositoryImpl(
                     GroupPostReport(
                         id = row.string("id").orEmpty(),
                         postId = row.string("target_id").orEmpty(),
+                        postPreview = row.string("target_preview").orEmpty(),
                         reporterId = row.string("reporter_id").orEmpty(),
                         reason = row.string("reason").orEmpty(),
                         note = row.string("note").orEmpty(),
