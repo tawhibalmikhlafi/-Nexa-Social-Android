@@ -26,6 +26,9 @@ class GatheringRepositoryImpl(
 ) : GatheringRepository {
 
     private val _gatherings = MutableStateFlow(local.readGatherings().sortedBy { it.startsAt })
+    // Keep other accounts' local-only records on disk while exposing the active account's
+    // cloud view. They can be migrated if that account signs in again.
+    private var archivedGatherings: List<Gathering> = emptyList()
 
     override fun observeGatherings(): Flow<List<Gathering>> =
         _gatherings.asStateFlow().map { list -> list.sortedBy { it.startsAt } }
@@ -96,11 +99,13 @@ class GatheringRepositoryImpl(
     override suspend fun refresh() {
         val source = remote ?: return
         val uid = sessionFlow.first().accountUserId ?: return
-        val localOwned = _gatherings.value.filter { it.hostId == uid && !it.id.startsWith("sample_") }
+        val allLocal = withContext(Dispatchers.IO) { local.readGatherings() }
+        val localOwned = allLocal.filter { it.hostId == uid && !it.id.startsWith("sample_") }
+        archivedGatherings = allLocal.filterNot { it.hostId == uid && !it.id.startsWith("sample_") }
         // Idempotent upsert is the migration checkpoint: do not replace local data until it succeeds.
         localOwned.forEach { source.saveGathering(it) }
         val cloud = source.loadGatherings()
-        if (cloud.isEmpty() && _gatherings.value.isNotEmpty()) return
+        if (cloud.isEmpty() && allLocal.isNotEmpty()) return
         // Prefer the local copy for matching IDs: if an upsert failed, an older cloud
         // version must not overwrite the still-pending local edit.
         val merged = (localOwned + cloud).distinctBy { it.id }.sortedBy { it.startsAt }
@@ -110,6 +115,7 @@ class GatheringRepositoryImpl(
 
     private suspend fun persist() {
         val snapshot = _gatherings.value
-        withContext(Dispatchers.IO) { local.writeGatherings(snapshot) }
+        val durableSnapshot = (snapshot + archivedGatherings).distinctBy { it.id }
+        withContext(Dispatchers.IO) { local.writeGatherings(durableSnapshot) }
     }
 }
