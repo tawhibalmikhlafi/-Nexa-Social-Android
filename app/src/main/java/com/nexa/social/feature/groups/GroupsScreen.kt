@@ -95,13 +95,23 @@ fun GroupsScreen(
                 shape = RoundedCornerShape(NexaRadius.pill),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.sm),
+                    .padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.md),
             )
             if (state.isLoading && state.searchQuery.isBlank()) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = NexaSpacing.lg)
+                        .clip(RoundedCornerShape(NexaRadius.pill))
+                )
             }
             if (state.isSearching) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = NexaSpacing.lg)
+                        .clip(RoundedCornerShape(NexaRadius.pill))
+                )
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -186,8 +196,10 @@ fun GroupsScreen(
 private fun SectionTitle(text: String) {
     Text(
         text = text,
-        modifier = Modifier.padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.sm),
-        style = MaterialTheme.typography.titleSmall,
+        modifier = Modifier.padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.sm),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface,
     )
 }
 
@@ -196,7 +208,10 @@ private fun EmptyState(text: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(32.dp),
+            .padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.xl)
+            .clip(RoundedCornerShape(NexaRadius.card))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            .padding(28.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -210,15 +225,15 @@ private fun EmptyState(text: String) {
 @Composable
 private fun GroupRow(group: Group, onClick: () -> Unit) {
     NexaCard(
-        modifier = Modifier.padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.xs),
+        modifier = Modifier.padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.xs),
         onClick = onClick,
-        padding = 12,
+        padding = 16,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             NexaAvatar(
                 displayName = group.name,
                 avatarUri = group.avatarUrl,
-                size = 56.dp,
+                size = 60.dp,
             )
             Spacer(Modifier.width(NexaSpacing.md))
             Column(Modifier.weight(1f)) {
@@ -229,7 +244,17 @@ private fun GroupRow(group: Group, onClick: () -> Unit) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.size(NexaSpacing.xxs))
+                if (group.description.isNotBlank()) {
+                    Spacer(Modifier.size(NexaSpacing.xxs))
+                    Text(
+                        text = group.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.size(NexaSpacing.xs))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     PrivacyPill(group.privacy)
                     Spacer(Modifier.width(NexaSpacing.sm))
@@ -243,7 +268,11 @@ private fun GroupRow(group: Group, onClick: () -> Unit) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(NexaRadius.pill))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                    .padding(4.dp)
             )
         }
     }
@@ -279,14 +308,15 @@ private fun PrivacyPill(privacy: GroupPrivacy) {
 @Composable
 private fun SearchResultRow(result: GroupSearchResult, onClick: () -> Unit) {
     NexaCard(
-        modifier = Modifier.padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.xs),
+        modifier = Modifier.padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.xs),
         onClick = onClick,
+        padding = 16,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             NexaAvatar(
                 displayName = result.name,
                 avatarUri = result.avatarUrl,
-                size = 48.dp,
+                size = 56.dp,
             )
             Spacer(Modifier.width(NexaSpacing.md))
             Column(Modifier.weight(1f)) {
@@ -331,7 +361,8 @@ private fun InviteRow(
     onDecline: () -> Unit,
 ) {
     NexaCard(
-        modifier = Modifier.padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.xs),
+        modifier = Modifier.padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.xs),
+        padding = 16,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             NexaAvatar(
