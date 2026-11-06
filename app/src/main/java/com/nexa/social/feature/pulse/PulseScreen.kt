@@ -174,7 +174,8 @@ fun PulseScreen(
                                     Text("تم اختيار صورة للمشاركة", color = MaterialTheme.colorScheme.primary)
                                 }
                                 selectedVideoUri?.let { uri ->
-                                    Text("تم اختيار فيديو للمشاركة", color = MaterialTheme.colorScheme.primary)
+                                    Text("معاينة الفيديو", color = MaterialTheme.colorScheme.primary)
+                                    PulseVideoPlayer(uri.toString())
                                 }
                                 Button(
                                     onClick = {
@@ -228,14 +229,13 @@ fun PulseScreen(
                     NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
                         Text("تحديات الأصدقاء", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         friendsState.challenges.forEach { challenge ->
-                            val incoming = challenge.challengedUserId != daily.entries.firstOrNull { it.userId == challenge.challengerId }?.userId
                             Column(modifier = Modifier.fillMaxWidth().padding(top = NexaSpacing.sm)) {
                                 Text(
-                                    if (challenge.challengedUserId == friendsState.challenges.firstOrNull()?.challengedUserId) "تحدي من ${challenge.challengerName}" else "تحدي أرسلته إلى ${challenge.challengedName}",
+                                    if (challenge.isIncoming) "تحدي من ${challenge.challengerName}" else "تحدي أرسلته إلى ${challenge.challengedName}",
                                     style = MaterialTheme.typography.titleSmall
                                 )
                                 if (challenge.message.isNotBlank()) Text(challenge.message, style = MaterialTheme.typography.bodySmall)
-                                if (challenge.challengedUserId == challenge.challengedUserId) {
+                                if (challenge.isIncoming) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
                                         TextButton(onClick = { viewModel.respondToFriendChallenge(challenge.id, true) }) { Text("قبول") }
                                         TextButton(onClick = { viewModel.respondToFriendChallenge(challenge.id, false) }) { Text("رفض") }
