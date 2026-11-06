@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Groups
@@ -92,6 +93,10 @@ fun GroupDetailScreen(
     var showJoinDialog by remember { mutableStateOf(false) }
     var joinMessage by remember { mutableStateOf("") }
     var postToDelete by remember { mutableStateOf<GroupPost?>(null) }
+    var postToReport by remember { mutableStateOf<GroupPost?>(null) }
+    var reportReason by remember { mutableStateOf("spam") }
+    var reportNote by remember { mutableStateOf("") }
+    var showGroupReports by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
 
     val errorMessage = when (state.error) {
@@ -102,12 +107,15 @@ fun GroupDetailScreen(
         "leave_failed" -> stringResource(R.string.groups_leave_failed)
         "reaction_failed" -> stringResource(R.string.groups_reaction_failed)
         "posts_failed" -> stringResource(R.string.groups_posts_failed)
+        "report_failed" -> stringResource(R.string.groups_report_failed)
+        "reports_failed", "report_review_failed" -> stringResource(R.string.groups_reports_failed)
         else -> stringResource(R.string.groups_error)
     }
 
+    val reportSentMessage = stringResource(R.string.groups_report_sent)
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let { message ->
-            snackbar.showSnackbar(message)
+            snackbar.showSnackbar(if (message == "report_sent") reportSentMessage else message)
             viewModel.clearMessage()
         }
     }
@@ -120,6 +128,9 @@ fun GroupDetailScreen(
                 actions = {
                     val group = state.group
                     if (group?.canManage == true) {
+                        IconButton(onClick = { showGroupReports = true; viewModel.loadGroupPostReports() }) {
+                            Icon(Icons.Filled.Flag, contentDescription = stringResource(R.string.groups_reports_title))
+                        }
                         IconButton(onClick = { onOpenRequests(groupId) }) {
                             Icon(
                                 imageVector = Icons.Filled.Groups,
@@ -261,9 +272,11 @@ fun GroupDetailScreen(
                             GroupPostCard(
                                 post = post,
                                 canManage = group.canManage,
+                                canReport = group.isMember && !post.isAuthor,
                                 onReact = { kind -> viewModel.react(post.id, kind) },
                                 onComments = { onOpenComments(groupId, post.id) },
                                 onDelete = { postToDelete = post },
+                                onReport = { postToReport = post },
                                 onOpenProfile = onOpenProfile,
                                 modifier = Modifier.padding(horizontal = NexaSpacing.lg),
                             )
@@ -283,6 +296,93 @@ fun GroupDetailScreen(
                 }
             }
         }
+    }
+
+    if (postToReport != null) {
+        AlertDialog(
+            onDismissRequest = { postToReport = null },
+            title = { Text(stringResource(R.string.groups_report_post_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
+                    OutlinedTextField(
+                        value = reportReason,
+                        onValueChange = { reportReason = it.take(60) },
+                        label = { Text(stringResource(R.string.groups_report_reason_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = reportNote,
+                        onValueChange = { reportNote = it.take(500) },
+                        placeholder = { Text(stringResource(R.string.groups_report_note_hint)) },
+                        minLines = 2,
+                        maxLines = 4,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = reportReason.isNotBlank(),
+                    onClick = {
+                        postToReport?.let { viewModel.reportPost(it.id, reportReason.trim(), reportNote.trim()) }
+                        postToReport = null
+                        reportReason = "spam"
+                        reportNote = ""
+                    },
+                ) { Text(stringResource(R.string.groups_report_send)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { postToReport = null }) {
+                    Text(stringResource(R.string.groups_report_cancel))
+                }
+            },
+        )
+    }
+
+    if (showGroupReports) {
+        AlertDialog(
+            onDismissRequest = { showGroupReports = false },
+            title = { Text(stringResource(R.string.groups_reports_title)) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm),
+                ) {
+                    if (state.isLoadingReports) {
+                        CircularProgressIndicator()
+                    } else if (state.groupPostReports.isEmpty()) {
+                        Text(stringResource(R.string.groups_reports_empty))
+                    } else {
+                        state.groupPostReports.forEach { report ->
+                            NexaCard(padding = NexaSpacing.md) {
+                                Text(
+                                    text = report.reason,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                if (report.note.isNotBlank()) {
+                                    Text(report.note, style = MaterialTheme.typography.bodySmall)
+                                }
+                                Text(
+                                    text = stringResource(R.string.groups_reporter_reference, report.reporterId.take(8)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                TextButton(onClick = { viewModel.reviewGroupPostReport(report.id) }) {
+                                    Text(stringResource(R.string.groups_report_mark_reviewed))
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showGroupReports = false }) {
+                    Text(stringResource(R.string.groups_reports_close))
+                }
+            },
+        )
     }
 
     if (showJoinDialog) {
@@ -626,9 +726,11 @@ private fun GroupComposer(
 private fun GroupPostCard(
     post: GroupPost,
     canManage: Boolean,
+    canReport: Boolean,
     onReact: (ReactionKind?) -> Unit,
     onComments: () -> Unit,
     onDelete: () -> Unit,
+    onReport: () -> Unit,
     onOpenProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -669,6 +771,16 @@ private fun GroupPostCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                }
+                if (canReport) {
+                    IconButton(onClick = onReport) {
+                        Icon(
+                            imageVector = Icons.Filled.Flag,
+                            contentDescription = stringResource(R.string.groups_report_post),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
                 if (post.isAuthor || canManage) {
                     IconButton(onClick = onDelete) {
