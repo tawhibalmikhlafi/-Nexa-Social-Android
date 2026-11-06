@@ -29,7 +29,9 @@ class CapsuleRepositoryImpl(
 ) : CapsuleRepository {
 
     private val stored = local.readCapsules().toMutableList()
-    private val _capsules = MutableStateFlow(stored.map { it.toDomain() })
+    // Capsules are private: never expose cached records until the active account is known.
+    private var visibleOwnerId: String? = null
+    private val _capsules = MutableStateFlow<List<TimeCapsule>>(emptyList())
 
     override fun observeCapsules(): Flow<List<TimeCapsule>> =
         _capsules.asStateFlow().map { list ->
@@ -84,8 +86,13 @@ class CapsuleRepositoryImpl(
     }
 
     override suspend fun refresh() {
+        val uid = sessionFlow.first().accountUserId
+        visibleOwnerId = uid
+        _capsules.value = if (uid == null) emptyList() else stored
+            .filter { it.authorId == uid }
+            .map { it.toDomain() }
         val source = remote ?: return
-        val uid = sessionFlow.first().accountUserId ?: return
+        if (uid == null) return
         val mine = stored.filter { it.authorId == uid }
         // Upload local encrypted payloads first; local files are retained until the cloud snapshot
         // is successfully fetched and merged.
@@ -119,7 +126,9 @@ class CapsuleRepositoryImpl(
         withContext(Dispatchers.IO) { local.writeCapsules(nextStored) }
         stored.clear()
         stored.addAll(nextStored)
-        _capsules.value = nextStored.map { it.toDomain() }
+        _capsules.value = visibleOwnerId?.let { owner ->
+            nextStored.filter { it.authorId == owner }.map { it.toDomain() }
+        }.orEmpty()
     }
 
     private fun StoredCapsule.toCloud(uid: String) = CloudCapsule(
