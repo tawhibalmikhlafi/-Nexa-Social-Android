@@ -422,9 +422,9 @@ fun ProfileScreen(
 
         // 2. Profile Header (Cover, Avatar, Name, Bio, Details)
         item(span = { GridItemSpan(maxLineSpan) }) {
-            val coverHeight = 160.dp
-            val avatarSize = 104.dp
-            val avatarOverlap = 52.dp
+            val coverHeight = 176.dp
+            val avatarSize = 112.dp
+            val avatarOverlap = 56.dp
             Column(modifier = Modifier.fillMaxWidth()) {
                 Box(
                     modifier = Modifier
@@ -948,13 +948,14 @@ private fun StatBox(
 ) {
     Card(
         modifier = modifier.clickable(enabled = onClick != {}, onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 4.dp),
+                .padding(vertical = 14.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -978,8 +979,9 @@ private fun LargeShortcutCard(
         modifier = modifier
             .aspectRatio(1.5f)
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
