@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.People
@@ -43,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,6 +71,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.nexa.social.core.common.TimeUtils
 import com.nexa.social.domain.model.Conversation
+import com.nexa.social.domain.model.NotificationType
+import com.nexa.social.feature.settings.SettingsViewModel
 import com.nexa.social.data.remote.UserNote
 import com.nexa.social.feature.presence.PresenceViewModel
 import com.nexa.social.ui.components.OnlineAvatar
@@ -109,6 +113,10 @@ fun MessagesScreen(
     val search by viewModel.search.collectAsStateWithLifecycle()
     val conversations by viewModel.conversations.collectAsStateWithLifecycle()
     val unreadNotifications by viewModel.unreadNotificationsCount.collectAsStateWithLifecycle()
+    val messageSettingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
+    val notificationsEnabled by messageSettingsViewModel.notificationsEnabled.collectAsStateWithLifecycle()
+    val notificationCategories by messageSettingsViewModel.notificationCategories.collectAsStateWithLifecycle()
+    var showMessageSettings by rememberSaveable { mutableStateOf(false) }
     val notes by viewModel.notes.collectAsStateWithLifecycle()
     val myNote by viewModel.myNote.collectAsStateWithLifecycle()
     val noteSaving by viewModel.noteSaving.collectAsStateWithLifecycle()
@@ -122,6 +130,59 @@ fun MessagesScreen(
     var showBanner by rememberSaveable { mutableStateOf(true) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        if (showMessageSettings) {
+            AlertDialog(
+                onDismissRequest = { showMessageSettings = false },
+                title = {
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("إعدادات الرسائل والنشاط", fontWeight = FontWeight.Bold)
+                        Text(
+                            "تحكم في تنبيهات المحادثات وتفاعلات حسابك",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp
+                        )
+                    }
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("إعدادات الرسائل", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        MessagePreferenceRow(
+                            title = "إشعارات الرسائل",
+                            subtitle = "تشغيل أو إيقاف جميع إشعارات التطبيق",
+                            checked = notificationsEnabled,
+                            onCheckedChange = messageSettingsViewModel::setNotificationsEnabled
+                        )
+                        MessagePreferenceRow(
+                            title = "الرسائل الجديدة",
+                            subtitle = "تنبيهات عند وصول رسالة",
+                            checked = notificationCategories[NotificationType.MESSAGE] != false,
+                            enabled = notificationsEnabled,
+                            onCheckedChange = { messageSettingsViewModel.setNotificationCategory(NotificationType.MESSAGE, it) }
+                        )
+                        androidx.compose.material3.HorizontalDivider()
+                        Text("إشعارات النشاط", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        listOf(
+                            NotificationType.LIKE to "الإعجابات والتفاعلات",
+                            NotificationType.COMMENT to "التعليقات",
+                            NotificationType.REPLY to "الردود",
+                            NotificationType.FOLLOW to "المتابعات",
+                            NotificationType.STORY_REPLY to "الردود على القصص",
+                            NotificationType.MENTION to "الإشارات إليك"
+                        ).forEach { (type, label) ->
+                            MessagePreferenceRow(
+                                title = label,
+                                checked = notificationCategories[type] != false,
+                                enabled = notificationsEnabled,
+                                onCheckedChange = { messageSettingsViewModel.setNotificationCategory(type, it) }
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showMessageSettings = false }) { Text("تم") }
+                }
+            )
+        }
         if (selectedNote != null) {
             val note = selectedNote!!
             AlertDialog(
@@ -222,7 +283,8 @@ fun MessagesScreen(
                     TopBarSection(
                         unreadCount = unreadNotifications,
                         onOpenProfile = onOpenProfile,
-                        onNotifications = onNotifications
+                        onNotifications = onNotifications,
+                        onSettings = { showMessageSettings = true }
                     )
                 }
                 item {
@@ -288,7 +350,8 @@ fun MessagesScreen(
 fun TopBarSection(
     unreadCount: Int,
     onOpenProfile: () -> Unit,
-    onNotifications: () -> Unit
+    onNotifications: () -> Unit,
+    onSettings: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -310,7 +373,15 @@ fun TopBarSection(
                 fontSize = 12.sp
             )
         }
-        IconButton(onClick = onNotifications) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onSettings) {
+                Icon(
+                    Icons.Filled.Settings,
+                    contentDescription = "إعدادات الرسائل والنشاط",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onNotifications) {
             Box {
                 Icon(
                     Icons.Outlined.Notifications,
@@ -333,6 +404,7 @@ fun TopBarSection(
                         )
                     }
                 }
+            }
             }
         }
     }
@@ -362,6 +434,32 @@ fun SearchBarSection(
             unfocusedTextColor = MaterialTheme.colorScheme.onSurface
         )
     )
+}
+
+@Composable
+private fun MessagePreferenceRow(
+    title: String,
+    subtitle: String? = null,
+    checked: Boolean,
+    enabled: Boolean = true,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            if (subtitle != null) {
+                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+            }
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled
+        )
+    }
 }
 
 @Composable
