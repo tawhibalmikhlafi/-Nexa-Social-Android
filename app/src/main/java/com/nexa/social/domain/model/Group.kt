@@ -166,3 +166,14 @@ data class GroupSearchResult(
     val category: String?,
     val createdAt: Long,
 )
+
+
+data class GroupPostReport(
+    val id: String,
+    val postId: String,
+    val reporterId: String,
+    val reason: String,
+    val note: String,
+    val createdAt: Long,
+    val status: String,
+)
