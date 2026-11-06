@@ -105,7 +105,8 @@ fun PulseScreen(
         selectedEntry?.id?.let(viewModel::loadComments)
     }
     LaunchedEffect(commentsState.comments, commentsState.submitting) {
-        if (!commentsState.submitting && commentText.isNotBlank() &&
+        if (!commentsState.submitting &&
+            (commentText.isNotBlank() || selectedCommentImageUri != null || selectedCommentVideoUri != null) &&
             commentsState.comments.any {
                 it.body == commentText.trim() &&
                     (selectedCommentImageUri == null || it.imageUrl != null) &&
