@@ -7,6 +7,7 @@ import com.nexa.social.domain.model.GroupComment
 import com.nexa.social.domain.model.GroupInvite
 import com.nexa.social.domain.model.GroupMember
 import com.nexa.social.domain.model.GroupPost
+import com.nexa.social.domain.model.GroupPostReport
 import com.nexa.social.domain.model.GroupSearchResult
 import com.nexa.social.domain.model.GroupStats
 import com.nexa.social.domain.model.JoinRequest
@@ -108,6 +109,20 @@ internal object UnconfiguredGroupRepository : GroupRepository {
     ): Resource<String> = Resource.Failure(FailureReason.NOT_CONFIGURED)
 
     override suspend fun deletePost(postId: String): Resource<Unit> =
+        Resource.Failure(FailureReason.NOT_CONFIGURED)
+
+    override suspend fun submitGroupPostReport(
+        groupId: String,
+        postId: String,
+        postPreview: String,
+        reason: String,
+        note: String,
+    ): Resource<Unit> = Resource.Failure(FailureReason.NOT_CONFIGURED)
+
+    override suspend fun getGroupPostReports(groupId: String): Resource<List<GroupPostReport>> =
+        Resource.Failure(FailureReason.NOT_CONFIGURED)
+
+    override suspend fun reviewGroupPostReport(reportId: String): Resource<Unit> =
         Resource.Failure(FailureReason.NOT_CONFIGURED)
 
     override suspend fun reactToPost(postId: String, kind: ReactionKind?): Resource<Unit> =
