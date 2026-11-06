@@ -466,7 +466,7 @@ class SupabaseDailyPulseRepository(
                 .patch(http.jsonBody(body)).build()
         ).getOrNull() ?: return false
         if (!response.successful) return false
-        runCatching { JsonParser.parseString(response.body).asJsonArray.size() > 0 }.getOrDefault(false)
+        return runCatching { JsonParser.parseString(response.body).asJsonArray.size() > 0 }.getOrDefault(false)
     }
 
     private suspend fun getRows(path: String, token: String): List<JsonObject>? {
