@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -26,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -73,6 +76,7 @@ import com.nexa.social.feature.labs.LabsScreen
 import com.nexa.social.feature.messages.ConversationScreen
 import com.nexa.social.feature.messages.MessageRequestsScreen
 import com.nexa.social.feature.messages.MessagesScreen
+import com.nexa.social.feature.messages.MessagesViewModel
 import com.nexa.social.feature.messages.StarredMessagesScreen
 import com.nexa.social.feature.notifications.NotificationsScreen
 import com.nexa.social.feature.onboarding.OnboardingScreen
@@ -101,6 +105,9 @@ import com.nexa.social.ui.components.rememberNexaRefresh
 @Composable
 fun NexaRoot() {
     val navController = rememberNavController()
+    val messagesViewModel: MessagesViewModel = viewModel(factory = MessagesViewModel.Factory)
+    val conversations by messagesViewModel.conversations.collectAsStateWithLifecycle()
+    val unreadMessagesCount = conversations.sumOf { it.unreadCount }.coerceAtLeast(0)
     val snackbarHostState = remember { SnackbarHostState() }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -166,11 +173,30 @@ fun NexaRoot() {
                                     selected = currentRoute == item.route,
                                     onClick = { navController.navigateTab(item.route) },
                                     icon = {
-                                        Icon(
-                                            imageVector = item.icon,
-                                            contentDescription = stringResource(item.labelRes),
-                                            modifier = Modifier.size(25.dp)
-                                        )
+                                        if (item == BottomNavItem.MESSAGES && unreadMessagesCount > 0) {
+                                            BadgedBox(
+                                                badge = {
+                                                    Badge {
+                                                        Text(
+                                                            text = if (unreadMessagesCount > 99) "99+" else unreadMessagesCount.toString(),
+                                                            color = Color.White
+                                                        )
+                                                    }
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = item.icon,
+                                                    contentDescription = stringResource(item.labelRes),
+                                                    modifier = Modifier.size(25.dp)
+                                                )
+                                            }
+                                        } else {
+                                            Icon(
+                                                imageVector = item.icon,
+                                                contentDescription = stringResource(item.labelRes),
+                                                modifier = Modifier.size(25.dp)
+                                            )
+                                        }
                                     },
                                     label = { Text(stringResource(item.labelRes)) },
                                     colors = NavigationBarItemDefaults.colors(
