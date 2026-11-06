@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +46,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexa.social.R
@@ -70,17 +76,23 @@ fun PulseScreen(
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
     val daily by viewModel.dailyState.collectAsStateWithLifecycle()
     val commentsState by viewModel.commentsState.collectAsStateWithLifecycle()
+    val friendsState by viewModel.friendsState.collectAsStateWithLifecycle()
     var entryText by remember { mutableStateOf("") }
     var commentText by remember { mutableStateOf("") }
     var selectedEntry by remember { mutableStateOf<DailyPulseEntry?>(null) }
     var popularFirst by remember { mutableStateOf(false) }
+    var showFriendChallengeDialog by remember { mutableStateOf(false) }
+    var friendChallengeMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
     var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var selectedVideoUri by remember { mutableStateOf<android.net.Uri?>(null) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { selectedImageUri = it }
+    val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { selectedVideoUri = it }
     LaunchedEffect(daily.myEntryId) {
         if (daily.myEntryId != null) {
             entryText = ""
             selectedImageUri = null
+            selectedVideoUri = null
         }
     }
     LaunchedEffect(selectedEntry?.id) {
@@ -145,9 +157,14 @@ fun PulseScreen(
                                 )
                                 Button(
                                     onClick = { imagePicker.launch("image/*") },
-                                    enabled = !daily.submitting,
+                                    enabled = !daily.submitting && selectedVideoUri == null,
                                     modifier = Modifier.fillMaxWidth()
                                 ) { Text(if (selectedImageUri == null) "إرفاق صورة (حتى 5MB)" else "تغيير الصورة") }
+                                Button(
+                                    onClick = { videoPicker.launch("video/*") },
+                                    enabled = !daily.submitting && selectedImageUri == null,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text(if (selectedVideoUri == null) "إرفاق فيديو (حتى 50MB)" else "تغيير الفيديو") }
                                 selectedImageUri?.let { uri ->
                                     AsyncImage(
                                         model = uri,
@@ -156,11 +173,14 @@ fun PulseScreen(
                                     )
                                     Text("تم اختيار صورة للمشاركة", color = MaterialTheme.colorScheme.primary)
                                 }
+                                selectedVideoUri?.let { uri ->
+                                    Text("تم اختيار فيديو للمشاركة", color = MaterialTheme.colorScheme.primary)
+                                }
                                 Button(
                                     onClick = {
-                                        viewModel.publish(entryText, selectedImageUri?.toString())
+                                        viewModel.publish(entryText, selectedImageUri?.toString(), selectedVideoUri?.toString())
                                     },
-                                    enabled = (entryText.isNotBlank() || selectedImageUri != null) && !daily.submitting,
+                                    enabled = (entryText.isNotBlank() || selectedImageUri != null || selectedVideoUri != null) && !daily.submitting,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(if (daily.submitting) "جارٍ الرفع والنشر…" else "انشر مشاركتك")
@@ -176,6 +196,7 @@ fun PulseScreen(
                         }
                     }
                     daily.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    friendsState.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
                     if (!daily.loading && daily.prompt != null) {
                         Text(
                             "المشاركات: ${daily.entries.size}",
@@ -197,6 +218,29 @@ fun PulseScreen(
                                     color = if (badge.isEarned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(badge.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+            if (friendsState.challenges.isNotEmpty()) {
+                item {
+                    NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
+                        Text("تحديات الأصدقاء", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        friendsState.challenges.forEach { challenge ->
+                            val incoming = challenge.challengedUserId != daily.entries.firstOrNull { it.userId == challenge.challengerId }?.userId
+                            Column(modifier = Modifier.fillMaxWidth().padding(top = NexaSpacing.sm)) {
+                                Text(
+                                    if (challenge.challengedUserId == friendsState.challenges.firstOrNull()?.challengedUserId) "تحدي من ${challenge.challengerName}" else "تحدي أرسلته إلى ${challenge.challengedName}",
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                if (challenge.message.isNotBlank()) Text(challenge.message, style = MaterialTheme.typography.bodySmall)
+                                if (challenge.challengedUserId == challenge.challengedUserId) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
+                                        TextButton(onClick = { viewModel.respondToFriendChallenge(challenge.id, true) }) { Text("قبول") }
+                                        TextButton(onClick = { viewModel.respondToFriendChallenge(challenge.id, false) }) { Text("رفض") }
+                                    }
+                                }
                             }
                         }
                     }
@@ -234,6 +278,7 @@ fun PulseScreen(
                             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
                         )
                     }
+                    entry.videoUrl?.let { video -> PulseVideoPlayer(video) }
                 }
             }
             item {
@@ -353,6 +398,42 @@ fun PulseScreen(
             }
         }
     }
+    if (showFriendChallengeDialog) {
+        AlertDialog(
+            onDismissRequest = { showFriendChallengeDialog = false },
+            title = { Text("تحدَّ أحد أصدقائك") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
+                    Text("تظهر هنا الحسابات التي تتابعك وتتابعها.")
+                    OutlinedTextField(
+                        value = friendChallengeMessage,
+                        onValueChange = { if (it.length <= 240) friendChallengeMessage = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("رسالة قصيرة (اختياري)") },
+                        maxLines = 2
+                    )
+                    when {
+                        friendsState.loading -> Text("جارٍ تحميل الأصدقاء…")
+                        friendsState.friends.isEmpty() -> Text("لا يوجد أصدقاء بمتابعة متبادلة حالياً.")
+                        else -> friendsState.friends.forEach { friend ->
+                            TextButton(
+                                onClick = {
+                                    viewModel.sendFriendChallenge(friend.id, friendChallengeMessage)
+                                    showFriendChallengeDialog = false
+                                    friendChallengeMessage = ""
+                                },
+                                enabled = !friendsState.submitting,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("${friend.displayName}  @${friend.username}")
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showFriendChallengeDialog = false }) { Text("إغلاق") } }
+        )
+    }
     selectedEntry?.let { entry ->
         AlertDialog(
             onDismissRequest = { selectedEntry = null },
@@ -365,6 +446,7 @@ fun PulseScreen(
                         AsyncImage(model = image, contentDescription = "صورة المشاركة",
                             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)))
                     }
+                    entry.videoUrl?.let { video -> PulseVideoPlayer(video) }
                     Text("❤ ${entry.reactions} إعجاب · ${if (commentsState.entryId == entry.id) commentsState.comments.size else "…"} تعليق", style = MaterialTheme.typography.labelMedium)
                     Text("التعليقات", style = MaterialTheme.typography.titleSmall)
                     when {
@@ -496,4 +578,30 @@ private fun WorldRow(
 
 
     }
+}
+
+
+@Composable
+private fun PulseVideoPlayer(url: String) {
+    val context = LocalContext.current
+    val player = remember(url) {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(url))
+            prepare()
+            playWhenReady = false
+        }
+    }
+    DisposableEffect(player) {
+        onDispose { player.release() }
+    }
+    AndroidView(
+        factory = { viewContext ->
+            PlayerView(viewContext).apply {
+                this.player = player
+                useController = true
+            }
+        },
+        update = { it.player = player },
+        modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(16.dp))
+    )
 }
