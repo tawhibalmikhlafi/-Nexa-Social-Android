@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -817,8 +818,11 @@ private fun NavHostController.enterWelcome() {
 }
 
 private fun NavHostController.navigateTab(route: String) {
+    if (currentDestination?.route == route) return
     navigate(route) {
-        popUpTo(NexaDestinations.HOME) { saveState = true }
+        // Save each tab's own back stack from the graph's real start destination.
+        // Using a hard-coded HOME route can restore an unrelated saved destination.
+        popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
     }
