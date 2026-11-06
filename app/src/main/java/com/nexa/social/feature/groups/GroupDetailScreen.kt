@@ -355,7 +355,7 @@ fun GroupDetailScreen(
                         Text(stringResource(R.string.groups_reports_empty))
                     } else {
                         state.groupPostReports.forEach { report ->
-                            NexaCard(padding = 16.dp) {
+                            NexaCard(padding = 16) {
                                 if (report.postPreview.isNotBlank()) {
                                     Text(report.postPreview, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
                                 }
