@@ -177,12 +177,17 @@ class PulseViewModel(
         }
     }
 
-    fun addComment(entryId: String, text: String) {
+    fun addComment(
+        entryId: String,
+        text: String,
+        imageUri: String? = null,
+        videoUri: String? = null
+    ) {
         val clean = text.trim()
-        if (clean.isEmpty() || clean.length > 500 || _commentsState.value.submitting) return
+        if (!PulseInputRules.validComment(clean, imageUri, videoUri) || _commentsState.value.submitting) return
         viewModelScope.launch {
             _commentsState.value = _commentsState.value.copy(submitting = true, message = null)
-            val ok = dailyRepository?.addComment(entryId, clean) == true
+            val ok = dailyRepository?.addComment(entryId, clean, imageUri, videoUri) == true
             if (ok) {
                 loadComments(entryId)
                 refreshDaily()
