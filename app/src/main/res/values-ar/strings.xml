@@ -1161,5 +1161,5 @@
     <string name="groups_reports_failed">تعذر تحميل البلاغات أو تحديثها.</string>
     <string name="groups_report_mark_reviewed">تمت المراجعة</string>
     <string name="groups_reports_close">إغلاق</string>
-    <string name="groups_reporter_reference">معرّف المبلّغ: %1$s</string>
+    <string name="groups_reporter_member">تم الإبلاغ بواسطة أحد الأعضاء</string>
 </resources>
