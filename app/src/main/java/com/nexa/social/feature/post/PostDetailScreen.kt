@@ -8,6 +8,7 @@ import android.os.Environment
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -1422,7 +1423,13 @@ private fun CommentRow(
     val imageUrl = comment.imageUri
     var showActions by remember { mutableStateOf(false) }
     var showCommentReactionPicker by remember { mutableStateOf(false) }
-    val indent = (depth.coerceAtMost(3) * 16).dp
+    val indent = (depth.coerceAtMost(3) * 14).dp
+    val isReply = depth > 0
+    val bubbleColor = if (isReply) {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f)
+    }
 
     Row(
         modifier = Modifier
@@ -1431,28 +1438,46 @@ private fun CommentRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
     ) {
-        if (depth > 0) {
+        if (isReply) {
             Box(
                 modifier = Modifier
-                    .width(2.dp)
-                    .height(64.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.42f))
+                    .width(3.dp)
+                    .height(76.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.28f))
             )
         }
         NexaAvatar(
             displayName = authorName,
             avatarUri = comment.author.avatarUri,
-            size = if (depth == 0) 38.dp else 32.dp,
+            size = if (!isReply) 42.dp else 34.dp,
             modifier = Modifier.clickable { onOpenProfile(comment.author.id) }
         )
         Column(modifier = Modifier.weight(1f)) {
             Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                    .fillMaxWidth()
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = if (isReply) 12.dp else 7.dp,
+                            topEnd = 20.dp,
+                            bottomEnd = 20.dp,
+                            bottomStart = 20.dp
+                        )
+                    )
+                    .background(bubbleColor)
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = if (isReply) 0.10f else 0.16f),
+                        shape = RoundedCornerShape(
+                            topStart = if (isReply) 12.dp else 7.dp,
+                            topEnd = 20.dp,
+                            bottomEnd = 20.dp,
+                            bottomStart = 20.dp
+                        )
+                    )
                     .combinedClickable(onClick = {}, onLongClick = { showActions = true })
-                    .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.sm + 2.dp)
+                    .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.md)
             ) {
                 if (replyToName != null) {
                     Text(
@@ -1481,7 +1506,7 @@ private fun CommentRow(
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text = comment.text,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -1493,8 +1518,8 @@ private fun CommentRow(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 220.dp)
-                            .clip(RoundedCornerShape(14.dp))
+                            .heightIn(max = 240.dp)
+                            .clip(RoundedCornerShape(16.dp))
                             .clickable { onOpenImage(imageUrl) }
                     )
                 }
@@ -1502,7 +1527,7 @@ private fun CommentRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = NexaSpacing.xs, top = NexaSpacing.xxs),
+                    .padding(start = NexaSpacing.xs, top = NexaSpacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
             ) {
@@ -1523,7 +1548,7 @@ private fun CommentRow(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .clickable(onClick = onReply)
-                        .padding(horizontal = 5.dp, vertical = 3.dp),
+                        .padding(horizontal = NexaSpacing.sm, vertical = 4.dp),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
