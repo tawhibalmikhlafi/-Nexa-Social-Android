@@ -50,8 +50,8 @@ data class PulseSnapshot(
 
 /**
  * Daily Pulse content and interactions come from Supabase. Tag and creator metrics are derived
- * only from the active challenge's Pulse entries and reactions. World metrics remain hidden
- * until the world catalog is backed by stable remote records.
+ * only from the active challenge's Pulse entries and reactions. World activity is aggregated from
+ * world_id/world_name values stored on those same Pulse entry rows.
  */
 class PulseViewModel(
     postRepository: PostRepository,
