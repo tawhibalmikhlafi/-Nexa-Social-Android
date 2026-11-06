@@ -9,6 +9,7 @@ import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.domain.model.Community
 import com.nexa.social.domain.model.UserSummary
 import com.nexa.social.domain.model.AccountOrigin
+import com.nexa.social.domain.model.WorldPrivacy
 import com.nexa.social.domain.repository.CommunityRepository
 import com.nexa.social.domain.repository.PostRepository
 import kotlinx.coroutines.flow.SharingStarted
