@@ -361,7 +361,8 @@ class PreferenceStorage(private val context: Context) {
                     NotificationType.MESSAGE -> Keys.notifMessages
                     NotificationType.GROUP_JOIN_REQUEST,
                     NotificationType.GROUP_JOIN_APPROVED,
-                    NotificationType.GROUP_JOIN_REJECTED -> Keys.notifGroups
+                    NotificationType.GROUP_JOIN_REJECTED,
+                    NotificationType.GROUP_POST_REPORT -> Keys.notifGroups
                     NotificationType.STORY_REPLY -> Keys.notifStories
                     NotificationType.MENTION -> Keys.notifMentions
                     NotificationType.WELCOME, NotificationType.SYSTEM -> Keys.notifSystem
@@ -383,7 +384,8 @@ class PreferenceStorage(private val context: Context) {
             NotificationType.MESSAGE -> Keys.notifMessages
             NotificationType.GROUP_JOIN_REQUEST,
             NotificationType.GROUP_JOIN_APPROVED,
-            NotificationType.GROUP_JOIN_REJECTED -> Keys.notifGroups
+            NotificationType.GROUP_JOIN_REJECTED,
+            NotificationType.GROUP_POST_REPORT -> Keys.notifGroups
             NotificationType.STORY_REPLY -> Keys.notifStories
             NotificationType.MENTION -> Keys.notifMentions
             NotificationType.WELCOME,
