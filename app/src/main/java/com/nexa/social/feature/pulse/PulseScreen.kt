@@ -85,8 +85,12 @@ fun PulseScreen(
     val context = LocalContext.current
     var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var selectedVideoUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var selectedCommentImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var selectedCommentVideoUri by remember { mutableStateOf<android.net.Uri?>(null) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { selectedImageUri = it }
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { selectedVideoUri = it }
+    val commentImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { selectedCommentImageUri = it }
+    val commentVideoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { selectedCommentVideoUri = it }
     LaunchedEffect(daily.myEntryId) {
         if (daily.myEntryId != null) {
             entryText = ""
@@ -96,12 +100,20 @@ fun PulseScreen(
     }
     LaunchedEffect(selectedEntry?.id) {
         commentText = ""
+        selectedCommentImageUri = null
+        selectedCommentVideoUri = null
         selectedEntry?.id?.let(viewModel::loadComments)
     }
     LaunchedEffect(commentsState.comments, commentsState.submitting) {
         if (!commentsState.submitting && commentText.isNotBlank() &&
-            commentsState.comments.any { it.body == commentText.trim() }) {
+            commentsState.comments.any {
+                it.body == commentText.trim() &&
+                    (selectedCommentImageUri == null || it.imageUrl != null) &&
+                    (selectedCommentVideoUri == null || it.videoUrl != null)
+            }) {
             commentText = ""
+            selectedCommentImageUri = null
+            selectedCommentVideoUri = null
         }
     }
 
@@ -457,7 +469,12 @@ fun PulseScreen(
                         else -> commentsState.comments.takeLast(8).forEach { comment ->
                             Column(modifier = Modifier.fillMaxWidth().padding(top = NexaSpacing.xs)) {
                                 Text(comment.displayName + "  @" + comment.username, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                                Text(comment.body, style = MaterialTheme.typography.bodyMedium)
+                                if (comment.body.isNotBlank()) Text(comment.body, style = MaterialTheme.typography.bodyMedium)
+                                comment.imageUrl?.let { image ->
+                                    AsyncImage(model = image, contentDescription = "صورة تعليق نبض",
+                                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)))
+                                }
+                                comment.videoUrl?.let { video -> PulseVideoPlayer(video) }
                             }
                         }
                     }
@@ -471,11 +488,32 @@ fun PulseScreen(
                         label = { Text("اكتب تعليقًا (حتى 500 حرف)") },
                         maxLines = 3
                     )
+                    Row(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
+                        TextButton(
+                            onClick = { commentImagePicker.launch("image/*") },
+                            enabled = selectedCommentVideoUri == null && !commentsState.submitting
+                        ) { Text(if (selectedCommentImageUri == null) "إرفاق صورة" else "تغيير الصورة") }
+                        TextButton(
+                            onClick = { commentVideoPicker.launch("video/*") },
+                            enabled = selectedCommentImageUri == null && !commentsState.submitting
+                        ) { Text(if (selectedCommentVideoUri == null) "إرفاق فيديو" else "تغيير الفيديو") }
+                    }
+                    selectedCommentImageUri?.let { uri ->
+                        AsyncImage(model = uri, contentDescription = "معاينة صورة التعليق",
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)))
+                    }
+                    selectedCommentVideoUri?.let { uri -> PulseVideoPlayer(uri.toString()) }
                     Button(
                         onClick = {
-                            viewModel.addComment(entry.id, commentText)
+                            viewModel.addComment(
+                                entry.id,
+                                commentText,
+                                selectedCommentImageUri?.toString(),
+                                selectedCommentVideoUri?.toString()
+                            )
                         },
-                        enabled = commentText.isNotBlank() && !commentsState.submitting,
+                        enabled = (commentText.isNotBlank() || selectedCommentImageUri != null || selectedCommentVideoUri != null) &&
+                            !commentsState.submitting,
                         modifier = Modifier.fillMaxWidth()
                     ) { Text(if (commentsState.submitting) "جارٍ النشر…" else "إضافة تعليق") }
                 }
