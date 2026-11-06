@@ -575,6 +575,7 @@ private fun StoryBubble(group: StoryGroup, onClick: () -> Unit) {
     }
 }
 
+@Composable
 private fun CreatePostCard(
     onCreatePost: () -> Unit,
     modifier: Modifier = Modifier
