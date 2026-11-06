@@ -1144,4 +1144,18 @@
     <string name="post_comments_locked">The author turned off comments.</string>
     <string name="post_comment_permission_saved">Comment permissions updated</string>
     <string name="notif_follow_request_accepted">Your follow request was accepted</string>
+    <string name="groups_report_post">Report post</string>
+    <string name="groups_report_post_title">Report this post</string>
+    <string name="groups_report_reason_hint">Reason (e.g. spam, harassment, inappropriate content)</string>
+    <string name="groups_report_note_hint">Additional details (optional)</string>
+    <string name="groups_report_send">Send report</string>
+    <string name="groups_report_cancel">Cancel</string>
+    <string name="groups_report_failed">Could not send the report. Try again.</string>
+    <string name="groups_report_sent">Your report was sent to the group admins.</string>
+    <string name="groups_reports_title">Group post reports</string>
+    <string name="groups_reports_empty">There are no pending reports.</string>
+    <string name="groups_reports_failed">Could not load or update reports.</string>
+    <string name="groups_report_mark_reviewed">Mark as reviewed</string>
+    <string name="groups_reports_close">Close</string>
+    <string name="groups_reporter_reference">Reporter ID: %1$s</string>
 </resources>
