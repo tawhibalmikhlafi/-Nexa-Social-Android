@@ -1157,5 +1157,5 @@
     <string name="groups_reports_failed">Could not load or update reports.</string>
     <string name="groups_report_mark_reviewed">Mark as reviewed</string>
     <string name="groups_reports_close">Close</string>
-    <string name="groups_reporter_reference">Reporter ID: %1$s</string>
+    <string name="groups_reporter_member">Reported by a group member</string>
 </resources>
