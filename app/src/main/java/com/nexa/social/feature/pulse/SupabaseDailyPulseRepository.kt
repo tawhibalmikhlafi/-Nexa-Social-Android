@@ -370,6 +370,9 @@ class SupabaseDailyPulseRepository(
         )?.firstOrNull()
         val imagePath = mediaRow?.string("image_path")
         val videoPath = mediaRow?.string("video_path")
+        val commentMedia = getRows(
+            "pulse_comments?select=image_path,video_path&entry_id=eq.${enc(entryId)}", token
+        ).orEmpty()
         val request = http.authenticatedRequest(
             "$rest/pulse_entries?id=eq.${enc(entryId)}&user_id=eq.${enc(uid)}", token
         ).delete().build()
@@ -377,6 +380,10 @@ class SupabaseDailyPulseRepository(
         if (ok) {
             imagePath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
             videoPath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE_VIDEO, it) }
+            commentMedia.forEach { row ->
+                row.string("image_path")?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
+                row.string("video_path")?.let { mediaStorage?.deleteObject(MediaBucket.PULSE_VIDEO, it) }
+            }
         }
         return ok
     }
