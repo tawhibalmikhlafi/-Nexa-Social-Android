@@ -73,7 +73,8 @@ private fun notificationIcon(type: NotificationType?): ImageVector = when (type)
     NotificationType.COMMUNITY,
     NotificationType.GROUP_JOIN_REQUEST,
     NotificationType.GROUP_JOIN_APPROVED,
-    NotificationType.GROUP_JOIN_REJECTED -> Icons.Filled.Groups
+    NotificationType.GROUP_JOIN_REJECTED,
+    NotificationType.GROUP_POST_REPORT -> Icons.Filled.Groups
     NotificationType.SPACE -> Icons.Filled.Explore
     NotificationType.WELCOME -> Icons.Filled.Star
     NotificationType.MENTION -> Icons.Filled.AlternateEmail
@@ -275,6 +276,7 @@ private fun notificationTypeLabel(type: NotificationType): String = when (type) 
     NotificationType.GROUP_JOIN_REQUEST -> stringResource(R.string.notif_type_group_join_request)
     NotificationType.GROUP_JOIN_APPROVED -> stringResource(R.string.notif_type_group_join_approved)
     NotificationType.GROUP_JOIN_REJECTED -> stringResource(R.string.notif_type_group_join_rejected)
+    NotificationType.GROUP_POST_REPORT -> stringResource(R.string.notif_type_group_post_report)
     NotificationType.SPACE -> stringResource(R.string.notif_type_space)
     NotificationType.WELCOME -> stringResource(R.string.notif_type_welcome)
     NotificationType.MENTION -> stringResource(R.string.notif_type_mention)
@@ -300,6 +302,7 @@ private fun notificationMessage(notification: NexaNotification): String {
         NotificationType.GROUP_JOIN_REQUEST -> stringResource(R.string.notif_group_join_request, actor)
         NotificationType.GROUP_JOIN_APPROVED -> stringResource(R.string.notif_group_join_approved)
         NotificationType.GROUP_JOIN_REJECTED -> stringResource(R.string.notif_group_join_rejected)
+        NotificationType.GROUP_POST_REPORT -> stringResource(R.string.notif_group_post_report)
         else -> notification.body
     }
 }
