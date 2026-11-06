@@ -245,14 +245,20 @@ private fun HomeHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = NexaSpacing.sm, vertical = NexaSpacing.xs),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs)
     ) {
-        NexaWordmark(modifier = Modifier.weight(1f), markSize = 32.dp, showYear = false)
+        NexaWordmark(
+            modifier = Modifier.weight(1f),
+            markSize = 36.dp,
+            showYear = false
+        )
         CompactIconButton(
             onClick = onCreatePost,
             icon = Icons.Filled.Add,
-            contentDescription = stringResource(R.string.home_create_hint)
+            contentDescription = stringResource(R.string.home_create_hint),
+            emphasized = true
         )
         CompactIconButton(
             onClick = onOpenLabs,
@@ -270,19 +276,27 @@ private fun HomeHeader(
 
 @Composable
 private fun NotificationButton(unread: Int, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
-        if (unread > 0) {
-            BadgedBox(
-                badge = {
-                    Badge {
-                        Text(text = if (unread > 99) "99+" else unread.toString())
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .clip(RoundedCornerShape(15.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f)),
+        contentAlignment = Alignment.Center
+    ) {
+        IconButton(onClick = onClick, modifier = Modifier.size(42.dp)) {
+            if (unread > 0) {
+                BadgedBox(
+                    badge = {
+                        Badge {
+                            Text(text = if (unread > 99) "99+" else unread.toString())
+                        }
                     }
+                ) {
+                    NotificationIcon()
                 }
-            ) {
+            } else {
                 NotificationIcon()
             }
-        } else {
-            NotificationIcon()
         }
     }
 }
@@ -292,7 +306,8 @@ private fun NotificationIcon() {
     Icon(
         imageVector = Icons.Filled.Notifications,
         contentDescription = stringResource(R.string.notifications_title),
-        modifier = Modifier.size(22.dp)
+        tint = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.size(21.dp)
     )
 }
 
@@ -300,14 +315,28 @@ private fun NotificationIcon() {
 private fun CompactIconButton(
     onClick: () -> Unit,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String
+    contentDescription: String,
+    emphasized: Boolean = false
 ) {
-    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(22.dp)
-        )
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .clip(RoundedCornerShape(15.dp))
+            .background(
+                if (emphasized) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        IconButton(onClick = onClick, modifier = Modifier.size(42.dp)) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = if (emphasized) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(21.dp)
+            )
+        }
     }
 }
 
