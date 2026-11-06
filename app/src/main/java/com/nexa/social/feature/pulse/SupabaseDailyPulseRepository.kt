@@ -325,25 +325,16 @@ class SupabaseDailyPulseRepository(
     }
 
     suspend fun loadMutualFriends(): List<PulseFriend>? = withContext(Dispatchers.IO) {
-        val uid = currentUid() ?: return@withContext null
         val token = accessToken() ?: return@withContext null
-        val links = getRows(
-            "follows?select=follower_id,following_id&or=(follower_id.eq.${enc(uid)},following_id.eq.${enc(uid)})&limit=1000",
-            token
-        ) ?: return@withContext null
-        val outgoing = links.filter { it.string("follower_id") == uid }.mapNotNull { it.string("following_id") }.toSet()
-        val incoming = links.filter { it.string("following_id") == uid }.mapNotNull { it.string("follower_id") }.toSet()
-        val mutualIds = outgoing.intersect(incoming)
-        if (mutualIds.isEmpty()) return@withContext emptyList()
         val profiles = getRows(
-            "profiles?select=id,username,display_name,avatar_url&id=in.(${mutualIds.joinToString(",") { enc(it) }})",
+            "pulse_mutual_friends?select=id,username,display_name,avatar_url&order=display_name.asc&limit=1000",
             token
         ) ?: return@withContext null
         profiles.mapNotNull { row ->
             val id = row.string("id") ?: return@mapNotNull null
             val username = row.string("username") ?: "user"
             PulseFriend(id, username, row.string("display_name") ?: username, row.string("avatar_url"))
-        }.sortedBy { it.displayName.lowercase() }
+        }
     }
 
     suspend fun loadFriendChallenges(promptId: String): List<PulseFriendChallenge>? = withContext(Dispatchers.IO) {
