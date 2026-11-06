@@ -307,9 +307,6 @@ class SupabaseDailyPulseRepository(
     suspend fun deleteEntry(entryId: String): Boolean {
         val uid = currentUid() ?: return false
         val token = accessToken() ?: return false
-        val imagePath = getRows(
-            "pulse_entries?select=image_path,video_path&id=eq.${enc(entryId)}&user_id=eq.${enc(uid)}&limit=1", token
-        )?.firstOrNull()
         val mediaRow = getRows(
             "pulse_entries?select=image_path,video_path&id=eq.${enc(entryId)}&user_id=eq.${enc(uid)}&limit=1", token
         )?.firstOrNull()
