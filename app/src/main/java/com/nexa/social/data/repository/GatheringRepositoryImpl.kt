@@ -101,8 +101,9 @@ class GatheringRepositoryImpl(
         localOwned.forEach { source.saveGathering(it) }
         val cloud = source.loadGatherings()
         if (cloud.isEmpty() && _gatherings.value.isNotEmpty()) return
-        val merged = (cloud + localOwned.filter { localItem -> cloud.none { it.id == localItem.id } })
-            .distinctBy { it.id }.sortedBy { it.startsAt }
+        // Prefer the local copy for matching IDs: if an upsert failed, an older cloud
+        // version must not overwrite the still-pending local edit.
+        val merged = (localOwned + cloud).distinctBy { it.id }.sortedBy { it.startsAt }
         _gatherings.value = merged
         persist()
     }
