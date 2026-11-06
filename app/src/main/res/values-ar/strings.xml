@@ -1148,4 +1148,18 @@
     <string name="post_comments_locked">أوقف صاحب المنشور التعليقات.</string>
     <string name="post_comment_permission_saved">تم تحديث من يمكنه التعليق</string>
     <string name="notif_follow_request_accepted">تم قبول طلب متابعتك</string>
+    <string name="groups_report_post">الإبلاغ عن المنشور</string>
+    <string name="groups_report_post_title">الإبلاغ عن هذا المنشور</string>
+    <string name="groups_report_reason_hint">سبب البلاغ (مثل: إزعاج، إساءة، محتوى غير مناسب)</string>
+    <string name="groups_report_note_hint">تفاصيل إضافية (اختياري)</string>
+    <string name="groups_report_send">إرسال البلاغ</string>
+    <string name="groups_report_cancel">إلغاء</string>
+    <string name="groups_report_failed">تعذر إرسال البلاغ. حاول مرة أخرى.</string>
+    <string name="groups_report_sent">تم إرسال البلاغ إلى مسؤولي المجموعة.</string>
+    <string name="groups_reports_title">بلاغات منشورات المجموعة</string>
+    <string name="groups_reports_empty">لا توجد بلاغات معلّقة.</string>
+    <string name="groups_reports_failed">تعذر تحميل البلاغات أو تحديثها.</string>
+    <string name="groups_report_mark_reviewed">تمت المراجعة</string>
+    <string name="groups_reports_close">إغلاق</string>
+    <string name="groups_reporter_reference">معرّف المبلّغ: %1$s</string>
 </resources>
