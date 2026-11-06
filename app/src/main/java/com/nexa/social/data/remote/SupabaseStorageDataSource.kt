@@ -64,10 +64,10 @@ class SupabaseStorageDataSource(
         val info = readFileInfo(localUri) ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
         if (bucket == MediaBucket.MESSAGES) return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
         if (!info.mimeType.startsWith("image/")) return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
-        val maxSourceBytes = if (bucket == MediaBucket.PROFILES) {
-            MAX_PROFILE_SOURCE_BYTES
-        } else {
-            MAX_IMAGE_BYTES
+        val maxSourceBytes = when (bucket) {
+            MediaBucket.PROFILES -> MAX_PROFILE_SOURCE_BYTES
+            MediaBucket.PULSE -> 5L * 1024L * 1024L
+            else -> MAX_IMAGE_BYTES
         }
         if (info.size <= 0L || info.size > maxSourceBytes) {
             return Resource.Failure(FailureReason.FILE_TOO_LARGE)
