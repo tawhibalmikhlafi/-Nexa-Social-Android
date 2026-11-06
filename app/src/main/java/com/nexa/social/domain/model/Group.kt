@@ -171,6 +171,7 @@ data class GroupSearchResult(
 data class GroupPostReport(
     val id: String,
     val postId: String,
+    val postPreview: String,
     val reporterId: String,
     val reason: String,
     val note: String,
