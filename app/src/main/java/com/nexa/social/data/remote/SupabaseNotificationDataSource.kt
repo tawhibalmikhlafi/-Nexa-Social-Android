@@ -180,7 +180,8 @@ class SupabaseNotificationDataSource(
             NotificationType.STORY_REPLY -> actorId
             NotificationType.GROUP_JOIN_REQUEST,
             NotificationType.GROUP_JOIN_APPROVED,
-            NotificationType.GROUP_JOIN_REJECTED -> groupId
+            NotificationType.GROUP_JOIN_REJECTED,
+            NotificationType.GROUP_POST_REPORT -> groupId
             else -> null
         }
         return NexaNotification(
@@ -204,7 +205,8 @@ class SupabaseNotificationDataSource(
                 NotificationType.STORY_REPLY -> NotificationTargetKind.USER
                 NotificationType.GROUP_JOIN_REQUEST,
                 NotificationType.GROUP_JOIN_APPROVED,
-                NotificationType.GROUP_JOIN_REJECTED -> NotificationTargetKind.GROUP
+                NotificationType.GROUP_JOIN_REJECTED,
+                NotificationType.GROUP_POST_REPORT -> NotificationTargetKind.GROUP
                 else -> NotificationTargetKind.NONE
             },
             targetId = targetId
