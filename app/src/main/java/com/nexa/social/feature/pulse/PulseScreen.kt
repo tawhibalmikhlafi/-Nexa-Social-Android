@@ -299,6 +299,9 @@ fun PulseScreen(
                         Text(entry.reactions.toString(), style = MaterialTheme.typography.labelMedium)
                     }
                     if (entry.body.isNotBlank()) Text(entry.body, style = MaterialTheme.typography.bodyMedium)
+                    entry.worldName?.let {
+                        Text("في عالم $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    }
                     Text("عرض التفاصيل", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     entry.imageUrl?.let { image ->
                         AsyncImage(
@@ -503,6 +506,9 @@ fun PulseScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)) {
                     Text("@${entry.username}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (entry.body.isNotBlank()) Text(entry.body)
+                    entry.worldName?.let {
+                        Text("في عالم $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    }
                     entry.imageUrl?.let { image ->
                         AsyncImage(model = image, contentDescription = "صورة المشاركة",
                             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)))
