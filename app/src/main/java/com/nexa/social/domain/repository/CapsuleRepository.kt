@@ -5,8 +5,9 @@ import com.nexa.social.domain.model.TimeCapsule
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Encrypted, device-local time capsules. A capsule can only be opened after [TimeCapsule.unlockAt];
- * the repository enforces the lock even if the UI clock is manipulated forward and back.
+ * Encrypted time capsules mirrored to Supabase while retaining a local cache. The payload uses
+ * this device's Android Keystore key, so ciphertext is not portable to a different device.
+ * A capsule can only be opened after [TimeCapsule.unlockAt].
  */
 interface CapsuleRepository {
     fun observeCapsules(): Flow<List<TimeCapsule>>
