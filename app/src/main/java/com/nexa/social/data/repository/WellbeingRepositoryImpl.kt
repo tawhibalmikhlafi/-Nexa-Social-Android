@@ -19,25 +19,48 @@ class WellbeingRepositoryImpl(
     override val plan: Flow<WellbeingPlan> = _plan.asStateFlow()
 
     override suspend fun save(plan: WellbeingPlan) {
-        val safe = plan.copy(
-            dailyIntention = plan.dailyIntention.take(500),
-            quietStartHour = plan.quietStartHour.coerceIn(0, 23),
-            quietEndHour = plan.quietEndHour.coerceIn(0, 23),
-            dailyGoalMinutes = plan.dailyGoalMinutes.coerceIn(5, 1440)
-        )
-        // Persist locally first so a network outage never discards a preference change.
+        val safe = sanitize(plan)
+        val uid = remote?.currentUserId()
+        val owner = local.readOwnerId()
+        // Never copy one account's private wellbeing settings into another account.
+        if (uid != null && owner != null && owner != uid) return
         withContext(Dispatchers.IO) { local.writePlan(safe) }
         _plan.value = safe
-        remote?.saveWellbeing(safe)
+        if (uid != null && remote?.saveWellbeing(safe) == true) {
+            local.writeOwnerId(uid)
+        }
     }
 
     override suspend fun refresh() {
         val source = remote ?: return
-        val localPlan = _plan.value
-        // Idempotent upsert migrates the existing device plan before cloud data is applied.
-        source.saveWellbeing(localPlan)
+        val uid = source.currentUserId() ?: return
+        val owner = local.readOwnerId()
+
+        if (owner == null) {
+            // One-time migration of the pre-cloud local plan to the first signed-in account.
+            if (source.saveWellbeing(_plan.value)) local.writeOwnerId(uid)
+        } else if (owner != uid) {
+            // Account changed: load only that account's cloud settings; never upload the prior
+            // account's local preferences under the newly authenticated identity.
+            val accountPlan = source.loadWellbeing() ?: WellbeingPlan()
+            withContext(Dispatchers.IO) { local.writePlan(accountPlan) }
+            local.writeOwnerId(uid)
+            _plan.value = accountPlan
+            return
+        } else {
+            // Same account: local-first edits are safely retried as an idempotent upsert.
+            source.saveWellbeing(_plan.value)
+        }
+
         val cloudPlan = source.loadWellbeing() ?: return
         withContext(Dispatchers.IO) { local.writePlan(cloudPlan) }
         _plan.value = cloudPlan
     }
+
+    private fun sanitize(plan: WellbeingPlan) = plan.copy(
+        dailyIntention = plan.dailyIntention.take(500),
+        quietStartHour = plan.quietStartHour.coerceIn(0, 23),
+        quietEndHour = plan.quietEndHour.coerceIn(0, 23),
+        dailyGoalMinutes = plan.dailyGoalMinutes.coerceIn(5, 1440)
+    )
 }
