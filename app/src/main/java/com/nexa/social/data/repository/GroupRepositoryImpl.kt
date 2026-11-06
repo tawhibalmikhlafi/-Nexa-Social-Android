@@ -778,8 +778,16 @@ class GroupRepositoryImpl(
             addProperty("target_type", "group_post")
             addProperty("target_id", postId)
             addProperty("group_id", groupId)
-            addProperty("reason", reason.trim())
-            addProperty("note", note.trim())
+            val allowedReasons = setOf(
+                "spam", "harassment", "hate_speech", "misinformation",
+                "sexual_content", "violence", "self_harm", "impersonation", "other",
+            )
+            val normalizedReason = reason.trim().lowercase().takeIf { it in allowedReasons } ?: "other"
+            val details = if (normalizedReason == "other" && reason.trim().lowercase() !in allowedReasons) {
+                listOf("سبب البلاغ: ${reason.trim()}", note.trim()).filter(String::isNotBlank).joinToString("\\n")
+            } else note.trim()
+            addProperty("reason", normalizedReason)
+            addProperty("note", details.take(1000))
         }
         val request = http.authenticatedRequest("$base/content_reports", token)
             .addHeader("Prefer", "return=minimal")
