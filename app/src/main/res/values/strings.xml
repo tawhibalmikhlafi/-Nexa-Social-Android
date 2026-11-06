@@ -186,6 +186,8 @@
     <string name="worlds_popular">Popular worlds</string>
     <string name="worlds_new">New worlds</string>
     <string name="worlds_suggested">Suggested for you</string>
+    <string name="worlds_gatherings_title">Upcoming gatherings</string>
+    <string name="worlds_gatherings_subtitle">Meet the community and join live sessions</string>
 
     <string name="category_all">All</string>
     <string name="category_gaming">Gaming</string>
@@ -687,7 +689,7 @@
     <string name="gatherings_guest_error">Sign in to host a gathering or RSVP.</string>
     <string name="gatherings_empty_title">No gatherings yet</string>
     <string name="gatherings_empty_body">Create the first room for your community, or switch to Past.</string>
-    <string name="gatherings_local_note">Gatherings and RSVPs are stored on this device until the events service is connected.</string>
+    <string name="gatherings_local_note">Gatherings and attendance are synced securely with your Nexa account through Supabase.</string>
     <string name="gatherings_virtual">Virtual room</string>
     <string name="gatherings_in_person">In person</string>
     <string name="gatherings_unlimited">Unlimited seats</string>
