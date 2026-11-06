@@ -34,8 +34,10 @@ data class PulseCreator(
 )
 
 data class PulseWorld(
-    val community: Community,
-    val posts: Int
+    val id: String,
+    val name: String,
+    val posts: Int,
+    val engagement: Int
 )
 
 data class PulseSnapshot(
@@ -152,12 +154,18 @@ class PulseViewModel(
         }
     }
 
-    fun publish(text: String, imageUri: String? = null, videoUri: String? = null) {
+    fun publish(
+        text: String,
+        imageUri: String? = null,
+        videoUri: String? = null,
+        worldId: String? = null,
+        worldName: String? = null
+    ) {
         val prompt = _dailyState.value.prompt ?: return
         if (_dailyState.value.submitting || (text.isBlank() && imageUri.isNullOrBlank())) return
         viewModelScope.launch {
             _dailyState.value = _dailyState.value.copy(submitting = true, message = null)
-            val ok = dailyRepository?.publish(prompt.id, text, imageUri, videoUri) == true
+            val ok = dailyRepository?.publish(prompt.id, text, imageUri, videoUri, worldId, worldName) == true
             if (ok) refreshDaily()
             else _dailyState.value = _dailyState.value.copy(
                 submitting = false,
@@ -264,6 +272,22 @@ class PulseViewModel(
                 .thenByDescending { it.posts }
         ).take(5)
 
+        val worlds = entries.mapNotNull { entry ->
+            val id = entry.worldId ?: return@mapNotNull null
+            val name = entry.worldName ?: return@mapNotNull null
+            id to (name to entry.reactions)
+        }.groupBy({ it.first }, { it.second })
+            .map { (id, values) ->
+                PulseWorld(
+                    id = id,
+                    name = values.first().first,
+                    posts = values.size,
+                    engagement = values.sumOf { it.second }
+                )
+            }
+            .sortedWith(compareByDescending<PulseWorld> { it.engagement }.thenByDescending { it.posts })
+            .take(5)
+
         return PulseSnapshot(
             totalPosts = entries.size,
             activeToday = entries.count { entry ->
@@ -273,7 +297,7 @@ class PulseViewModel(
                 .sortedWith(compareByDescending<PulseTag> { it.engagement }.thenByDescending { it.posts })
                 .take(12),
             creators = creators,
-            worlds = emptyList()
+            worlds = worlds
         )
     }
 
