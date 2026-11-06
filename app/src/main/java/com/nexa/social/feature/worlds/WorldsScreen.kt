@@ -13,9 +13,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +32,7 @@ import com.nexa.social.R
 import com.nexa.social.domain.model.Community
 import com.nexa.social.domain.model.CommunityCategory
 import com.nexa.social.ui.components.CommunityCard
+import com.nexa.social.ui.components.NexaCard
 import com.nexa.social.ui.components.NexaEmptyState
 import com.nexa.social.ui.components.NexaTextField
 import com.nexa.social.ui.components.NexaWordmark
@@ -39,6 +43,7 @@ import com.nexa.social.ui.theme.NexaSpacing
 fun WorldsScreen(
     onOpenCommunity: (String) -> Unit,
     onCreateWorld: () -> Unit = {},
+    onOpenGatherings: () -> Unit,
     viewModel: WorldsViewModel = viewModel(factory = WorldsViewModel.Factory)
 ) {
     val search by viewModel.search.collectAsStateWithLifecycle()
@@ -98,6 +103,38 @@ fun WorldsScreen(
                 selected = category,
                 onSelect = viewModel::setCategory
             )
+        }
+
+        item {
+            NexaCard(
+                onClick = onOpenGatherings,
+                modifier = Modifier.padding(horizontal = NexaSpacing.lg)
+            ) {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Groups,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.size(NexaSpacing.md))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.worlds_gatherings_title),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = stringResource(R.string.worlds_gatherings_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Filled.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
         if (state.isEmpty) {
