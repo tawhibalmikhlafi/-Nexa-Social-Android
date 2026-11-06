@@ -21,6 +21,8 @@ class SupabaseLifeDataSource(
 ) {
     private val rest get() = config.restUrl
 
+    fun currentUserId(): String? = currentUid()
+
     suspend fun loadGatherings(): List<Gathering> {
         val token = accessToken() ?: return emptyList()
         val rows = getRows(rest + "/nexa_gatherings?select=*&order=starts_at.asc&limit=200", token)
