@@ -58,7 +58,6 @@ import java.time.Instant
 import com.nexa.social.domain.model.Community
 import com.nexa.social.domain.model.UserSummary
 import com.nexa.social.feature.worlds.categoryLabel
-import com.nexa.social.ui.components.LocalDataBanner
 import com.nexa.social.ui.components.NexaAvatar
 import com.nexa.social.ui.components.NexaCard
 import com.nexa.social.ui.components.NexaEmptyState
@@ -391,8 +390,10 @@ fun PulseScreen(
             }
 
             item {
-                LocalDataBanner(
-                    text = stringResource(R.string.pulse_local_note),
+                Text(
+                    text = "إحصاءات الوسوم والمبدعين هنا محسوبة من مشاركات نبض الفعلية للتحدي الحالي. لن نعرض إحصاءات للعوالم حتى تصبح بيانات العوالم مرتبطة بمصدر سحابي موثوق.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = NexaSpacing.lg)
                 )
             }
