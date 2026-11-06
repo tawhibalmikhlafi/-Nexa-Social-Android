@@ -47,8 +47,9 @@ data class PulseSnapshot(
 )
 
 /**
- * Pulse is a local signal processor over the real feed. It never invents trends or remote
- * statistics; every number is derived from posts already present on this device.
+ * Daily Pulse content and interactions come from Supabase. Tag and creator metrics are derived
+ * only from the active challenge's Pulse entries and reactions. World metrics remain hidden
+ * until the world catalog is backed by stable remote records.
  */
 class PulseViewModel(
     postRepository: PostRepository,
