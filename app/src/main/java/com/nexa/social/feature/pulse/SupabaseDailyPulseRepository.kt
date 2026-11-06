@@ -69,6 +69,8 @@ data class PulseComment(
     val displayName: String,
     val username: String,
     val body: String,
+    val imageUrl: String?,
+    val videoUrl: String?,
     val createdAt: String
 )
 
@@ -231,7 +233,7 @@ class SupabaseDailyPulseRepository(
     suspend fun loadComments(entryId: String): List<PulseComment>? = withContext(Dispatchers.IO) {
         val token = accessToken() ?: return@withContext null
         val rows = getRows(
-            "pulse_comments?select=id,user_id,body,created_at&entry_id=eq.${enc(entryId)}&order=created_at.asc&limit=100",
+            "pulse_comments?select=id,user_id,body,image_path,video_path,created_at&entry_id=eq.${enc(entryId)}&order=created_at.asc&limit=100",
             token
         ) ?: return@withContext null
         if (rows.isEmpty()) return@withContext emptyList()
@@ -252,26 +254,67 @@ class SupabaseDailyPulseRepository(
                 displayName = profile?.string("display_name") ?: username,
                 username = username,
                 body = row.string("body").orEmpty(),
+                imageUrl = row.string("image_path")?.let { publicImageUrl(it) },
+                videoUrl = row.string("video_path")?.let { publicImageUrl(it) },
                 createdAt = row.string("created_at").orEmpty()
             )
         }
     }
 
-    suspend fun addComment(entryId: String, bodyText: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun addComment(
+        entryId: String,
+        bodyText: String,
+        imageUri: String? = null,
+        videoUri: String? = null
+    ): Boolean = withContext(Dispatchers.IO) {
         val uid = currentUid() ?: return@withContext false
         val token = accessToken() ?: return@withContext false
         val clean = bodyText.trim()
-        if (!PulseInputRules.validComment(clean)) return@withContext false
+        if (!PulseInputRules.validComment(clean, imageUri, videoUri)) return@withContext false
+        val storage = if (!imageUri.isNullOrBlank() || !videoUri.isNullOrBlank()) mediaStorage ?: return@withContext false else null
+        var imagePath: String? = null
+        var videoPath: String? = null
+        if (!imageUri.isNullOrBlank()) {
+            val extension = when (Uri.parse(imageUri).lastPathSegment?.substringAfterLast('.', "")?.lowercase()) {
+                "png" -> "png"
+                "webp" -> "webp"
+                else -> "jpg"
+            }
+            val path = "$uid/comments/${UUID.randomUUID()}.$extension"
+            when (storage?.uploadImage(imageUri, MediaBucket.PULSE, path)) {
+                is Resource.Success -> imagePath = path
+                else -> return@withContext false
+            }
+        }
+        if (!videoUri.isNullOrBlank()) {
+            val extension = when (Uri.parse(videoUri).lastPathSegment?.substringAfterLast('.', "")?.lowercase()) {
+                "mov" -> "mov"
+                "webm" -> "webm"
+                "3gp" -> "3gp"
+                else -> "mp4"
+            }
+            val path = "$uid/comments/${UUID.randomUUID()}.$extension"
+            when (storage?.uploadVideoToBucket(videoUri, MediaBucket.PULSE, path, 50L * 1024L * 1024L)) {
+                is Resource.Success -> videoPath = path
+                else -> return@withContext false
+            }
+        }
         val body = JsonObject().apply {
             addProperty("entry_id", entryId)
             addProperty("user_id", uid)
             addProperty("body", clean)
+            if (imagePath != null) addProperty("image_path", imagePath)
+            if (videoPath != null) addProperty("video_path", videoPath)
         }
-        http.execute(
+        val response = http.execute(
             http.authenticatedRequest("$rest/pulse_comments", token)
                 .header("Prefer", "return=minimal")
                 .post(http.jsonBody(body)).build()
-        ).getOrNull()?.successful == true
+        ).getOrNull()
+        if (response?.successful == true) return@withContext true
+        imagePath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
+        videoPath?.let { mediaStorage?.deleteObject(MediaBucket.PULSE, it) }
+        false
     }
 
     suspend fun loadMyBadges(): List<PulseBadge>? = withContext(Dispatchers.IO) {
