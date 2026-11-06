@@ -65,6 +65,14 @@ class PulseViewModel(
         val badges: List<PulseBadge> = emptyList()
     )
 
+    data class FriendsState(
+        val loading: Boolean = false,
+        val friends: List<PulseFriend> = emptyList(),
+        val challenges: List<PulseFriendChallenge> = emptyList(),
+        val submitting: Boolean = false,
+        val message: String? = null
+    )
+
     data class CommentsState(
         val entryId: String? = null,
         val loading: Boolean = false,
@@ -77,6 +85,8 @@ class PulseViewModel(
     val dailyState = _dailyState.asStateFlow()
     private val _commentsState = MutableStateFlow(CommentsState())
     val commentsState = _commentsState.asStateFlow()
+    private val _friendsState = MutableStateFlow(FriendsState())
+    val friendsState = _friendsState.asStateFlow()
 
     init { refreshDaily() }
 
@@ -99,15 +109,53 @@ class PulseViewModel(
                     badges = badges
                 )
             }
+            feed?.prompt?.id?.let(::refreshFriends)
         }
     }
 
-    fun publish(text: String, imageUri: String? = null) {
+    fun refreshFriends(promptId: String) {
+        viewModelScope.launch {
+            _friendsState.value = _friendsState.value.copy(loading = true, message = null)
+            val friends = dailyRepository?.loadMutualFriends()
+            val challenges = dailyRepository?.loadFriendChallenges(promptId)
+            _friendsState.value = if (friends == null || challenges == null) {
+                FriendsState(message = "تعذر تحميل الأصدقاء والتحديات. تحقق من الاتصال.")
+            } else {
+                FriendsState(friends = friends, challenges = challenges)
+            }
+        }
+    }
+
+    fun sendFriendChallenge(friendId: String, message: String = "") {
+        val promptId = _dailyState.value.prompt?.id ?: return
+        viewModelScope.launch {
+            _friendsState.value = _friendsState.value.copy(submitting = true, message = null)
+            val ok = dailyRepository?.sendFriendChallenge(promptId, friendId, message) == true
+            _friendsState.value = _friendsState.value.copy(
+                submitting = false,
+                message = if (ok) "تم إرسال التحدي إلى صديقك." else "تعذر إرسال التحدي. تأكد أنكما تتابعان بعضكما."
+            )
+            if (ok) refreshFriends(promptId)
+        }
+    }
+
+    fun respondToFriendChallenge(challengeId: String, accepted: Boolean) {
+        val promptId = _dailyState.value.prompt?.id ?: return
+        viewModelScope.launch {
+            val ok = dailyRepository?.respondToFriendChallenge(challengeId, accepted) == true
+            _friendsState.value = _friendsState.value.copy(
+                message = if (ok) "تم تحديث حالة التحدي." else "تعذر تحديث التحدي."
+            )
+            if (ok) refreshFriends(promptId)
+        }
+    }
+
+    fun publish(text: String, imageUri: String? = null, videoUri: String? = null) {
         val prompt = _dailyState.value.prompt ?: return
         if (_dailyState.value.submitting || (text.isBlank() && imageUri.isNullOrBlank())) return
         viewModelScope.launch {
             _dailyState.value = _dailyState.value.copy(submitting = true, message = null)
-            val ok = dailyRepository?.publish(prompt.id, text, imageUri) == true
+            val ok = dailyRepository?.publish(prompt.id, text, imageUri, videoUri) == true
             if (ok) refreshDaily()
             else _dailyState.value = _dailyState.value.copy(
                 submitting = false,
