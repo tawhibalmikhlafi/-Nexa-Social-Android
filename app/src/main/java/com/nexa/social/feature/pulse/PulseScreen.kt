@@ -412,10 +412,10 @@ fun PulseScreen(
                             modifier = Modifier.padding(horizontal = NexaSpacing.lg)
                         )
                     }
-                    items(snapshot.worlds, key = { it.community.id }) { world ->
+                    items(snapshot.worlds, key = { it.id }) { world ->
                         WorldRow(
                             world = world,
-                            onClick = { onOpenWorld(world.community.id) },
+                            onClick = { onOpenWorld(world.id) },
                             modifier = Modifier.padding(horizontal = NexaSpacing.lg)
                         )
                     }
