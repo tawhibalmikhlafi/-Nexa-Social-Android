@@ -1162,4 +1162,6 @@
     <string name="groups_report_mark_reviewed">تمت المراجعة</string>
     <string name="groups_reports_close">إغلاق</string>
     <string name="groups_reporter_member">تم الإبلاغ بواسطة أحد الأعضاء</string>
+    <string name="notif_type_group_post_report">بلاغات منشورات المجموعات</string>
+    <string name="notif_group_post_report">أبلغ أحد أعضاء المجموعة عن منشور. يرجى مراجعته.</string>
 </resources>
