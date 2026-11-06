@@ -9,7 +9,7 @@ The Android screen uses Supabase for live challenge and community data:
 - server-awarded badges: first entry, five entries, first comment, ten comments, and ten received reactions;
 - deletion of the current user's own entry and its uploaded image or video;
 - challenges sent to mutual-follow friends, with incoming accept/decline actions and participant-only RLS;
-- tag and creator metrics derived from actual Pulse entries/reactions for the active challenge. World activity metrics are intentionally not shown until worlds are stored remotely and entries can reference a stable world id.
+- tag, creator, and world metrics derived from actual Pulse entries/reactions for the active challenge. Each entry stores an optional world_id/world_name attribution; the selectable world catalog is still supplied by the existing app world repository.
 
 ## Database and security
 
@@ -19,7 +19,7 @@ The Android screen uses Supabase for live challenge and community data:
 - `migrations/20261105130000_nexa_pulse_comments_badges.sql` adds authenticated comments, RLS, and server-side badge awards.
 - `migrations/20261105140000_nexa_pulse_image_only_entries.sql` aligns the entry constraint with image-only submissions;
 - `migrations/20261106150522_nexa_pulse_video_and_friend_challenges.sql` adds video paths and mutual-follow challenge invitations;
-- `migrations/20261106150709_nexa_pulse_mutual_friends_view.sql`, `20261106150726_nexa_pulse_invite_policy_use_mutual_view.sql`, `20261106150813_nexa_pulse_friend_challenge_update_guard.sql`, `20261106150919_nexa_pulse_mutual_friends_private_rpc.sql`, `20261106151029_nexa_pulse_user_activity_indexes.sql`, `20261106151046_nexa_pulse_comment_media.sql`, `20261106151142_nexa_pulse_media_path_ownership.sql`, and `20261106151336_nexa_pulse_separate_video_storage_bucket.sql` secure mutual-friend lookup, harden challenge responses, support comment media, and isolate video size limits from images.
+- `migrations/20261106150709_nexa_pulse_mutual_friends_view.sql`, `20261106150726_nexa_pulse_invite_policy_use_mutual_view.sql`, `20261106150813_nexa_pulse_friend_challenge_update_guard.sql`, `20261106150919_nexa_pulse_mutual_friends_private_rpc.sql`, `20261106151029_nexa_pulse_user_activity_indexes.sql`, `20261106151046_nexa_pulse_comment_media.sql`, `20261106151142_nexa_pulse_media_path_ownership.sql`, `, `20261106151336_nexa_pulse_separate_video_storage_bucket.sql`, and `20261106151713_nexa_pulse_world_metrics.sql` secure mutual-friend lookup, harden challenge responses, support comment media, isolate video size limits from images, and add Pulse-native world attribution.
 
 The migrations above have been applied to the Nexa Supabase project. The Android client uses the publishable/anon key and the signed-in user's access token; no service-role key is shipped in the app.
 
