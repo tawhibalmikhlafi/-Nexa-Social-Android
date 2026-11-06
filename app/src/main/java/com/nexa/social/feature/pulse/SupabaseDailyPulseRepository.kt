@@ -391,11 +391,14 @@ class SupabaseDailyPulseRepository(
             addProperty("status", if (accepted) "accepted" else "declined")
             addProperty("responded_at", Instant.now().toString())
         }
-        return http.execute(
+        val response = http.execute(
             http.authenticatedRequest(
                 "$rest/pulse_friend_challenges?id=eq.${enc(challengeId)}&challenged_user_id=eq.${enc(uid)}&status=eq.pending", token
-            ).patch(http.jsonBody(body)).build()
-        ).getOrNull()?.successful == true
+            ).header("Prefer", "return=representation")
+                .patch(http.jsonBody(body)).build()
+        ).getOrNull() ?: return false
+        if (!response.successful) return false
+        runCatching { JsonParser.parseString(response.body).asJsonArray.size() > 0 }.getOrDefault(false)
     }
 
     private suspend fun getRows(path: String, token: String): List<JsonObject>? {
