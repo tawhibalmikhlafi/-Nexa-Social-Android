@@ -158,7 +158,11 @@ fun CreatePostScreen(
         ) {
             // الشريط العلوي
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(NexaSurface)
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -173,7 +177,7 @@ fun CreatePostScreen(
                 Text(
                     text = "إنشاء منشور",
                     color = NexaText,
-                    fontSize = 22.sp,
+                    fontSize = 20.sp,
                     style = MaterialTheme.typography.titleLarge
                 )
 
@@ -223,8 +227,9 @@ fun CreatePostScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(NexaSurface, RoundedCornerShape(16.dp))
-                    .padding(12.dp),
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(NexaSurface)
+                    .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -293,7 +298,7 @@ fun CreatePostScreen(
                         Brush.verticalGradient(
                             listOf(
                                 NexaSurface,
-                                Color(0xFF100D20)
+                                NexaSurfaceVariant
                             )
                         ),
                         RoundedCornerShape(22.dp)
@@ -366,89 +371,51 @@ fun CreatePostScreen(
                 }
             }
 
-            // أزرار الوسائط (صور، فيديو، كاميرا، إضافة إلى القصة)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // إضافة الوسائط: هذا المسار يدعم اختيار الصور فعلياً
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { pickImage() },
+                shape = RoundedCornerShape(20.dp),
+                color = NexaSurface
             ) {
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(64.dp)
-                        .clickable { pickImage() },
-                    shape = RoundedCornerShape(16.dp),
-                    color = NexaSurface
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(15.dp))
+                            .background(NexaPurple.copy(alpha = 0.14f)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Image, contentDescription = null, tint = NexaLavender, modifier = Modifier.size(22.dp))
-                        Spacer(Modifier.height(4.dp))
-                        Text("صور", color = NexaText, fontSize = 12.sp)
+                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = NexaLavender, modifier = Modifier.size(24.dp))
                     }
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(64.dp)
-                        .clickable { pickImage() },
-                    shape = RoundedCornerShape(16.dp),
-                    color = NexaSurface
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = NexaLavender, modifier = Modifier.size(22.dp))
-                        Spacer(Modifier.height(4.dp))
-                        Text("فيديو", color = NexaText, fontSize = 12.sp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("إضافة صور", color = NexaText, fontSize = 14.sp, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            if (imageUris.isEmpty()) "اختر صوراً لإرفاقها بالمنشور" else "تم اختيار ${imageUris.size} صورة",
+                            color = NexaMuted,
+                            fontSize = 12.sp
+                        )
                     }
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(64.dp)
-                        .clickable { pickImage() },
-                    shape = RoundedCornerShape(16.dp),
-                    color = NexaSurface
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = NexaLavender, modifier = Modifier.size(22.dp))
-                        Spacer(Modifier.height(4.dp))
-                        Text("كاميرا", color = NexaText, fontSize = 12.sp)
-                    }
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(64.dp)
-                        .clickable { pickImage() },
-                    shape = RoundedCornerShape(16.dp),
-                    color = NexaSurface
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(Icons.Default.AddCircleOutline, contentDescription = null, tint = NexaLavender, modifier = Modifier.size(22.dp))
-                        Spacer(Modifier.height(4.dp))
-                        Text("إضافة للقصة", color = NexaText, fontSize = 11.sp, textAlign = TextAlign.Center)
-                    }
+                    Icon(Icons.Default.AddCircle, contentDescription = "إضافة صور", tint = NexaPurple, modifier = Modifier.size(26.dp))
                 }
             }
 
-            // عرض الصور المختارة
+            // معاينة الصور المختارة
+            if (imageUris.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("معاينة الصور", color = NexaText, style = MaterialTheme.typography.titleSmall)
+                    Text("${imageUris.size} مرفق", color = NexaMuted, fontSize = 12.sp)
+                }
+            }
             imageUris.forEach { uri ->
                 Column(
                     modifier = Modifier
