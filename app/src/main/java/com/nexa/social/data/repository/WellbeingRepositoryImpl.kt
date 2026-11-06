@@ -38,7 +38,8 @@ class WellbeingRepositoryImpl(
 
         if (owner == null) {
             // One-time migration of the pre-cloud local plan to the first signed-in account.
-            if (source.saveWellbeing(_plan.value)) local.writeOwnerId(uid)
+            if (!source.saveWellbeing(_plan.value)) return
+            local.writeOwnerId(uid)
         } else if (owner != uid) {
             // Account changed: preserve the old local file unless the new account's cloud
             // snapshot was read successfully. Never upload the prior account's settings.
@@ -49,7 +50,7 @@ class WellbeingRepositoryImpl(
             return
         } else {
             // Same account: local-first edits are safely retried as an idempotent upsert.
-            source.saveWellbeing(_plan.value)
+            if (!source.saveWellbeing(_plan.value)) return
         }
 
         val cloudPlan = source.loadWellbeing().getOrElse { return } ?: return
