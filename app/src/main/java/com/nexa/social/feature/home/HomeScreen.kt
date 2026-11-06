@@ -370,13 +370,63 @@ private fun StoryTray(
     onCreateStory: () -> Unit,
     onOpenStory: (String) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(R.string.stories_label),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = NexaSpacing.lg)
-        )
-        Spacer(Modifier.height(NexaSpacing.xs))
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = NexaSpacing.xs, bottom = NexaSpacing.xs)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = NexaSpacing.lg, vertical = NexaSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.AutoAwesome,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+            Text(
+                text = stringResource(R.string.stories_label),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            if (stories.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                        .padding(horizontal = 9.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = stories.size.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = stringResource(R.string.story_add_short),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
         LazyRow(
             contentPadding = PaddingValues(horizontal = NexaSpacing.lg),
             horizontalArrangement = Arrangement.spacedBy(NexaSpacing.md)
@@ -398,7 +448,7 @@ private fun StoryTray(
 private fun CreateStoryBubble(onClick: () -> Unit) {
     Column(
         modifier = Modifier
-            .width(74.dp)
+            .width(78.dp)
             .clip(RoundedCornerShape(NexaRadius.chip))
             .clickable(onClick = onClick)
             .padding(vertical = NexaSpacing.xs),
@@ -406,13 +456,13 @@ private fun CreateStoryBubble(onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(66.dp)
+                .size(72.dp)
                 .clip(CircleShape)
                 .background(
                     androidx.compose.ui.graphics.Brush.sweepGradient(
                         listOf(
                             MaterialTheme.colorScheme.primary,
-                            Color(0xFFD946EF),
+                            Color(0xFFE879F9),
                             Color(0xFF8B5CF6),
                             MaterialTheme.colorScheme.primary
                         )
@@ -420,21 +470,35 @@ private fun CreateStoryBubble(onClick: () -> Unit) {
                 )
                 .padding(3.dp)
                 .background(MaterialTheme.colorScheme.surface, CircleShape)
-                .padding(2.dp)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), CircleShape),
+                .padding(3.dp)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = stringResource(R.string.story_create_title),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.story_create_title),
+                    tint = Color.White,
+                    modifier = Modifier.size(23.dp)
+                )
+            }
         }
         Spacer(Modifier.height(NexaSpacing.xs))
         Text(
             text = stringResource(R.string.story_add_short),
             style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
@@ -447,11 +511,11 @@ private fun StoryBubble(group: StoryGroup, onClick: () -> Unit) {
     val ringColor = if (group.hasUnseen) {
         MaterialTheme.colorScheme.primary
     } else {
-        MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)
     }
     Column(
         modifier = Modifier
-            .width(74.dp)
+            .width(78.dp)
             .clip(RoundedCornerShape(NexaRadius.chip))
             .clickable(onClick = onClick)
             .padding(vertical = NexaSpacing.xs),
@@ -459,21 +523,21 @@ private fun StoryBubble(group: StoryGroup, onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(66.dp)
+                .size(72.dp)
                 .clip(CircleShape)
                 .background(
                     if (group.hasUnseen) {
                         androidx.compose.ui.graphics.Brush.sweepGradient(
                             listOf(
                                 MaterialTheme.colorScheme.primary,
-                                Color(0xFFD946EF),
+                                Color(0xFFE879F9),
                                 Color(0xFF8B5CF6),
                                 MaterialTheme.colorScheme.primary
                             )
                         )
                     } else {
                         androidx.compose.ui.graphics.Brush.linearGradient(
-                            listOf(ringColor, ringColor.copy(alpha = 0.55f))
+                            listOf(ringColor, ringColor.copy(alpha = 0.45f))
                         )
                     }
                 )
@@ -484,13 +548,26 @@ private fun StoryBubble(group: StoryGroup, onClick: () -> Unit) {
             NexaAvatar(
                 displayName = group.author.displayName,
                 avatarUri = group.author.avatarUri,
-                size = 56.dp
+                size = 62.dp
             )
+            if (group.hasUnseen) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(3.dp)
+                        .size(13.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
+                )
+            }
         }
         Spacer(Modifier.height(NexaSpacing.xs))
         Text(
             text = group.author.displayName,
             style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (group.hasUnseen) FontWeight.SemiBold else FontWeight.Normal,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
@@ -498,7 +575,6 @@ private fun StoryBubble(group: StoryGroup, onClick: () -> Unit) {
     }
 }
 
-@Composable
 private fun CreatePostCard(
     onCreatePost: () -> Unit,
     modifier: Modifier = Modifier
