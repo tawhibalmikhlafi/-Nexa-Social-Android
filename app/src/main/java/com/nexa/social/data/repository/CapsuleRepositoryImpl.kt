@@ -104,8 +104,8 @@ class CapsuleRepositoryImpl(
         }
         if (cloud.isEmpty() && stored.isNotEmpty()) return
         val otherAccounts = stored.filter { it.authorId != uid }
-        val merged = (cloudLocal + mine.filter { localItem -> cloudLocal.none { it.id == localItem.id } } + otherAccounts)
-            .distinctBy { it.id }
+        // Keep local-first ordering so a failed upsert cannot replace a newer local openedAt.
+        val merged = (mine + cloudLocal + otherAccounts).distinctBy { it.id }
         write(merged)
     }
 
