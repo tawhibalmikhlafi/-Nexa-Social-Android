@@ -96,9 +96,9 @@ fun PostCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(NexaRadius.chip))
+                    .clip(RoundedCornerShape(NexaRadius.card))
                     .clickable { onOpenProfile(post.author.id) }
-                    .padding(vertical = NexaSpacing.xs),
+                    .padding(vertical = NexaSpacing.xs, horizontal = NexaSpacing.xxs),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 NexaAvatar(
@@ -214,7 +214,10 @@ fun PostCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = NexaSpacing.sm, vertical = 2.dp)
+                .padding(horizontal = NexaSpacing.md, vertical = NexaSpacing.xs)
+                .clip(RoundedCornerShape(NexaRadius.card))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f))
+                .padding(horizontal = NexaSpacing.xs, vertical = 2.dp)
         ) {
             ReactionLikeButton(
                 likedByMe = post.likedByMe,
@@ -600,7 +603,7 @@ private fun PostAction(
     }
     Row(
         modifier = modifier
-            .height(40.dp)
+            .height(42.dp)
             .clip(RoundedCornerShape(NexaRadius.chip))
             .then(interaction),
         verticalAlignment = Alignment.CenterVertically,
