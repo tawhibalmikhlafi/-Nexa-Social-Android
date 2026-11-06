@@ -186,6 +186,8 @@
     <string name="worlds_popular">عوالم شائعة</string>
     <string name="worlds_new">عوالم جديدة</string>
     <string name="worlds_suggested">مقترحة لك</string>
+    <string name="worlds_gatherings_title">التجمعات القادمة</string>
+    <string name="worlds_gatherings_subtitle">تعرّف على المجتمع وانضم إلى اللقاءات المباشرة</string>
 
     <string name="category_all">الكل</string>
     <string name="category_gaming">الألعاب</string>
@@ -686,7 +688,7 @@
     <string name="gatherings_guest_error">سجّل الدخول لاستضافة لقاء أو تأكيد الحضور.</string>
     <string name="gatherings_empty_title">لا لقاءات بعد</string>
     <string name="gatherings_empty_body">أنشئ أول غرفة لمجتمعك، أو انتقل إلى السابقة.</string>
-    <string name="gatherings_local_note">تُحفظ اللقاءات وتأكيدات الحضور على هذا الجهاز حتى ربط خدمة الفعاليات.</string>
+    <string name="gatherings_local_note">تتم مزامنة اللقاءات وتأكيدات الحضور بأمان مع حسابك في Nexa عبر Supabase.</string>
     <string name="gatherings_virtual">غرفة افتراضية</string>
     <string name="gatherings_in_person">حضوري</string>
     <string name="gatherings_unlimited">مقاعد غير محدودة</string>
