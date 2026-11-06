@@ -10,6 +10,7 @@ import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.domain.model.Group
 import com.nexa.social.domain.model.GroupMember
 import com.nexa.social.domain.model.GroupPost
+import com.nexa.social.domain.model.GroupPostReport
 import com.nexa.social.domain.model.GroupStats
 import com.nexa.social.domain.model.ReactionKind
 import com.nexa.social.domain.repository.GroupRepository
@@ -27,6 +28,8 @@ data class GroupDetailUiState(
     val posts: List<GroupPost> = emptyList(),
     val members: List<GroupMember> = emptyList(),
     val stats: GroupStats? = null,
+    val groupPostReports: List<GroupPostReport> = emptyList(),
+    val isLoadingReports: Boolean = false,
     val isSaving: Boolean = false,
     val isLoadingMore: Boolean = false,
     val hasMore: Boolean = true,
@@ -154,6 +157,31 @@ class GroupDetailViewModel(
         when (repo.deletePost(postId)) {
             is Resource.Success -> refreshPosts()
             else -> _state.update { it.copy(error = "delete_failed") }
+        }
+    }
+
+    fun reportPost(postId: String, reason: String, note: String) = viewModelScope.launch {
+        when (repo.submitGroupPostReport(groupId, postId, reason, note)) {
+            is Resource.Success -> _state.update { it.copy(successMessage = "report_sent") }
+            is Resource.Failure -> _state.update { it.copy(error = "report_failed") }
+            Resource.Loading -> Unit
+        }
+    }
+
+    fun loadGroupPostReports() = viewModelScope.launch {
+        _state.update { it.copy(isLoadingReports = true) }
+        when (val result = repo.getGroupPostReports(groupId)) {
+            is Resource.Success -> _state.update { it.copy(groupPostReports = result.data, isLoadingReports = false) }
+            is Resource.Failure -> _state.update { it.copy(isLoadingReports = false, error = "reports_failed") }
+            Resource.Loading -> _state.update { it.copy(isLoadingReports = false) }
+        }
+    }
+
+    fun reviewGroupPostReport(reportId: String) = viewModelScope.launch {
+        when (repo.reviewGroupPostReport(reportId)) {
+            is Resource.Success -> loadGroupPostReports()
+            is Resource.Failure -> _state.update { it.copy(error = "report_review_failed") }
+            Resource.Loading -> Unit
         }
     }
 
