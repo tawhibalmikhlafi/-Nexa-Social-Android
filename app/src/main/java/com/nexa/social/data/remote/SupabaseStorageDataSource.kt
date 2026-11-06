@@ -111,6 +111,22 @@ class SupabaseStorageDataSource(
         }
     }
 
+    override suspend fun uploadVideoToBucket(
+        localUri: String,
+        bucket: MediaBucket,
+        path: String,
+        maxBytes: Long
+    ): Resource<String> {
+        val info = readFileInfo(localUri) ?: return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
+        if (!info.mimeType.startsWith("video/")) return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
+        if (info.size <= 0L || info.size > maxBytes) return Resource.Failure(FailureReason.FILE_TOO_LARGE)
+        return when (val result = upload(localUri, bucket, path, info, {}, upsert = false)) {
+            is Resource.Success -> Resource.Success(config.normalizedUrl + "/storage/v1/object/public/${bucket.id}/${encodePath(path)}")
+            is Resource.Failure -> result
+            Resource.Loading -> Resource.Loading
+        }
+    }
+
     override suspend fun uploadVideoResumable(
         localUri: String,
         path: String,
