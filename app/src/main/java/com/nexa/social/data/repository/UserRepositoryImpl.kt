@@ -126,7 +126,12 @@ class UserRepositoryImpl(
         coverUri: String?,
         city: String?,
         website: String?,
-        username: String?
+        username: String?,
+        placeOfOrigin: String?,
+        currentResidence: String?,
+        birthDate: String?,
+        skills: List<String>,
+        hobbies: List<String>
     ): Resource<User> {
         val remoteStore = remote
         val activeSession = prefs.session.first()
@@ -175,7 +180,12 @@ class UserRepositoryImpl(
                 avatarUri = avatar,
                 coverUri = cover,
                 city = city?.trim()?.ifBlank { null },
-                website = website?.trim()?.ifBlank { null }
+                website = website?.trim()?.ifBlank { null },
+                placeOfOrigin = placeOfOrigin?.trim()?.ifBlank { null },
+                currentResidence = currentResidence?.trim()?.ifBlank { null },
+                birthDate = birthDate?.takeIf { it.isNotBlank() },
+                skills = skills.map(String::trim).filter(String::isNotBlank).distinct(),
+                hobbies = hobbies.map(String::trim).filter(String::isNotBlank).distinct()
             )) {
                 is Resource.Success -> result.data
                 is Resource.Failure -> return result
@@ -205,6 +215,11 @@ class UserRepositoryImpl(
             coverUri = coverUri,
             city = city?.trim()?.ifBlank { null } ?: existing.city,
             website = website?.trim()?.ifBlank { null } ?: existing.website,
+            placeOfOrigin = placeOfOrigin?.trim()?.ifBlank { null },
+            currentResidence = currentResidence?.trim()?.ifBlank { null },
+            birthDate = birthDate?.takeIf { it.isNotBlank() },
+            skills = skills.map(String::trim).filter(String::isNotBlank).distinct(),
+            hobbies = hobbies.map(String::trim).filter(String::isNotBlank).distinct(),
             username = username?.let(Validators::canonicalUsername)?.takeIf { it.isNotBlank() } ?: existing.username
         )
         accounts.updateUser(updated)
@@ -363,5 +378,10 @@ class UserRepositoryImpl(
             first.avatarUri == second.avatarUri &&
             first.coverUri == second.coverUri &&
             first.city == second.city &&
-            first.website == second.website
+            first.website == second.website &&
+            first.placeOfOrigin == second.placeOfOrigin &&
+            first.currentResidence == second.currentResidence &&
+            first.birthDate == second.birthDate &&
+            first.skills == second.skills &&
+            first.hobbies == second.hobbies
 }
