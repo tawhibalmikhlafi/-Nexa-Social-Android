@@ -460,6 +460,16 @@ fun ProfileExperiencePanel(
         }
     }
 
+    fun runSave(block: suspend () -> Boolean) {
+        busy = true
+        scope.launch {
+            val ok = runCatching { block() }.getOrDefault(false)
+            if (!ok) message = "تعذر الحفظ. تحقق من البيانات واتصال Supabase."
+            else { dialog = ""; refresh() }
+            busy = false
+        }
+    
+
     if (message != null) AlertDialog(
         onDismissRequest = { message = null },
         title = { Text("Nexa") },
@@ -605,15 +615,6 @@ fun ProfileExperiencePanel(
         }
     }
 
-    fun runSave(block: suspend () -> Boolean) {
-        busy = true
-        scope.launch {
-            val ok = runCatching { block() }.getOrDefault(false)
-            if (!ok) message = "تعذر الحفظ. تحقق من البيانات واتصال Supabase."
-            else { dialog = ""; refresh() }
-            busy = false
-        }
-    }
 }
 
 @Composable
