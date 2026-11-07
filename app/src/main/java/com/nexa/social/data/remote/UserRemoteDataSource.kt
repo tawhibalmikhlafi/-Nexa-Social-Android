@@ -29,7 +29,12 @@ interface UserRemoteDataSource {
         avatarUri: String?,
         coverUri: String?,
         city: String?,
-        website: String?
+        website: String?,
+        placeOfOrigin: String? = null,
+        currentResidence: String? = null,
+        birthDate: String? = null,
+        skills: List<String> = emptyList(),
+        hobbies: List<String> = emptyList()
     ): Resource<User>
 
     suspend fun changeUsername(uid: String, username: String): Resource<User>
