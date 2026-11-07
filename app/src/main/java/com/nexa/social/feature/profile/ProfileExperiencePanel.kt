@@ -409,7 +409,11 @@ fun ProfileExperiencePanel(
                             IconButton(onClick = {
                                 val code = row.get("achievement_code")?.asString ?: return@IconButton
                                 val patch = JsonObject().apply { addProperty("is_featured", row.get("is_featured")?.asBoolean != true) }
-                                scope.launch { dataSource.updateRow("nexa_profile_achievements", code, patch); refresh() }
+                                scope.launch {
+                                    val ok = dataSource.updateRow("nexa_profile_achievements", code, patch)
+                                    if (!ok) message = "يمكن تثبيت 3 شارات كحد أقصى."
+                                    refresh()
+                                }
                             }) { Text(if (row.get("is_featured")?.asBoolean == true) "📌" else "☆") }
                             IconButton(onClick = {
                                 val code = row.get("achievement_code")?.asString ?: return@IconButton
