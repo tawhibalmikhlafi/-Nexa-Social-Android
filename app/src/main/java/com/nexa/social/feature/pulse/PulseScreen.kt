@@ -239,40 +239,60 @@ fun PulseScreen(
             if (daily.badges.isNotEmpty()) {
                 item {
                     NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
-                        Text("🏅 شاراتك في نبض", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🏅 إنجازاتك في نبض", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+                            Text("${daily.badges.count { it.isEarned }} / ${daily.badges.size}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        }
+                        Text("أنجز المهام التالية لفتح الشارات والحصول على التقدير داخل المجتمع.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         daily.badges.forEach { badge ->
-                            Column(modifier = Modifier.padding(top = NexaSpacing.sm)) {
-                                Text(
-                                    "${if (badge.isEarned) "🏆" else "🔒"} ${badge.title} · ${if (badge.isEarned) "مكتسبة" else "غير مكتسبة بعد"}",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = if (badge.isEarned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                )
+                            Column(modifier = Modifier.fillMaxWidth().padding(top = NexaSpacing.md)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(if (badge.isEarned) "🏆" else "🔒")
+                                    Text(
+                                        badge.title,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        modifier = Modifier.weight(1f),
+                                        color = if (badge.isEarned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(if (badge.isEarned) "مكتسبة" else "لم تُكتسب", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                                 Text(badge.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
                 }
             }
-            if (friendsState.challenges.isNotEmpty()) {
-                item {
-                    NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
-                        Text("تحديات الأصدقاء", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                        friendsState.challenges.forEach { challenge ->
-                            Column(modifier = Modifier.fillMaxWidth().padding(top = NexaSpacing.sm)) {
-                                Text(
-                                    if (challenge.isIncoming) "تحدي من ${challenge.challengerName}" else "تحدي أرسلته إلى ${challenge.challengedName}",
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-                                if (challenge.message.isNotBlank()) Text(challenge.message, style = MaterialTheme.typography.bodySmall)
-                                if (challenge.isIncoming) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
-                                        TextButton(onClick = { viewModel.respondToFriendChallenge(challenge.id, true) }) { Text("قبول") }
-                                        TextButton(onClick = { viewModel.respondToFriendChallenge(challenge.id, false) }) { Text("رفض") }
-                                    }
+            item {
+                NexaCard(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("🤝 تحديات الأصدقاء", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                            Text("تحدَّ صديقاً بينكما متابعة متبادلة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        TextButton(onClick = { showFriendChallengeDialog = true }) { Text("تحدَّ صديقاً") }
+                    }
+                    if (friendsState.loading && friendsState.challenges.isEmpty()) {
+                        Text("جارٍ تحميل التحديات…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else if (friendsState.challenges.isEmpty()) {
+                        Text("لا توجد تحديات بعد. ابدأ بإرسال تحدٍّ إلى أحد أصدقائك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    friendsState.challenges.forEach { challenge ->
+                        Column(modifier = Modifier.fillMaxWidth().padding(top = NexaSpacing.md)) {
+                            Text(
+                                if (challenge.isIncoming) "تحدٍّ وارد من ${challenge.challengerName}" else "تحدٍّ أرسلته إلى ${challenge.challengedName}",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            if (challenge.message.isNotBlank()) Text(challenge.message, style = MaterialTheme.typography.bodySmall)
+                            Text("الحالة: ${when (challenge.status) { "pending" -> "بانتظار الرد"; "accepted" -> "مقبول"; "declined" -> "مرفوض"; else -> challenge.status }}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (challenge.isIncoming && challenge.status == "pending") {
+                                Row(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
+                                    TextButton(onClick = { viewModel.respondToFriendChallenge(challenge.id, true) }) { Text("قبول") }
+                                    TextButton(onClick = { viewModel.respondToFriendChallenge(challenge.id, false) }) { Text("رفض") }
                                 }
                             }
                         }
                     }
+                    friendsState.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 }
             }
             item {
@@ -314,12 +334,14 @@ fun PulseScreen(
                 }
             }
             item {
-                Text(
-                    text = stringResource(R.string.pulse_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = NexaSpacing.lg)
-                )
+                Column(modifier = Modifier.padding(horizontal = NexaSpacing.lg)) {
+                    SectionHeader(title = "نبض المجتمع")
+                    Text(
+                        "أرقام ونشاط مستمدّان من مشاركات تحدي نبض الحالي، لمساعدتك على اكتشاف المواضيع والمبدعين والعوالم النشطة.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             item {
                 Row(
@@ -341,7 +363,7 @@ fun PulseScreen(
                 }
             }
 
-            if (snapshot.tags.isEmpty() && snapshot.creators.isEmpty()) {
+            if (snapshot.tags.isEmpty() && snapshot.creators.isEmpty() && snapshot.worlds.isEmpty()) {
                 item {
                     NexaEmptyState(
                         icon = Icons.Filled.Bolt,
