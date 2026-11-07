@@ -439,6 +439,11 @@ fun EditProfileScreen(
                             }.getOrDefault(it) } ?: "تاريخ الميلاد"
                         )
                     }
+                    if (birthDate != null) {
+                        TextButton(onClick = { birthDate = null }) {
+                            Text("إزالة تاريخ الميلاد", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(NexaSpacing.sm))
