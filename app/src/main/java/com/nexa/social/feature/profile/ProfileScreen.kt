@@ -100,7 +100,7 @@ import com.nexa.social.core.navigation.DeepLinkRouter
 import com.nexa.social.core.ui.LocalSnackbarHostState
 import com.nexa.social.feature.presence.PresenceViewModel
 import com.nexa.social.core.ui.rememberRemoteMode
-import com.nexa.social.core.ui.nexaApplication
+import com.nexa.social.core.ui.rememberAppContainer
 import com.nexa.social.domain.model.Post
 import com.nexa.social.ui.components.LocalDataBanner
 import com.nexa.social.ui.components.NexaCover
@@ -166,7 +166,7 @@ fun ProfileScreen(
     val messageBusy by viewModel.messageBusy.collectAsStateWithLifecycle()
     val messageError by viewModel.messageError.collectAsStateWithLifecycle()
     val remoteMode = rememberRemoteMode()
-    val profileExperienceDataSource = nexaApplication().container.profileExperienceDataSource
+    val profileExperienceDataSource = rememberAppContainer().profileExperienceDataSource
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var fullImageUri by remember { mutableStateOf<String?>(null) }
