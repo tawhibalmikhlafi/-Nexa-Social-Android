@@ -468,7 +468,7 @@ fun ProfileExperiencePanel(
             else { dialog = ""; refresh() }
             busy = false
         }
-    
+    }
 
     if (message != null) AlertDialog(
         onDismissRequest = { message = null },
