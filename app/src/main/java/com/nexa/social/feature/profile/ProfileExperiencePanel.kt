@@ -132,6 +132,7 @@ fun ProfileExperiencePanel(
     var statusEmoji by remember { mutableStateOf("💭") }
     var statusDuration by remember { mutableStateOf("24") }
     var statusVisible by remember { mutableStateOf(true) }
+    var statusNotifyExpiry by remember { mutableStateOf(false) }
 
     var testimonialName by remember { mutableStateOf("") }
     var testimonialTitle by remember { mutableStateOf("") }
@@ -298,6 +299,15 @@ fun ProfileExperiencePanel(
                                 scope.launch { dataSource.updateRow("nexa_profile_credentials", id, patch); refresh() }
                             }) { Text(if (row.get("is_visible")?.asBoolean == false) "🙈" else "👁") }
                             IconButton(onClick = {
+                                val id = row.get("id")?.asString ?: return@IconButton
+                                val patch = JsonObject().apply { addProperty("is_pinned", row.get("is_pinned")?.asBoolean != true) }
+                                scope.launch {
+                                    val ok = dataSource.updateRow("nexa_profile_credentials", id, patch)
+                                    if (!ok) message = "يمكن تثبيت شهادة أو خبرة أساسية واحدة فقط."
+                                    refresh()
+                                }
+                            }) { Text(if (row.get("is_pinned")?.asBoolean == true) "📌" else "☆") }
+                            IconButton(onClick = {
                                 val id = row.get("id")?.asString
                                 if (id != null) scope.launch { dataSource.deleteRow("nexa_profile_credentials", id); refresh() }
                             }) { Icon(Icons.Default.Delete, contentDescription = "حذف") }
@@ -432,6 +442,15 @@ fun ProfileExperiencePanel(
                                 scope.launch { dataSource.updateRow("nexa_profile_favorites", id, patch); refresh() }
                             }) { Text(if (row.get("is_visible")?.asBoolean == false) "🙈" else "👁") }
                             IconButton(onClick = {
+                                val id = row.get("id")?.asString ?: return@IconButton
+                                val patch = JsonObject().apply { addProperty("is_pinned", row.get("is_pinned")?.asBoolean != true) }
+                                scope.launch {
+                                    val ok = dataSource.updateRow("nexa_profile_favorites", id, patch)
+                                    if (!ok) message = "يمكن تثبيت 3 مفضلات كحد أقصى."
+                                    refresh()
+                                }
+                            }) { Text(if (row.get("is_pinned")?.asBoolean == true) "📌" else "☆") }
+                            IconButton(onClick = {
                                 val id = row.get("id")?.asString
                                 if (id != null) scope.launch { dataSource.deleteRow("nexa_profile_favorites", id); refresh() }
                             }) { Icon(Icons.Default.Delete, contentDescription = "حذف") }
@@ -505,6 +524,7 @@ fun ProfileExperiencePanel(
             OutlinedTextField(statusEmoji, { statusEmoji = it.take(8) }, label = { Text("إيموجي") })
             ChoiceChips(listOf("1" to "ساعة", "8" to "8 ساعات", "24" to "24 ساعة", "168" to "أسبوع", "0" to "دائم"), statusDuration) { statusDuration = it }
             TextButton(onClick = { statusVisible = !statusVisible }) { Text(if (statusVisible) "👁 ظاهرة للآخرين" else "🔒 مخفية عن الآخرين") }
+            TextButton(onClick = { statusNotifyExpiry = !statusNotifyExpiry }) { Text(if (statusNotifyExpiry) "🔔 تنبيه عند الانتهاء مفعّل" else "🔕 تنبيه عند الانتهاء متوقف") }
         }, !busy, "نشر الحالة") {
             runSave {
                 val expiry = statusDuration.toLongOrNull()?.takeIf { it > 0 }?.let { Instant.now().plus(it, ChronoUnit.HOURS).toString() }
@@ -512,6 +532,7 @@ fun ProfileExperiencePanel(
                     addProperty("status_code", statusCode); addProperty("custom_text", statusCustom.takeIf { it.isNotBlank() })
                     addProperty("emoji", statusEmoji); addProperty("color_key", statusColor(statusCode))
                     addProperty("expires_at", expiry); addProperty("is_visible", statusVisible)
+                    addProperty("notify_on_expiry", statusNotifyExpiry)
                 }
                 dataSource.saveRow("nexa_profile_status", body)
             }
