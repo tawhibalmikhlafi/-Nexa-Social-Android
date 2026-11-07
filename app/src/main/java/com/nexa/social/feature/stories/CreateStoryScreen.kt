@@ -25,7 +25,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexa.social.R
 import com.nexa.social.core.ui.LocalSnackbarHostState
 import com.nexa.social.core.ui.failureMessageRes
-import com.nexa.social.ui.components.AccountRequiredBanner
 import com.nexa.social.ui.components.NexaCover
 import com.nexa.social.ui.components.NexaPrimaryButton
 import com.nexa.social.ui.components.NexaSecondaryButton
@@ -57,7 +56,6 @@ fun CreateStoryScreen(
         verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)
     ) {
         NexaTopBar(title = stringResource(R.string.story_create_title), onBack = onBack)
-        AccountRequiredBanner(text = stringResource(R.string.story_requires_account))
 
         if (imageUri != null) {
             NexaCover(seed = imageUri!!.hashCode().toLong(), coverUri = imageUri, height = 320.dp)
