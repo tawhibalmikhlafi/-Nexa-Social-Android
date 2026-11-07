@@ -428,8 +428,12 @@ fun ProfileExperiencePanel(
                 val links = analytics.count { it.get("event_type")?.asString == "SOCIAL_LINK_CLICK" }
                 val downloads = analytics.count { it.get("event_type")?.asString == "CV_DOWNLOAD" }
                 val qr = analytics.count { it.get("event_type")?.asString == "QR_SCAN" }
+                val topSkill = analytics.filter { it.get("event_type")?.asString == "SKILL_CLICK" }
+                    .mapNotNull { it.get("event_key")?.takeIf { value -> !value.isJsonNull }?.asString }
+                    .groupingBy { it }.eachCount().maxByOrNull { it.value }
                 Text("👁️ مشاهدات الملف: $views")
                 Text("🎯 نقرات المهارات: $skills")
+                topSkill?.let { Text("⭐ أكثر مهارة اهتماماً: ${it.key} (${it.value})") }
                 Text("🔗 نقرات الروابط: $links")
                 Text("📄 تحميلات السيرة: $downloads")
                 Text("📱 مسحات QR: $qr")
