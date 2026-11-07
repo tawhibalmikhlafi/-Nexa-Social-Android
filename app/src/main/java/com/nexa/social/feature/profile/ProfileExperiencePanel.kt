@@ -1,6 +1,7 @@
 package com.nexa.social.feature.profile
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -72,6 +73,7 @@ private val languageLevels = listOf(
     "BEGINNER" to "مبتدئ · 25%"
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileExperiencePanel(
     profileId: String,
