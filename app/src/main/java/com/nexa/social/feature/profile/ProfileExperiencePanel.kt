@@ -44,6 +44,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.gson.JsonObject
@@ -97,6 +99,7 @@ fun ProfileExperiencePanel(
     val achievements = remember(profileId) { mutableStateListOf<JsonObject>() }
     val analytics = remember(profileId) { mutableStateListOf<JsonObject>() }
     val scope = rememberCoroutineScope()
+    val clipboard = LocalClipboardManager.current
 
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -281,6 +284,11 @@ fun ProfileExperiencePanel(
                         if (isOwner) {
                             IconButton(onClick = { openCredential(row) }) { Icon(Icons.Default.Edit, contentDescription = "تعديل") }
                             IconButton(onClick = {
+                                val id = row.get("id")?.asString ?: return@IconButton
+                                val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.asBoolean != true) }
+                                scope.launch { dataSource.updateRow("nexa_profile_credentials", id, patch); refresh() }
+                            }) { Text(if (row.get("is_visible")?.asBoolean == false) "🙈" else "👁") }
+                            IconButton(onClick = {
                                 val id = row.get("id")?.asString
                                 if (id != null) scope.launch { dataSource.deleteRow("nexa_profile_credentials", id); refresh() }
                             }) { Icon(Icons.Default.Delete, contentDescription = "حذف") }
@@ -364,7 +372,7 @@ fun ProfileExperiencePanel(
                             }) { Text(if (row.get("is_featured")?.asBoolean == true) "📌" else "☆") }
                             IconButton(onClick = {
                                 val code = row.get("achievement_code")?.asString ?: return@IconButton
-                                val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.asBoolean != false) }
+                                val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.asBoolean != true) }
                                 scope.launch { dataSource.updateRow("nexa_profile_achievements", code, patch); refresh() }
                             }) { Text(if (row.get("is_visible")?.asBoolean == false) "🙈" else "👁") }
                         }
@@ -404,6 +412,11 @@ fun ProfileExperiencePanel(
                         }
                         if (isOwner) {
                             IconButton(onClick = { openFavorite(row) }) { Icon(Icons.Default.Edit, contentDescription = "تعديل") }
+                            IconButton(onClick = {
+                                val id = row.get("id")?.asString ?: return@IconButton
+                                val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.asBoolean != true) }
+                                scope.launch { dataSource.updateRow("nexa_profile_favorites", id, patch); refresh() }
+                            }) { Text(if (row.get("is_visible")?.asBoolean == false) "🙈" else "👁") }
                             IconButton(onClick = {
                                 val id = row.get("id")?.asString
                                 if (id != null) scope.launch { dataSource.deleteRow("nexa_profile_favorites", id); refresh() }
