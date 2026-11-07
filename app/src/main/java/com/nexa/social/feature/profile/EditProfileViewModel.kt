@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 class EditProfileViewModel(
     private val userRepository: UserRepository,
@@ -85,6 +86,13 @@ class EditProfileViewModel(
         if (com.nexa.social.core.common.Validators.isReservedUsername(canonicalUsername)) {
             _error.value = R.string.error_username_reserved
             return
+        }
+        if (!birthDate.isNullOrBlank()) {
+            val parsedBirthDate = runCatching { LocalDate.parse(birthDate) }.getOrNull()
+            if (parsedBirthDate == null || parsedBirthDate.isAfter(LocalDate.now())) {
+                _error.value = R.string.edit_profile_error_unexpected
+                return
+            }
         }
 
         viewModelScope.launch {
