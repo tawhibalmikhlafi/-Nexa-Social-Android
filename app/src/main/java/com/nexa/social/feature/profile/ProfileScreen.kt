@@ -707,6 +707,11 @@ fun ProfileScreen(
                                     FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
                                         current.skills.orEmpty().forEach { skill ->
                                             Surface(
+                                                modifier = Modifier.clickable {
+                                                    scope.launch {
+                                                        profileExperienceDataSource?.recordEvent(current.id, "SKILL_CLICK", skill)
+                                                    }
+                                                },
                                                 shape = RoundedCornerShape(50),
                                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                                             ) {
