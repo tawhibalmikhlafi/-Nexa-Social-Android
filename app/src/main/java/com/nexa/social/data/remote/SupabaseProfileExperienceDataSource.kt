@@ -63,8 +63,9 @@ class SupabaseProfileExperienceDataSource(
         val body = values.deepCopy().apply {
             addProperty(owner, uid)
             if (table == "nexa_profile_testimonials") {
-                // Recommendations entered by the owner are clearly marked as manual.
-                add("author_id", null)
+                // A new manually entered recommendation has no verified author. On edits,
+                // preserve the original author identity from a confirmed incoming recommendation.
+                if (!has("id")) add("author_id", null)
                 addProperty("is_approved", true)
             }
         }
