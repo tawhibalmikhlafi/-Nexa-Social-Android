@@ -58,7 +58,12 @@ class EditProfileViewModel(
         avatarUri: String?,
         coverUri: String?,
         shareCoverToProfile: Boolean = false,
-        coverCaption: String = ""
+        coverCaption: String = "",
+        placeOfOrigin: String = "",
+        currentResidence: String = "",
+        birthDate: String? = null,
+        skills: List<String> = emptyList(),
+        hobbies: List<String> = emptyList()
     ) {
         if (_saving.value) return
 
@@ -96,7 +101,12 @@ class EditProfileViewModel(
                     coverUri = coverUri,
                     city = current.city,
                     website = current.website,
-                    username = canonicalUsername
+                    username = canonicalUsername,
+                    placeOfOrigin = placeOfOrigin,
+                    currentResidence = currentResidence,
+                    birthDate = birthDate,
+                    skills = skills,
+                    hobbies = hobbies
                 )) {
                     is Resource.Success -> {
                         // The cover is saved first. Publishing is an explicit opt-in and
