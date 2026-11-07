@@ -427,7 +427,7 @@ fun ProfileExperiencePanel(
             OutlinedTextField(eventDate, { eventDate = it.take(10) }, label = { Text("التاريخ YYYY-MM-DD") })
             OutlinedTextField(eventDescription, { eventDescription = it.take(600) }, label = { Text("الوصف") })
             ChoiceChips(listOf("EDUCATION" to "تعليم", "WORK" to "عمل", "ACHIEVEMENT" to "إنجاز", "TRAVEL" to "سفر", "PERSONAL" to "شخصي"), eventType) { eventType = it }
-        }, !busy && eventTitle.isNotBlank() && eventDate.matches(Regex("\\\\d{4}-\\\\d{2}-\\\\d{2}")), "حفظ") {
+        }, !busy && eventTitle.isNotBlank() && eventDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}")), "حفظ") {
             runSave { JsonObject().apply { addProperty("title", eventTitle.trim()); addProperty("event_date", eventDate); addProperty("description", eventDescription.trim()); addProperty("event_type", eventType) }.let { dataSource.saveRow("nexa_profile_timeline", it) } }
         }
         "language" -> FormDialog("إضافة لغة", { dialog = "" }, {
@@ -463,8 +463,8 @@ fun ProfileExperiencePanel(
                     editingId?.let { addProperty("id", it) }
                     addProperty("title", credentialTitle.trim()); addProperty("issuer", credentialIssuer.trim())
                     addProperty("record_type", credentialType); addProperty("category", credentialCategory)
-                    addProperty("start_date", credentialStart.takeIf { it.matches(Regex("\\\\d{4}-\\\\d{2}-\\\\d{2}")) })
-                    addProperty("end_date", if (credentialCurrent) null else credentialEnd.takeIf { it.matches(Regex("\\\\d{4}-\\\\d{2}-\\\\d{2}")) })
+                    addProperty("start_date", credentialStart.takeIf { it.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) })
+                    addProperty("end_date", if (credentialCurrent) null else credentialEnd.takeIf { it.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) })
                     addProperty("is_current", credentialCurrent); addProperty("location", credentialLocation)
                     addProperty("description", credentialDescription); addProperty("verification_url", credentialVerifyUrl)
                     addProperty("document_url", credentialDocumentUrl); addProperty("organization_logo_url", credentialLogoUrl)
