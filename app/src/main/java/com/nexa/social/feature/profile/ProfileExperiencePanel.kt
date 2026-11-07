@@ -346,6 +346,7 @@ fun ProfileExperiencePanel(
             testimonialRating = "5"; testimonialLinkedIn = ""; editingId = null; dialog = "testimonial"
         }) {
             val visible = testimonials.filter { (isOwner || it.get("is_visible")?.asBoolean != false) && (isOwner || it.get("is_approved")?.asBoolean != false) }
+                .sortedWith(compareByDescending<JsonObject> { it.get("is_pinned")?.asBoolean == true }.thenByDescending { it.get("created_at")?.asString.orEmpty() })
             val rated = visible.mapNotNull { it.get("rating")?.takeIf { v -> !v.isJsonNull }?.asInt }
             if (rated.isNotEmpty()) Text("⭐ ${"%.1f".format(rated.average())} من ${rated.size} توصية", style = MaterialTheme.typography.titleSmall)
             if (visible.isEmpty()) Text("لا توجد توصيات بعد.", style = MaterialTheme.typography.bodySmall)
@@ -359,10 +360,25 @@ fun ProfileExperiencePanel(
                     }
                     if (isOwner) {
                         IconButton(onClick = {
-                            val id = row.get("id")?.asString
+                            editingId = row.get("id")?.asString
+                            testimonialName = row.get("author_name")?.asString.orEmpty()
+                            testimonialTitle = row.get("author_title")?.asString.orEmpty()
+                            testimonialCompany = row.get("author_company")?.asString.orEmpty()
+                            testimonialBody = row.get("body")?.asString.orEmpty()
+                            testimonialRating = (row.get("rating")?.takeIf { !it.isJsonNull }?.asInt ?: 5).toString()
+                            testimonialLinkedIn = row.get("linkedin_url")?.asString.orEmpty()
+                            dialog = "testimonial"
+                        }) { Icon(Icons.Default.Edit, contentDescription = "تعديل") }
+                        IconButton(onClick = {
+                            val id = row.get("id")?.asString ?: return@IconButton
                             val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.asBoolean != true) }
-                            if (id != null) scope.launch { dataSource.updateRow("nexa_profile_testimonials", id, patch); refresh() }
+                            scope.launch { dataSource.updateRow("nexa_profile_testimonials", id, patch); refresh() }
                         }) { Text(if (row.get("is_visible")?.asBoolean == false) "👁" else "🙈") }
+                        IconButton(onClick = {
+                            val id = row.get("id")?.asString ?: return@IconButton
+                            val patch = JsonObject().apply { addProperty("is_pinned", row.get("is_pinned")?.asBoolean != true) }
+                            scope.launch { dataSource.updateRow("nexa_profile_testimonials", id, patch); refresh() }
+                        }) { Text(if (row.get("is_pinned")?.asBoolean == true) "📌" else "☆") }
                         IconButton(onClick = {
                             val id = row.get("id")?.asString
                             if (id != null) scope.launch { dataSource.deleteRow("nexa_profile_testimonials", id); refresh() }
