@@ -242,6 +242,35 @@ fun ProfileScreen(
         }
     }
 
+    var profileStatusLabel by remember(current.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(current.id, profileExperienceDataSource) {
+        val status = profileExperienceDataSource?.loadRows("nexa_profile_status", current.id)?.firstOrNull()
+        val expires = status?.get("expires_at")?.takeIf { !it.isJsonNull }?.asString
+        val active = expires.isNullOrBlank() || runCatching {
+            java.time.Instant.parse(expires).isAfter(java.time.Instant.now())
+        }.getOrDefault(false)
+        profileStatusLabel = status?.takeIf { active }?.let { row ->
+            val code = row.get("status_code")?.asString.orEmpty()
+            val custom = row.get("custom_text")?.takeIf { !it.isJsonNull }?.asString.orEmpty()
+            val label = custom.ifBlank {
+                when (code) {
+                    "AVAILABLE" -> "متاح للتعاون"
+                    "LOOKING" -> "أبحث عن فرصة"
+                    "BUSY" -> "مشغول حالياً"
+                    "VACATION" -> "في إجازة"
+                    "UNAVAILABLE" -> "غير متاح مؤقتاً"
+                    "IDEA" -> "أفكر في فكرة جديدة"
+                    "PROJECT" -> "أعمل على مشروع"
+                    "LEARNING" -> "أتعلم شيئاً جديداً"
+                    "CONSULTING" -> "متاح للاستشارات"
+                    "REST" -> "في راحة"
+                    else -> code
+                }
+            }
+            "\${row.get("emoji")?.asString.orEmpty()} $label".trim()
+        }
+    }
+
     val copyProfileLink: () -> Unit = {
         clipboard.setText(AnnotatedString(DeepLinkRouter.userLink(current.id)))
         scope.launch { snackbarHost?.showSnackbar(profileLinkCopied) }
@@ -555,6 +584,20 @@ fun ProfileScreen(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            profileStatusLabel?.let { statusLabel ->
+                                Surface(
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = RoundedCornerShape(50),
+                                    modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                                ) {
+                                    Text(
+                                        text = statusLabel,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
                             Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
