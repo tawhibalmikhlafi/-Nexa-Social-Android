@@ -12,3 +12,5 @@ comment on column public.profiles.current_residence is 'User supplied current re
 comment on column public.profiles.birth_date is 'User birth date; nullable and user controlled';
 comment on column public.profiles.skills is 'User profile skills as text array';
 comment on column public.profiles.hobbies is 'User profile hobbies as text array';
+
+notify pgrst, 'reload schema';
