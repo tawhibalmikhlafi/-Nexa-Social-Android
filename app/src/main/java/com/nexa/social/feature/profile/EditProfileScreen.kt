@@ -1,12 +1,32 @@
 
 package com.nexa.social.feature.profile
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.window.Dialog
+import coil.compose.AsyncImage
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -70,6 +90,11 @@ fun EditProfileScreen(
     var coverUri by rememberSaveable { mutableStateOf<String?>(null) }
     var originalAvatarUri by rememberSaveable { mutableStateOf<String?>(null) }
     var originalCoverUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var showCoverMenu by remember { mutableStateOf(false) }
+    var showCoverPreview by remember { mutableStateOf(false) }
+    var shareCoverToProfile by rememberSaveable { mutableStateOf(false) }
+    var coverCaption by rememberSaveable { mutableStateOf("") }
+    var coverSelectedForPost by rememberSaveable { mutableStateOf(false) }
     var prefilled by remember { mutableStateOf(false) }
 
     LaunchedEffect(user) {
@@ -114,7 +139,12 @@ fun EditProfileScreen(
     }
 
     val pickCover = rememberImagePicker { uri ->
-        uri?.let { coverUri = it.toString() }
+        uri?.let {
+            coverUri = it.toString()
+            coverSelectedForPost = true
+            shareCoverToProfile = false
+            coverCaption = ""
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -130,22 +160,134 @@ fun EditProfileScreen(
                 .padding(NexaSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)
         ) {
-            NexaCover(
-                seed = (user?.id ?: "cover").hashCode().toLong(),
-                coverUri = coverUri,
-                height = 150.dp
-            )
-
-            NexaSecondaryButton(
-                text = stringResource(R.string.edit_profile_pick_cover),
-                onClick = pickCover
-            )
-
-            if (coverUri != null) {
-                NexaSecondaryButton(
-                    text = stringResource(R.string.edit_profile_remove_cover),
-                    onClick = { coverUri = null }
+            Box(modifier = Modifier.fillMaxWidth()) {
+                NexaCover(
+                    seed = (user?.id ?: "cover").hashCode().toLong(),
+                    coverUri = coverUri,
+                    height = 170.dp
                 )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(NexaSpacing.sm)
+                ) {
+                    IconButton(
+                        onClick = { showCoverMenu = true },
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.CameraAlt,
+                            contentDescription = "خيارات صورة الغلاف",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showCoverMenu,
+                        onDismissRequest = { showCoverMenu = false }
+                    ) {
+                        if (!coverUri.isNullOrBlank()) {
+                            DropdownMenuItem(
+                                text = { Text("عرض الصورة") },
+                                leadingIcon = { Icon(Icons.Filled.Visibility, contentDescription = null) },
+                                onClick = {
+                                    showCoverMenu = false
+                                    showCoverPreview = true
+                                }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text("إضافة صورة") },
+                            leadingIcon = { Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null) },
+                            onClick = {
+                                showCoverMenu = false
+                                pickCover()
+                            }
+                        )
+                        if (!coverUri.isNullOrBlank()) {
+                            DropdownMenuItem(
+                                text = { Text("حذف الصورة") },
+                                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                                onClick = {
+                                    showCoverMenu = false
+                                    coverUri = null
+                                    coverSelectedForPost = false
+                                    shareCoverToProfile = false
+                                    coverCaption = ""
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (coverSelectedForPost && coverUri != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                        .padding(NexaSpacing.md),
+                    verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = shareCoverToProfile,
+                            onCheckedChange = { shareCoverToProfile = it }
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "مشاركة الصورة في الملف الشخصي",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "عند التفعيل ستُحفظ كغلاف وتُنشر أيضاً كمنشور",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (shareCoverToProfile) {
+                        NexaTextField(
+                            value = coverCaption,
+                            onValueChange = { coverCaption = it },
+                            label = "اكتب نصاً مع الصورة (اختياري)",
+                            singleLine = false,
+                            imeAction = ImeAction.Default
+                        )
+                    }
+                }
+            }
+
+            if (showCoverPreview && !coverUri.isNullOrBlank()) {
+                Dialog(onDismissRequest = { showCoverPreview = false }) {
+                    androidx.compose.material3.Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(NexaSpacing.md),
+                            verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+                        ) {
+                            AsyncImage(
+                                model = coverUri,
+                                contentDescription = "صورة الغلاف",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(320.dp)
+                                    .clip(MaterialTheme.shapes.medium),
+                                contentScale = ContentScale.Fit
+                            )
+                            TextButton(
+                                onClick = { showCoverPreview = false },
+                                modifier = Modifier.align(Alignment.End)
+                            ) { Text("إغلاق") }
+                        }
+                    }
+                }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -259,7 +401,9 @@ fun EditProfileScreen(
                         username = username,
                         bio = bio,
                         avatarUri = avatarUri,
-                        coverUri = coverUri
+                        coverUri = coverUri,
+                        shareCoverToProfile = shareCoverToProfile,
+                        coverCaption = coverCaption
                     )
                 }
             )
