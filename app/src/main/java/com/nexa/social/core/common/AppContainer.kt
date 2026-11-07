@@ -176,10 +176,6 @@ class DefaultAppContainer(context: Context) : AppContainer {
     private val capsuleLocal = CapsuleLocalDataSource(jsonStore)
     private val wellbeingLocal = WellbeingLocalDataSource(jsonStore)
 
-    // Constructed first because several repositories record activity into it.
-    override val achievementRepository: AchievementRepository =
-        AchievementRepositoryImpl(achievementLocal)
-
     // Session sync is best-effort background work. It must never
     // terminate the process: a failure here (e.g. the server is unreachable) is isolated to this
     // scope instead of reaching the uncaught-exception handler right after app start.
@@ -376,6 +372,14 @@ class DefaultAppContainer(context: Context) : AppContainer {
             currentUid = { supabaseTokens.currentSession()?.userId }
         )
     } else null
+
+    // The remote achievement catalog is authoritative whenever Supabase is configured.
+    override val achievementRepository: AchievementRepository =
+        AchievementRepositoryImpl(
+            local = achievementLocal,
+            remote = remoteProfileExperience,
+            currentUid = { supabaseTokens?.currentSession()?.userId }
+        )
 
     override val profileExperienceDataSource: SupabaseProfileExperienceDataSource? get() = remoteProfileExperience
     override val notesDataSource: SupabaseNotesDataSource? get() = remoteNotes
