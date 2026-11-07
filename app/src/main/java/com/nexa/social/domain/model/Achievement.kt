@@ -24,7 +24,8 @@ enum class CounterKind {
     WORLDS_CREATED,
     USERS_FOLLOWED,
     CLIPS_CREATED,
-    STORIES_CREATED
+    STORIES_CREATED,
+    POINTS_EARNED
 }
 
 data class AchievementDefinition(
