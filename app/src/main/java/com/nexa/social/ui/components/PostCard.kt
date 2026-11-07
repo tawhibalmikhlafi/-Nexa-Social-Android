@@ -515,7 +515,6 @@ private fun ReactionLikeButton(
             PostAction(
                 emoji = displayEmoji,
                 tint = MaterialTheme.colorScheme.primary,
-                label = stringResource(R.string.post_like),
                 contentDescription = stringResource(R.string.post_like),
                 onClick = onLike,
                 onLongClick = { showPicker = true },
