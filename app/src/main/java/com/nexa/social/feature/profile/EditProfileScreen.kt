@@ -1,6 +1,7 @@
 
 package com.nexa.social.feature.profile
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -42,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -90,6 +92,7 @@ fun EditProfileScreen(
     var originalCoverUri by rememberSaveable { mutableStateOf<String?>(null) }
     var showCoverMenu by remember { mutableStateOf(false) }
     var showCoverPreview by remember { mutableStateOf(false) }
+    var coverPreviewPage by remember { mutableStateOf(0) }
     var shareCoverToProfile by rememberSaveable { mutableStateOf(false) }
     var coverCaption by rememberSaveable { mutableStateOf("") }
     var coverSelectedForPost by rememberSaveable { mutableStateOf(false) }
@@ -192,6 +195,7 @@ fun EditProfileScreen(
                                 leadingIcon = { Icon(Icons.Filled.Visibility, contentDescription = null) },
                                 onClick = {
                                     showCoverMenu = false
+                                    coverPreviewPage = 0
                                     showCoverPreview = true
                                 }
                             )
@@ -261,6 +265,10 @@ fun EditProfileScreen(
             }
 
             if (showCoverPreview && !coverUri.isNullOrBlank()) {
+                val previewUris = listOfNotNull(coverUri, originalCoverUri?.takeIf { it != coverUri })
+                val displayedCover = previewUris.getOrNull(coverPreviewPage.coerceIn(0, previewUris.lastIndex))
+                    ?: coverUri
+                var horizontalDrag by remember(showCoverPreview) { mutableStateOf(0f) }
                 Dialog(onDismissRequest = { showCoverPreview = false }) {
                     androidx.compose.material3.Surface(
                         shape = MaterialTheme.shapes.large,
@@ -271,14 +279,38 @@ fun EditProfileScreen(
                             verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
                         ) {
                             AsyncImage(
-                                model = coverUri,
-                                contentDescription = "صورة الغلاف",
+                                model = displayedCover,
+                                contentDescription = if (coverPreviewPage == 0) "الغلاف الحالي المختار" else "الغلاف السابق",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(320.dp)
-                                    .clip(MaterialTheme.shapes.medium),
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .pointerInput(previewUris) {
+                                        detectHorizontalDragGestures(
+                                            onHorizontalDrag = { _, dragAmount ->
+                                                horizontalDrag += dragAmount
+                                            },
+                                            onDragEnd = {
+                                                if (horizontalDrag < -50f && previewUris.size > 1) {
+                                                    coverPreviewPage = 1
+                                                } else if (horizontalDrag > 50f) {
+                                                    coverPreviewPage = 0
+                                                }
+                                                horizontalDrag = 0f
+                                            },
+                                            onDragCancel = { horizontalDrag = 0f }
+                                        )
+                                    },
                                 contentScale = ContentScale.Fit
                             )
+                            if (previewUris.size > 1) {
+                                Text(
+                                    text = if (coverPreviewPage == 0) "الغلاف الجديد  •  اسحب لليسار لعرض السابق"
+                                    else "الغلاف السابق  •  اسحب لليمين للعودة للجديد",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             TextButton(
                                 onClick = { showCoverPreview = false },
                                 modifier = Modifier.align(Alignment.End)
