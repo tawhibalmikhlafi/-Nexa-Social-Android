@@ -21,7 +21,13 @@ data class User(
     val isFollowingLocally: Boolean = false,
     val city: String? = null,
     val website: String? = null,
-    val isPrivateAccount: Boolean = false
+    val isPrivateAccount: Boolean = false,
+    val placeOfOrigin: String? = null,
+    val currentResidence: String? = null,
+    /** ISO-8601 calendar date (yyyy-MM-dd), independent of device timezone. */
+    val birthDate: String? = null,
+    val skills: List<String> = emptyList(),
+    val hobbies: List<String> = emptyList()
 )
 
 /** Lightweight author reference embedded in feeds and messages. */
