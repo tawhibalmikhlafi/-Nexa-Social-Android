@@ -267,7 +267,7 @@ fun ProfileScreen(
                     else -> code
                 }
             }
-            "\${row.get("emoji")?.asString.orEmpty()} $label".trim()
+            "${row.get("emoji")?.asString.orEmpty()} $label".trim()
         }
     }
 
