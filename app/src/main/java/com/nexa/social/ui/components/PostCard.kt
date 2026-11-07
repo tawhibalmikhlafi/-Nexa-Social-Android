@@ -524,7 +524,6 @@ private fun ReactionLikeButton(
             PostAction(
                 icon = Icons.Filled.FavoriteBorder,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                label = stringResource(R.string.post_like),
                 contentDescription = stringResource(R.string.post_like),
                 onClick = onLike,
                 onLongClick = { showPicker = true },
