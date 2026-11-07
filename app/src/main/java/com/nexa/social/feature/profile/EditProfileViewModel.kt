@@ -10,10 +10,12 @@ import com.nexa.social.core.common.Resource
 import com.nexa.social.core.ui.failureMessageRes
 import com.nexa.social.core.ui.nexaApplication
 import com.nexa.social.domain.model.User
+import com.nexa.social.domain.model.Audience
 import com.nexa.social.domain.model.UserSummary
 import com.nexa.social.domain.repository.CommentRepository
 import com.nexa.social.domain.repository.PostRepository
 import com.nexa.social.domain.repository.UserRepository
+import com.nexa.social.domain.usecase.CreatePostUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,7 +27,8 @@ import kotlinx.coroutines.launch
 class EditProfileViewModel(
     private val userRepository: UserRepository,
     private val postRepository: PostRepository,
-    private val commentRepository: CommentRepository
+    private val commentRepository: CommentRepository,
+    private val createPost: CreatePostUseCase
 ) : ViewModel() {
 
     val user: StateFlow<User?> = userRepository.currentUser
@@ -53,7 +56,9 @@ class EditProfileViewModel(
         username: String,
         bio: String,
         avatarUri: String?,
-        coverUri: String?
+        coverUri: String?,
+        shareCoverToProfile: Boolean = false,
+        coverCaption: String = ""
     ) {
         if (_saving.value) return
 
@@ -94,8 +99,23 @@ class EditProfileViewModel(
                     username = canonicalUsername
                 )) {
                     is Resource.Success -> {
-                        // The profile row and media are already saved at this point; show the
-                        // success state immediately instead of waiting for post/comment caches.
+                        // The cover is saved first. Publishing is an explicit opt-in and
+                        // reuses the same selected image as a normal profile post.
+                        if (shareCoverToProfile && !coverUri.isNullOrBlank()) {
+                            when (val publishResult = createPost(
+                                text = coverCaption.trim(),
+                                imageUris = listOf(coverUri),
+                                tags = emptyList(),
+                                audience = Audience.PUBLIC_LOCAL
+                            )) {
+                                is Resource.Success -> Unit
+                                is Resource.Failure -> {
+                                    _error.value = failureMessageRes(publishResult.reason)
+                                    return@launch
+                                }
+                                Resource.Loading -> Unit
+                            }
+                        }
                         _saved.value = true
                         val summary = UserSummary.from(result.data)
                         launch {
@@ -133,7 +153,8 @@ class EditProfileViewModel(
                 EditProfileViewModel(
                     container.userRepository,
                     container.postRepository,
-                    container.commentRepository
+                    container.commentRepository,
+                    container.createPost
                 )
             }
         }
