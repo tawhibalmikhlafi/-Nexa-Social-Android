@@ -1,7 +1,7 @@
 package com.nexa.social.domain.model
 
 /**
- * Local achievements. Every unlock is tied to a real, verifiable local event counter
+ * Server-awarded achievements. Every unlock is tied to a real database activity event
  * (posts, comments, worlds, follows, clips, stories). There is no global ranking server-side.
  */
 enum class AchievementId {
@@ -16,7 +16,7 @@ enum class AchievementId {
     RISING_STAR
 }
 
-/** A countable local activity used as the trigger for achievements. */
+/** A server activity counter used to display achievement progress. */
 enum class CounterKind {
     POSTS_CREATED,
     COMMENTS_CREATED,
