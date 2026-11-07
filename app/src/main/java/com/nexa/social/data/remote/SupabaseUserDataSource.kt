@@ -681,8 +681,8 @@ internal object SupabaseUserMapper {
         addProperty("place_of_origin", user.placeOfOrigin)
         addProperty("current_residence", user.currentResidence)
         addProperty("birth_date", user.birthDate)
-        add("skills", com.google.gson.JsonArray().apply { user.skills.forEach { add(it) } })
-        add("hobbies", com.google.gson.JsonArray().apply { user.hobbies.forEach { add(it) } })
+        add("skills", com.google.gson.JsonArray().apply { user.skills.orEmpty().forEach { add(it) } })
+        add("hobbies", com.google.gson.JsonArray().apply { user.hobbies.orEmpty().forEach { add(it) } })
         addProperty("created_at", Instant.ofEpochMilli(user.createdAt).toString())
         addProperty("updated_at", Instant.now().toString())
     }
