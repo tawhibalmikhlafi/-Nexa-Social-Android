@@ -114,8 +114,8 @@ fun EditProfileScreen(
     var placeOfOrigin by rememberSaveable { mutableStateOf("") }
     var currentResidence by rememberSaveable { mutableStateOf("") }
     var birthDate by rememberSaveable { mutableStateOf<String?>(null) }
-    var skills by rememberSaveable { mutableStateOf(emptyList<String>()) }
-    var hobbies by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    var skills by remember { mutableStateOf(emptyList<String>()) }
+    var hobbies by remember { mutableStateOf(emptyList<String>()) }
     var showBirthDatePicker by remember { mutableStateOf(false) }
     var avatarUri by rememberSaveable { mutableStateOf<String?>(null) }
     var coverUri by rememberSaveable { mutableStateOf<String?>(null) }
