@@ -1,6 +1,8 @@
 package com.nexa.social.data.repository
 
 import com.nexa.social.data.local.AchievementLocalDataSource
+import com.nexa.social.data.remote.SupabaseProfileExperienceDataSource
+import java.time.Instant
 import com.nexa.social.domain.model.AchievementDefinition
 import com.nexa.social.domain.model.AchievementId
 import com.nexa.social.domain.model.AchievementSnapshot
@@ -18,13 +20,51 @@ import kotlinx.coroutines.withContext
  * It never awards points without a matching recorded event and never claims a global ranking.
  */
 class AchievementRepositoryImpl(
-    private val local: AchievementLocalDataSource
+    private val local: AchievementLocalDataSource,
+    private val remote: SupabaseProfileExperienceDataSource? = null,
+    private val currentUid: () -> String? = { null }
 ) : AchievementRepository {
 
-    private val _snapshot = MutableStateFlow(initial())
+    private val _snapshot = MutableStateFlow(if (remote == null) initial() else AchievementSnapshot())
     override fun observeSnapshot(): Flow<AchievementSnapshot> = _snapshot.asStateFlow()
 
     override suspend fun record(kind: CounterKind, amount: Int) {
+        val remoteSource = remote
+        if (remoteSource != null) {
+            val uid = currentUid() ?: return
+            val rows = remoteSource.loadRows("nexa_profile_achievements", uid)
+            val progressByCode = rows.associateBy(
+                { it.get("achievement_code")?.asString.orEmpty() },
+                { it }
+            )
+            fun progress(code: String): Int = progressByCode[code]?.get("progress")?.asInt ?: 0
+            val counters = mapOf(
+                CounterKind.POSTS_CREATED to progress("ACTIVE_CREATOR"),
+                CounterKind.COMMENTS_CREATED to progress("HELPFUL_VOICE"),
+                CounterKind.WORLDS_JOINED to progress("WORLD_EXPLORER"),
+                CounterKind.WORLDS_CREATED to progress("WORLD_BUILDER"),
+                CounterKind.USERS_FOLLOWED to progress("SOCIAL_CONNECTOR"),
+                CounterKind.CLIPS_CREATED to progress("CLIP_MAKER"),
+                CounterKind.STORIES_CREATED to progress("STORYTELLER")
+            )
+            val unlocked = rows.mapNotNull { row ->
+                val code = row.get("achievement_code")?.asString ?: return@mapNotNull null
+                val id = runCatching { AchievementId.valueOf(code) }.getOrNull() ?: return@mapNotNull null
+                val timestamp = row.get("unlocked_at")?.takeIf { !it.isJsonNull }?.asString
+                    ?: return@mapNotNull null
+                val millis = runCatching { Instant.parse(timestamp).toEpochMilli() }.getOrDefault(0L)
+                UnlockedAchievement(id, millis)
+            }
+            val points = rows.filter { it.get("unlocked_at")?.takeIf { v -> !v.isJsonNull } != null }
+                .sumOf { it.get("reward_points")?.asInt ?: 0 }
+            _snapshot.value = AchievementSnapshot(
+                counters = counters,
+                points = points,
+                level = 1 + points / pointsPerLevel,
+                unlocked = unlocked
+            )
+            return
+        }
         val current = _snapshot.value
         val updatedCounters = current.counters + (kind to ((current.counters[kind] ?: 0) + amount))
         val recomputed = recompute(updatedCounters, current.unlocked)
