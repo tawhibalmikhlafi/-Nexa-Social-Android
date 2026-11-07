@@ -611,7 +611,7 @@ fun ProfileScreen(
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
                                 Icon(Icons.Filled.CalendarMonth, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 val dateStr = remember(current.createdAt) {
-                                    SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(current.createdAt))
+                                    SimpleDateFormat("dd MMMM yyyy", Locale("ar")).format(Date(current.createdAt))
                                 }
                                 Text(text = stringResource(R.string.profile_joined, dateStr), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
