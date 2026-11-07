@@ -25,7 +25,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexa.social.R
 import com.nexa.social.domain.model.AchievementDefinition
 import com.nexa.social.domain.model.AchievementId
-import com.nexa.social.ui.components.LocalDataBanner
 import com.nexa.social.ui.components.NexaCard
 import com.nexa.social.ui.components.NexaTopBar
 import com.nexa.social.ui.theme.NexaSpacing
@@ -46,7 +45,6 @@ fun AchievementsScreen(
                 .padding(horizontal = NexaSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)
         ) {
-            LocalDataBanner(text = stringResource(R.string.achievements_local_notice))
             NexaCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
