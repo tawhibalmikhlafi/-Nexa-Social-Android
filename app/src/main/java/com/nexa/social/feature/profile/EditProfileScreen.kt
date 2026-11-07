@@ -573,7 +573,7 @@ private fun ProfileDatePickerDialog(
         }.getOrNull() }
     }
     val pickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialMillis ?: System.currentTimeMillis()
+        initialSelectedDateMillis = initialMillis
     )
     DatePickerDialog(
         onDismissRequest = onDismiss,
