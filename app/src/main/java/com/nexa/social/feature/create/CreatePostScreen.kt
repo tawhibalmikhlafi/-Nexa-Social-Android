@@ -55,14 +55,15 @@ fun CreatePostScreen(
     val uploadProgress by viewModel.uploadProgress.collectAsStateWithLifecycle()
     val snackbarHost = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
-    var isDarkMode by rememberSaveable { mutableStateOf(true) }
-    val NexaBackground = if (isDarkMode) Color(0xFF070711) else Color(0xFFF7F6FC)
-    val NexaSurface = if (isDarkMode) Color(0xFF151129) else Color(0xFFFFFFFF)
-    val NexaSurfaceVariant = if (isDarkMode) Color(0xFF1B1630) else Color(0xFFEDEAF5)
-    val NexaPurple = if (isDarkMode) Color(0xFF9B4DFF) else Color(0xFF7138C8)
-    val NexaLavender = if (isDarkMode) Color(0xFFC6A7FF) else Color(0xFF6336A8)
-    val NexaText = if (isDarkMode) Color(0xFFF7F3FF) else Color(0xFF211A2B)
-    val NexaMuted = if (isDarkMode) Color(0xFFA69BBF) else Color(0xFF716A7C)
+    // Inherit the app-wide appearance and accent from NexaTheme settings.
+    val colorScheme = MaterialTheme.colorScheme
+    val NexaBackground = colorScheme.background
+    val NexaSurface = colorScheme.surface
+    val NexaSurfaceVariant = colorScheme.surfaceVariant
+    val NexaPurple = colorScheme.primary
+    val NexaLavender = colorScheme.tertiary
+    val NexaText = colorScheme.onSurface
+    val NexaMuted = colorScheme.onSurfaceVariant
 
     var text by rememberSaveable { mutableStateOf("") }
     var tagsText by rememberSaveable { mutableStateOf("") }
@@ -181,14 +182,6 @@ fun CreatePostScreen(
                     style = MaterialTheme.typography.titleLarge
                 )
 
-                IconButton(onClick = { isDarkMode = !isDarkMode }) {
-                    Icon(
-                        imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        contentDescription = if (isDarkMode) "تفعيل الوضع الفاتح" else "تفعيل الوضع الداكن",
-                        tint = NexaLavender
-                    )
-                }
-
                 Button(
                     onClick = {
                         val advancedTags = mutableListOf<String>()
@@ -204,7 +197,7 @@ fun CreatePostScreen(
                     enabled = (text.isNotBlank() || imageUris.isNotEmpty()) && !isPublishing,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = NexaPurple,
-                        disabledContainerColor = Color(0xFF292735)
+                        disabledContainerColor = colorScheme.surfaceVariant
                     ),
                     shape = RoundedCornerShape(28.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
