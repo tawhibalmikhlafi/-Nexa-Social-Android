@@ -7,7 +7,6 @@ import com.nexa.social.core.network.NetworkMonitor
 import com.nexa.social.core.sync.SyncCoordinator
 import com.nexa.social.core.sync.Syncable
 import com.nexa.social.data.local.AccountLocalDataSource
-import com.nexa.social.data.local.AchievementLocalDataSource
 import com.nexa.social.data.local.CapsuleLocalDataSource
 import com.nexa.social.data.local.ClipLocalDataSource
 import com.nexa.social.data.local.CommentLocalDataSource
@@ -170,7 +169,6 @@ class DefaultAppContainer(context: Context) : AppContainer {
     private val messageLocal = MessageLocalDataSource(jsonStore)
     private val notificationLocal = NotificationLocalDataSource(jsonStore)
     private val safetyLocal = SafetyLocalDataSource(jsonStore)
-    private val achievementLocal = AchievementLocalDataSource(jsonStore)
     private val searchLocal = SearchLocalDataSource(jsonStore)
     private val gatheringLocal = GatheringLocalDataSource(jsonStore)
     private val capsuleLocal = CapsuleLocalDataSource(jsonStore)
@@ -376,7 +374,6 @@ class DefaultAppContainer(context: Context) : AppContainer {
     // The remote achievement catalog is authoritative whenever Supabase is configured.
     override val achievementRepository: AchievementRepository =
         AchievementRepositoryImpl(
-            local = achievementLocal,
             remote = remoteProfileExperience,
             currentUid = { supabaseTokens?.currentSession()?.userId }
         )
