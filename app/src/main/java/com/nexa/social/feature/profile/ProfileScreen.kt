@@ -236,6 +236,12 @@ fun ProfileScreen(
         return
     }
 
+    LaunchedEffect(current.id, showOwnerTools, profileExperienceDataSource) {
+        if (!showOwnerTools) {
+            profileExperienceDataSource?.recordEvent(current.id, "PROFILE_VIEW")
+        }
+    }
+
     val copyProfileLink: () -> Unit = {
         clipboard.setText(AnnotatedString(DeepLinkRouter.userLink(current.id)))
         scope.launch { snackbarHost?.showSnackbar(profileLinkCopied) }
