@@ -327,7 +327,7 @@ fun ProfileExperiencePanel(
             else {
                 val code = current.get("status_code")?.asString.orEmpty()
                 Text(
-                    "\${current.get("emoji")?.asString.orEmpty()} " +
+                    "${current.get("emoji")?.asString.orEmpty()} " +
                         (current.get("custom_text")?.asString?.takeIf { it.isNotBlank() }
                             ?: statusChoices.firstOrNull { it.first == code }?.second ?: code),
                     style = MaterialTheme.typography.titleSmall
@@ -337,7 +337,7 @@ fun ProfileExperiencePanel(
             if (isOwner && current != null) TextButton(onClick = {
                 scope.launch { dataSource.deleteRow("nexa_profile_status", profileId); refresh() }
             }) { Text("مسح الحالة") }
-            if (isOwner && statusHistory.isNotEmpty()) Text("سجل الحالات: \${statusHistory.size}", style = MaterialTheme.typography.labelSmall)
+            if (isOwner && statusHistory.isNotEmpty()) Text("سجل الحالات: ${statusHistory.size}", style = MaterialTheme.typography.labelSmall)
         }
 
         // Recommendations
@@ -347,7 +347,7 @@ fun ProfileExperiencePanel(
         }) {
             val visible = testimonials.filter { (isOwner || it.get("is_visible")?.asBoolean != false) && (isOwner || it.get("is_approved")?.asBoolean != false) }
             val rated = visible.mapNotNull { it.get("rating")?.takeIf { v -> !v.isJsonNull }?.asInt }
-            if (rated.isNotEmpty()) Text("⭐ \${"%.1f".format(rated.average())} من \${rated.size} توصية", style = MaterialTheme.typography.titleSmall)
+            if (rated.isNotEmpty()) Text("⭐ ${"%.1f".format(rated.average())} من ${rated.size} توصية", style = MaterialTheme.typography.titleSmall)
             if (visible.isEmpty()) Text("لا توجد توصيات بعد.", style = MaterialTheme.typography.bodySmall)
             visible.forEach { row ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -386,7 +386,7 @@ fun ProfileExperiencePanel(
                         Column(Modifier.weight(1f)) {
                             Text(achievementTitle(row.get("achievement_code")?.asString.orEmpty()), style = MaterialTheme.typography.titleSmall)
                             LinearProgressIndicator(progress = { (progress.toFloat() / target.coerceAtLeast(1)).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
-                            Text(if (unlocked) "مفتوحة ✓" else "\$progress / \$target", style = MaterialTheme.typography.labelSmall)
+                            Text(if (unlocked) "مفتوحة ✓" else "$progress / $target", style = MaterialTheme.typography.labelSmall)
                         }
                         if (isOwner) {
                             IconButton(onClick = {
@@ -412,12 +412,12 @@ fun ProfileExperiencePanel(
                 val links = analytics.count { it.get("event_type")?.asString == "SOCIAL_LINK_CLICK" }
                 val downloads = analytics.count { it.get("event_type")?.asString == "CV_DOWNLOAD" }
                 val qr = analytics.count { it.get("event_type")?.asString == "QR_SCAN" }
-                Text("👁️ مشاهدات الملف: \$views")
-                Text("🎯 نقرات المهارات: \$skills")
-                Text("🔗 نقرات الروابط: \$links")
-                Text("📄 تحميلات السيرة: \$downloads")
-                Text("📱 مسحات QR: \$qr")
-                Text("💬 التوصيات المستلمة: \${testimonials.size}")
+                Text("👁️ مشاهدات الملف: $views")
+                Text("🎯 نقرات المهارات: $skills")
+                Text("🔗 نقرات الروابط: $links")
+                Text("📄 تحميلات السيرة: $downloads")
+                Text("📱 مسحات QR: $qr")
+                Text("💬 التوصيات المستلمة: ${testimonials.size}")
                 Text("البيانات المعروضة هي الأحداث المسجلة منذ تفعيل التتبع.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -430,7 +430,7 @@ fun ProfileExperiencePanel(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             val category = favoriteCategories.firstOrNull { it.first == row.get("category")?.asString }?.second.orEmpty()
-                            Text("\$category · \${row.get("title")?.asString.orEmpty()}", style = MaterialTheme.typography.titleSmall)
+                            Text("$category · ${row.get("title")?.asString.orEmpty()}", style = MaterialTheme.typography.titleSmall)
                             Text(row.get("creator")?.asString.orEmpty(), style = MaterialTheme.typography.bodySmall)
                             Text(row.get("quote")?.asString.orEmpty(), style = MaterialTheme.typography.labelSmall)
                         }
@@ -477,7 +477,7 @@ fun ProfileExperiencePanel(
             runSave { JsonObject().apply { addProperty("title", eventTitle.trim()); addProperty("event_date", eventDate); addProperty("description", eventDescription.trim()); addProperty("event_type", eventType) }.let { dataSource.saveRow("nexa_profile_timeline", it) } }
         }
         "language" -> FormDialog("إضافة لغة", { dialog = "" }, {
-            ChoiceChips(profileLanguageChoices.map { it.code to "\${it.flag} \${it.name}" }, selectedLanguage.code) { code -> selectedLanguage = profileLanguageChoices.first { it.code == code } }
+            ChoiceChips(profileLanguageChoices.map { it.code to "${it.flag} ${it.name}" }, selectedLanguage.code) { code -> selectedLanguage = profileLanguageChoices.first { it.code == code } }
             ChoiceChips(languageLevels, selectedLevel) { selectedLevel = it }
             TextButton(onClick = { languagePrivate = !languagePrivate }) { Text(if (languagePrivate) "🔒 خاصة (اضغط للإظهار)" else "🌐 ظاهرة (اضغط للإخفاء)") }
         }, !busy, "إضافة") {
@@ -562,7 +562,7 @@ fun ProfileExperiencePanel(
             busy = true
             scope.launch {
                 val token = dataSource.createTestimonialRequest(requestEmail)
-                message = if (token != null) "تم إنشاء طلب التوصية. شارك هذا الرمز مع الشخص: \$token" else "تعذر إنشاء الطلب. تحقق من اتصال Supabase."
+                message = if (token != null) "تم إنشاء طلب التوصية. شارك هذا الرمز مع الشخص: $token" else "تعذر إنشاء الطلب. تحقق من اتصال Supabase."
                 dialog = ""; busy = false
             }
         }
