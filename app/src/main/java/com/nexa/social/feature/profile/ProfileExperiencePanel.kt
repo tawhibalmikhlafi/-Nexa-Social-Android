@@ -2,6 +2,7 @@ package com.nexa.social.feature.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -342,7 +343,7 @@ fun ProfileExperiencePanel(
         }
 
         // Achievements
-        ExperienceCard("🏆 الإنجازات والشارات", isOwner, {}) {
+        ExperienceCard("🏆 الإنجازات والشارات", isOwner, null) {
             achievements.filter { isOwner || it.get("is_visible")?.asBoolean != false }
                 .sortedWith(compareByDescending<JsonObject> { it.get("is_featured")?.asBoolean == true }.thenByDescending { it.get("unlocked_at")?.takeIf { v -> !v.isJsonNull } != null })
                 .forEach { row ->
@@ -571,8 +572,8 @@ fun ProfileExperiencePanel(
 private fun ExperienceCard(
     title: String,
     isOwner: Boolean,
-    onAdd: () -> Unit,
-    content: @Composable Column.() -> Unit
+    onAdd: (() -> Unit)?,
+    content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -582,7 +583,7 @@ private fun ExperienceCard(
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                if (isOwner && onAdd !== {}) IconButton(onClick = onAdd) { Icon(Icons.Default.Add, contentDescription = "إضافة") }
+                if (isOwner && onAdd != null) IconButton(onClick = onAdd) { Icon(Icons.Default.Add, contentDescription = "إضافة") }
             }
             content()
         }
