@@ -448,8 +448,15 @@ class SupabaseStorageDataSource(
         if (localUri.isBlank()) return null
         val uri = Uri.parse(localUri)
         return withContext(Dispatchers.IO) {
-            val mime = resolver.getType(uri) ?: guessMimeFromPath(uri.lastPathSegment)
-            if (mime == null) {
+            val displayName = queryDisplayName(uri) ?: uri.lastPathSegment
+            val providerMime = resolver.getType(uri)?.lowercase()?.takeUnless {
+                it == "application/octet-stream" || it == "binary/octet-stream"
+            }
+            val mime = providerMime
+                ?: guessMimeFromPath(displayName)
+                ?: guessMimeFromPath(uri.lastPathSegment)
+                ?: sniffMimeType(uri)
+            if (mime.isNullOrBlank()) {
                 null
             } else {
                 val size = when (uri.scheme) {
@@ -459,11 +466,41 @@ class SupabaseStorageDataSource(
                 FileInfo(
                     mimeType = mime,
                     size = size,
-                    displayName = queryDisplayName(uri) ?: uri.lastPathSegment
+                    displayName = displayName
                 )
             }
         }
     }
+
+    /**
+     * Some Android photo providers return a content:// URI without a MIME type or extension.
+     * Inspect only the file signature as a final fallback so valid photos are not rejected.
+     */
+    private fun sniffMimeType(uri: Uri): String? = runCatching {
+        resolver.openInputStream(uri)?.use { input ->
+            val header = ByteArray(16)
+            var count = 0
+            while (count < header.size) {
+                val read = input.read(header, count, header.size - count)
+                if (read <= 0) break
+                count += read
+            }
+            fun ascii(offset: Int, value: String): Boolean {
+                val bytes = value.toByteArray(Charsets.US_ASCII)
+                return offset + bytes.size <= count &&
+                    bytes.indices.all { header[offset + it] == bytes[it] }
+            }
+            when {
+                count >= 3 && header[0] == 0xFF.toByte() && header[1] == 0xD8.toByte() && header[2] == 0xFF.toByte() -> "image/jpeg"
+                ascii(0, "\\u0089PNG\\r\\n\\u001a\\n") -> "image/png"
+                ascii(0, "GIF87a") || ascii(0, "GIF89a") -> "image/gif"
+                ascii(0, "RIFF") && ascii(8, "WEBP") -> "image/webp"
+                ascii(4, "ftyp") && (ascii(8, "heic") || ascii(8, "heix") || ascii(8, "heif") || ascii(8, "mif1")) -> "image/heic"
+                ascii(4, "ftyp") && (ascii(8, "avif") || ascii(8, "avis")) -> "image/avif"
+                else -> null
+            }
+        }
+    }.getOrNull()
 
     private fun streamingBody(
         uri: Uri,
@@ -528,6 +565,7 @@ class SupabaseStorageDataSource(
             "webp" -> "image/webp"
             "gif" -> "image/gif"
             "heic", "heif" -> "image/heic"
+            "avif" -> "image/avif"
             "mp4" -> "video/mp4"
             "webm" -> "video/webm"
             "m4a", "aac" -> "audio/mp4"
@@ -543,6 +581,7 @@ class SupabaseStorageDataSource(
         "image/webp" -> "webp"
         "image/gif" -> "gif"
         "image/heic", "image/heif" -> "heic"
+        "image/avif" -> "avif"
         "video/mp4" -> "mp4"
         "video/webm" -> "webm"
         "audio/mp4" -> "m4a"
