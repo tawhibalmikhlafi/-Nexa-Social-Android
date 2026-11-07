@@ -1,6 +1,8 @@
 
 package com.nexa.social.feature.profile
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
@@ -9,6 +11,20 @@ import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -47,6 +63,13 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexa.social.R
@@ -64,6 +87,7 @@ import com.nexa.social.ui.theme.NexaSpacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     onBack: () -> Unit,
@@ -86,6 +110,12 @@ fun EditProfileScreen(
     var displayName by rememberSaveable { mutableStateOf("") }
     var username by rememberSaveable { mutableStateOf("") }
     var bio by rememberSaveable { mutableStateOf("") }
+    var placeOfOrigin by rememberSaveable { mutableStateOf("") }
+    var currentResidence by rememberSaveable { mutableStateOf("") }
+    var birthDate by rememberSaveable { mutableStateOf<String?>(null) }
+    var skills by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    var hobbies by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    var showBirthDatePicker by remember { mutableStateOf(false) }
     var avatarUri by rememberSaveable { mutableStateOf<String?>(null) }
     var coverUri by rememberSaveable { mutableStateOf<String?>(null) }
     var originalAvatarUri by rememberSaveable { mutableStateOf<String?>(null) }
@@ -104,6 +134,11 @@ fun EditProfileScreen(
             displayName = current.displayName
             username = current.username
             bio = current.bio
+            placeOfOrigin = current.placeOfOrigin.orEmpty()
+            currentResidence = current.currentResidence.orEmpty()
+            birthDate = current.birthDate
+            skills = current.skills
+            hobbies = current.hobbies
             avatarUri = current.avatarUri
             coverUri = current.coverUri
             originalAvatarUri = current.avatarUri
@@ -364,6 +399,81 @@ fun EditProfileScreen(
                 imeAction = ImeAction.Default
             )
 
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(NexaSpacing.md),
+                    verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+                ) {
+                    Text("معلومات عنك", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "أضف تفاصيل تساعد الآخرين على التعرف عليك. يمكنك ترك أي حقل فارغاً.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    NexaTextField(
+                        value = placeOfOrigin,
+                        onValueChange = { placeOfOrigin = it },
+                        label = "مكان المنشأ"
+                    )
+                    NexaTextField(
+                        value = currentResidence,
+                        onValueChange = { currentResidence = it },
+                        label = "مكان الإقامة الحالية"
+                    )
+                    OutlinedButton(
+                        onClick = { showBirthDatePicker = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.Cake, contentDescription = null)
+                        Spacer(Modifier.width(NexaSpacing.sm))
+                        Text(
+                            birthDate?.let { runCatching {
+                                LocalDate.parse(it).format(java.time.format.DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("ar")))
+                            }.getOrDefault(it) } ?: "تاريخ الميلاد"
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(NexaSpacing.sm))
+                        Column {
+                            Text("تاريخ الانضمام", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                user?.createdAt?.takeIf { it > 0L }?.let {
+                                    SimpleDateFormat("dd MMMM yyyy", Locale("ar")).format(Date(it))
+                                } ?: "سيظهر بعد إنشاء الحساب",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Text("تلقائي", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
+            ProfileTagEditor(
+                title = "المهارات",
+                placeholder = "مثلاً: التصميم، البرمجة",
+                items = skills,
+                onAdd = { value -> skills = (skills + value).distinct() },
+                onRemove = { value -> skills = skills - value },
+                icon = Icons.Filled.Star
+            )
+            ProfileTagEditor(
+                title = "الهوايات",
+                placeholder = "مثلاً: القراءة، التصوير",
+                items = hobbies,
+                onAdd = { value -> hobbies = (hobbies + value).distinct() },
+                onRemove = { value -> hobbies = hobbies - value },
+                icon = Icons.Filled.Favorite
+            )
+
             NexaTextField(
                 value = username,
                 onValueChange = { username = it.removePrefix("@").filter { ch -> ch in 'a'..'z' || ch in 'A'..'Z' || ch in '0'..'9' || ch == '_' }.take(20) },
@@ -433,7 +543,12 @@ fun EditProfileScreen(
                         avatarUri = avatarUri,
                         coverUri = coverUri,
                         shareCoverToProfile = shareCoverToProfile,
-                        coverCaption = coverCaption
+                        coverCaption = coverCaption,
+                        placeOfOrigin = placeOfOrigin,
+                        currentResidence = currentResidence,
+                        birthDate = birthDate,
+                        skills = skills,
+                        hobbies = hobbies
                     )
                 }
             )
@@ -442,3 +557,101 @@ fun EditProfileScreen(
         }
     }
 }
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileDatePickerDialog(
+    title: String,
+    selectedDate: String?,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    val initialMillis = remember(selectedDate) {
+        selectedDate?.let { runCatching {
+            LocalDate.parse(it).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        }.getOrNull() }
+    }
+    val pickerState = rememberDatePickerState(
+        initialSelectedDateMillis = initialMillis ?: System.currentTimeMillis()
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                pickerState.selectedDateMillis?.let { millis ->
+                    onSelect(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString())
+                } ?: onDismiss()
+            }) { Text("تأكيد") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } }
+    ) {
+        DatePicker(state = pickerState, title = { Text(title, modifier = Modifier.padding(NexaSpacing.md)) })
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ProfileTagEditor(
+    title: String,
+    placeholder: String,
+    items: List<String>,
+    onAdd: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    var input by rememberSaveable(title) { mutableStateOf("") }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(NexaSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(NexaSpacing.sm))
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs)
+            ) {
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = { input = it.take(40) },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text(placeholder, style = MaterialTheme.typography.bodySmall) },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.large,
+                    colors = OutlinedTextFieldDefaults.colors()
+                )
+                FilledIconButton(
+                    onClick = {
+                        val value = input.trim()
+                        if (value.isNotBlank() && items.none { it.equals(value, ignoreCase = true) }) onAdd(value)
+                        input = ""
+                    },
+                    enabled = input.isNotBlank()
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = "إضافة")
+                }
+            }
+            if (items.isNotEmpty()) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)
+                ) {
+                    items.forEach { item ->
+                        AssistChip(onClick = { onRemove(item) }, label = { Text("$item  ×") })
+                    }
+                }
+            }
+        }
+    }
+}
+
