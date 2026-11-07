@@ -68,6 +68,7 @@ import com.nexa.social.data.remote.SupabaseSafetyDataSource
 import com.nexa.social.data.remote.SupabaseStorageDataSource
 import com.nexa.social.data.remote.SupabaseStoryDataSource
 import com.nexa.social.data.remote.SupabaseUserDataSource
+import com.nexa.social.data.remote.SupabaseProfileExperienceDataSource
 import com.nexa.social.feature.pulse.SupabaseDailyPulseRepository
 import com.nexa.social.domain.model.UserSession
 import com.nexa.social.domain.model.accountUserId
@@ -117,6 +118,7 @@ interface AppContainer {
     val spaceRepository: SpaceRepository
     val clipRepository: ClipRepository
     val messageRepository: MessageRepository
+    val profileExperienceDataSource: SupabaseProfileExperienceDataSource?
     val notesDataSource: SupabaseNotesDataSource?
     val notificationRepository: NotificationRepository
     val searchRepository: SearchRepository
@@ -366,6 +368,16 @@ class DefaultAppContainer(context: Context) : AppContainer {
         null
     }
 
+    private val remoteProfileExperience = if (supabaseHttp != null && supabaseTokens != null) {
+        SupabaseProfileExperienceDataSource(
+            config = supabaseConfig,
+            http = supabaseHttp,
+            accessToken = { supabaseTokens.currentSession()?.accessToken },
+            currentUid = { supabaseTokens.currentSession()?.userId }
+        )
+    } else null
+
+    override val profileExperienceDataSource: SupabaseProfileExperienceDataSource? get() = remoteProfileExperience
     override val notesDataSource: SupabaseNotesDataSource? get() = remoteNotes
 
     private val remoteNotifications = if (supabaseHttp != null && supabaseTokens != null) {
