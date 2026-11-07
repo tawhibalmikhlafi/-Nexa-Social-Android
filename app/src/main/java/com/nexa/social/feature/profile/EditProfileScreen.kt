@@ -138,8 +138,8 @@ fun EditProfileScreen(
             placeOfOrigin = current.placeOfOrigin.orEmpty()
             currentResidence = current.currentResidence.orEmpty()
             birthDate = current.birthDate
-            skills = current.skills
-            hobbies = current.hobbies
+            skills = current.skills.orEmpty()
+            hobbies = current.hobbies.orEmpty()
             avatarUri = current.avatarUri
             coverUri = current.coverUri
             originalAvatarUri = current.avatarUri
