@@ -180,7 +180,12 @@ class SupabaseUserDataSource(
         avatarUri: String?,
         coverUri: String?,
         city: String?,
-        website: String?
+        website: String?,
+        placeOfOrigin: String?,
+        currentResidence: String?,
+        birthDate: String?,
+        skills: List<String>,
+        hobbies: List<String>
     ): Resource<User> {
         val body = JsonObject().apply {
             addProperty("display_name", displayName)
@@ -189,6 +194,11 @@ class SupabaseUserDataSource(
             addProperty("cover_url", coverUri)
             addProperty("city", city)
             addProperty("website", website)
+            addProperty("place_of_origin", placeOfOrigin)
+            addProperty("current_residence", currentResidence)
+            addProperty("birth_date", birthDate)
+            add("skills", com.google.gson.JsonArray().apply { skills.forEach { add(it) } })
+            add("hobbies", com.google.gson.JsonArray().apply { hobbies.forEach { add(it) } })
             addProperty("updated_at", Instant.now().toString())
         }
         val failure = patchProfile(uid, body)
@@ -646,7 +656,16 @@ internal object SupabaseUserMapper {
             followingCount = row.long("following_count")?.toInt() ?: 0,
             city = row.string("city"),
             website = row.string("website"),
-            isPrivateAccount = row.boolean("is_private_account") ?: false
+            isPrivateAccount = row.boolean("is_private_account") ?: false,
+            placeOfOrigin = row.string("place_of_origin"),
+            currentResidence = row.string("current_residence"),
+            birthDate = row.string("birth_date"),
+            skills = row.getAsJsonArray("skills")?.mapNotNull { item ->
+                item.takeIf { !it.isJsonNull }?.asString?.trim()?.takeIf(String::isNotBlank)
+            }.orEmpty(),
+            hobbies = row.getAsJsonArray("hobbies")?.mapNotNull { item ->
+                item.takeIf { !it.isJsonNull }?.asString?.trim()?.takeIf(String::isNotBlank)
+            }.orEmpty()
         )
     }
 
@@ -659,6 +678,11 @@ internal object SupabaseUserMapper {
         addProperty("cover_url", user.coverUri)
         addProperty("city", user.city)
         addProperty("website", user.website)
+        addProperty("place_of_origin", user.placeOfOrigin)
+        addProperty("current_residence", user.currentResidence)
+        addProperty("birth_date", user.birthDate)
+        add("skills", com.google.gson.JsonArray().apply { user.skills.forEach { add(it) } })
+        add("hobbies", com.google.gson.JsonArray().apply { user.hobbies.forEach { add(it) } })
         addProperty("created_at", Instant.ofEpochMilli(user.createdAt).toString())
         addProperty("updated_at", Instant.now().toString())
     }
