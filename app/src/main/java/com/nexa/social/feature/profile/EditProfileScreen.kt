@@ -562,6 +562,18 @@ fun EditProfileScreen(
             Spacer(Modifier.height(NexaSpacing.lg))
         }
     }
+
+    if (showBirthDatePicker) {
+        ProfileDatePickerDialog(
+            title = "تاريخ الميلاد",
+            selectedDate = birthDate,
+            onDismiss = { showBirthDatePicker = false },
+            onSelect = { selected ->
+                birthDate = selected
+                showBirthDatePicker = false
+            }
+        )
+    }
 }
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
