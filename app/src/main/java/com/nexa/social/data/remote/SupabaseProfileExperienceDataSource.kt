@@ -70,6 +70,7 @@ class SupabaseProfileExperienceDataSource(
         }
         val conflict = when (table) {
             "nexa_profile_status" -> "user_id"
+            "nexa_profile_languages" -> "user_id,language_code"
             "nexa_profile_achievements" -> "user_id,achievement_code"
             else -> "id"
         }
