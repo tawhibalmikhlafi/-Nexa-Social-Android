@@ -129,7 +129,6 @@ fun MessagesScreen(
     var noteDuration by rememberSaveable { mutableStateOf(24) }
     var selectedNote by remember { mutableStateOf<UserNote?>(null) }
     var noteReply by rememberSaveable { mutableStateOf("") }
-    var showBanner by rememberSaveable { mutableStateOf(true) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         if (showMessageSettings) {
@@ -308,14 +307,6 @@ fun MessagesScreen(
                         },
                         onNoteClick = { selectedNote = it }
                     )
-                }
-                if (showBanner) {
-                    item {
-                        NotificationBanner(
-                            onDismiss = { showBanner = false },
-                            onEnable = onNotifications
-                        )
-                    }
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
