@@ -622,7 +622,7 @@ fun ProfileScreen(
                         !current.currentResidence.isNullOrBlank() ||
                         !current.birthDate.isNullOrBlank() ||
                         current.skills.orEmpty().isNotEmpty() || current.hobbies.orEmpty().isNotEmpty()
-                    if (hasPersonalDetails) {
+                    if (hasPersonalDetails && (!current.isPrivateAccount || isFollowing || showOwnerTools)) {
                         Spacer(Modifier.height(NexaSpacing.sm))
                         Card(
                             modifier = Modifier.fillMaxWidth(),
