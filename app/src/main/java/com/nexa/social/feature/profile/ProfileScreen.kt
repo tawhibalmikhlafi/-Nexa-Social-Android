@@ -9,6 +9,8 @@ import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -39,6 +41,9 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.filled.Link
@@ -60,6 +65,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -107,10 +113,13 @@ import com.nexa.social.ui.theme.NexaSpacing
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
     targetUserId: String?,
@@ -608,6 +617,69 @@ fun ProfileScreen(
                             }
                         }
                     }
+
+                    val hasPersonalDetails = !current.placeOfOrigin.isNullOrBlank() ||
+                        !current.currentResidence.isNullOrBlank() ||
+                        !current.birthDate.isNullOrBlank() ||
+                        current.skills.isNotEmpty() || current.hobbies.isNotEmpty()
+                    if (hasPersonalDetails) {
+                        Spacer(Modifier.height(NexaSpacing.sm))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(NexaSpacing.md),
+                                verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+                            ) {
+                                Text("معلومات شخصية", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                if (!current.placeOfOrigin.isNullOrBlank()) {
+                                    ProfileDetailRow("مكان المنشأ", current.placeOfOrigin, Icons.Filled.Place)
+                                }
+                                if (!current.currentResidence.isNullOrBlank()) {
+                                    ProfileDetailRow("مكان الإقامة", current.currentResidence, Icons.Filled.Home)
+                                }
+                                if (!current.birthDate.isNullOrBlank()) {
+                                    val birthLabel = remember(current.birthDate) {
+                                        runCatching {
+                                            LocalDate.parse(current.birthDate)
+                                                .format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("ar")))
+                                        }.getOrDefault(current.birthDate.orEmpty())
+                                    }
+                                    ProfileDetailRow("تاريخ الميلاد", birthLabel, Icons.Filled.Cake)
+                                }
+                                if (current.skills.isNotEmpty()) {
+                                    Text("المهارات", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
+                                        current.skills.forEach { skill ->
+                                            Surface(
+                                                shape = RoundedCornerShape(50),
+                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                            ) {
+                                                Text(skill, modifier = Modifier.padding(horizontal = NexaSpacing.sm, vertical = NexaSpacing.xs), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                            }
+                                        }
+                                    }
+                                }
+                                if (current.hobbies.isNotEmpty()) {
+                                    Text("الهوايات", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
+                                        current.hobbies.forEach { hobby ->
+                                            Surface(
+                                                shape = RoundedCornerShape(50),
+                                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+                                            ) {
+                                                Text(hobby, modifier = Modifier.padding(horizontal = NexaSpacing.sm, vertical = NexaSpacing.xs), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(NexaSpacing.md))
                 }
             }
@@ -1060,6 +1132,26 @@ private fun ProfilePostGridItem(
                 )
                 Text(text = post.commentCount.toString(), color = Color.White, style = MaterialTheme.typography.labelSmall)
             }
+        }
+    }
+}
+
+
+@Composable
+private fun ProfileDetailRow(
+    label: String,
+    value: String,
+    icon: ImageVector
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
         }
     }
 }
