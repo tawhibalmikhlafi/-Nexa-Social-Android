@@ -26,8 +26,8 @@ data class User(
     val currentResidence: String? = null,
     /** ISO-8601 calendar date (yyyy-MM-dd), independent of device timezone. */
     val birthDate: String? = null,
-    val skills: List<String> = emptyList(),
-    val hobbies: List<String> = emptyList()
+    val skills: List<String>? = emptyList(),
+    val hobbies: List<String>? = emptyList()
 )
 
 /** Lightweight author reference embedded in feeds and messages. */
