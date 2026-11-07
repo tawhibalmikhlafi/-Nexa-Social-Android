@@ -621,7 +621,7 @@ fun ProfileScreen(
                     val hasPersonalDetails = !current.placeOfOrigin.isNullOrBlank() ||
                         !current.currentResidence.isNullOrBlank() ||
                         !current.birthDate.isNullOrBlank() ||
-                        current.skills.isNotEmpty() || current.hobbies.isNotEmpty()
+                        current.skills.orEmpty().isNotEmpty() || current.hobbies.orEmpty().isNotEmpty()
                     if (hasPersonalDetails) {
                         Spacer(Modifier.height(NexaSpacing.sm))
                         Card(
@@ -645,16 +645,16 @@ fun ProfileScreen(
                                 if (!current.birthDate.isNullOrBlank()) {
                                     val birthLabel = remember(current.birthDate) {
                                         runCatching {
-                                            LocalDate.parse(current.birthDate)
+                                            LocalDate.parse(current.birthDate.orEmpty())
                                                 .format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("ar")))
                                         }.getOrDefault(current.birthDate.orEmpty())
                                     }
                                     ProfileDetailRow("تاريخ الميلاد", birthLabel, Icons.Filled.Cake)
                                 }
-                                if (current.skills.isNotEmpty()) {
+                                if (current.skills.orEmpty().isNotEmpty()) {
                                     Text("المهارات", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                                     FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
-                                        current.skills.forEach { skill ->
+                                        current.skills.orEmpty().forEach { skill ->
                                             Surface(
                                                 shape = RoundedCornerShape(50),
                                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
@@ -664,10 +664,10 @@ fun ProfileScreen(
                                         }
                                     }
                                 }
-                                if (current.hobbies.isNotEmpty()) {
+                                if (current.hobbies.orEmpty().isNotEmpty()) {
                                     Text("الهوايات", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                                     FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
-                                        current.hobbies.forEach { hobby ->
+                                        current.hobbies.orEmpty().forEach { hobby ->
                                             Surface(
                                                 shape = RoundedCornerShape(50),
                                                 color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
