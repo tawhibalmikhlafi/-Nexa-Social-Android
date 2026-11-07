@@ -157,6 +157,15 @@ fun ProfileExperiencePanel(
             languages.clear(); languages.addAll(dataSource.loadRows("nexa_profile_languages", profileId))
             credentials.clear(); credentials.addAll(dataSource.loadRows("nexa_profile_credentials", profileId))
             statuses.clear(); statuses.addAll(dataSource.loadRows("nexa_profile_status", profileId))
+            if (isOwner) {
+                val expired = statuses.firstOrNull()?.get("expires_at")?.takeIf { !it.isJsonNull }?.asString
+                    ?.let { runCatching { Instant.parse(it).isBefore(Instant.now()) }.getOrDefault(false) } == true
+                if (expired) {
+                    dataSource.deleteRow("nexa_profile_status", profileId)
+                    statuses.clear()
+                    statuses.addAll(dataSource.loadRows("nexa_profile_status", profileId))
+                }
+            }
             testimonials.clear(); testimonials.addAll(dataSource.loadRows("nexa_profile_testimonials", profileId))
             favorites.clear(); favorites.addAll(dataSource.loadRows("nexa_profile_favorites", profileId))
             achievements.clear(); achievements.addAll(dataSource.loadRows("nexa_profile_achievements", profileId))
@@ -307,7 +316,12 @@ fun ProfileExperiencePanel(
             if (current == null) Text("لا توجد حالة نشطة.", style = MaterialTheme.typography.bodySmall)
             else {
                 val code = current.get("status_code")?.asString.orEmpty()
-                Text(current.get("custom_text")?.asString?.takeIf { it.isNotBlank() } ?: statusChoices.firstOrNull { it.first == code }?.second ?: code, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "\${current.get("emoji")?.asString.orEmpty()} " +
+                        (current.get("custom_text")?.asString?.takeIf { it.isNotBlank() }
+                            ?: statusChoices.firstOrNull { it.first == code }?.second ?: code),
+                    style = MaterialTheme.typography.titleSmall
+                )
                 current.get("expires_at")?.takeIf { !it.isJsonNull }?.asString?.let { Text("تنتهي: $it", style = MaterialTheme.typography.labelSmall) }
             }
             if (isOwner && current != null) TextButton(onClick = {
@@ -617,7 +631,7 @@ private fun ChoiceChips(options: List<Pair<String, String>>, selected: String, o
 private fun FormDialog(
     title: String,
     onDismiss: () -> Unit,
-    fields: @Composable Column.() -> Unit,
+    fields: @Composable ColumnScope.() -> Unit,
     enabled: Boolean,
     confirmText: String,
     onConfirm: () -> Unit
