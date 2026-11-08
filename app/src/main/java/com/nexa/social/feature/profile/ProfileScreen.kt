@@ -379,11 +379,11 @@ fun ProfileScreen(
             ) {
                 if (onBack != null) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
                     }
                 } else {
                     IconButton(onClick = onSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.title_settings))
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.title_settings), modifier = Modifier.size(20.dp))
                     }
                 }
 
@@ -392,7 +392,7 @@ fun ProfileScreen(
                 }
 
                 IconButton(onClick = copyProfileLink) {
-                    Icon(Icons.Filled.Link, contentDescription = stringResource(R.string.profile_copy_link))
+                    Icon(Icons.Filled.Link, contentDescription = stringResource(R.string.profile_copy_link), modifier = Modifier.size(20.dp))
                 }
             }
         }
@@ -864,7 +864,7 @@ fun ProfileScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Icon(Icons.Filled.Add, contentDescription = null, tint = neonPurple, modifier = Modifier.size(24.dp))
+                                Icon(Icons.Filled.Add, contentDescription = null, tint = neonPurple, modifier = Modifier.size(20.dp))
                                 Text(stringResource(R.string.create_new_post), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                             }
                         }
@@ -1092,7 +1092,7 @@ private fun StatBox(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(16.dp))
+                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(14.dp))
                 Text(text = value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
             Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
@@ -1121,7 +1121,7 @@ private fun LargeShortcutCard(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(23.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(19.dp))
             Spacer(Modifier.height(8.dp))
             Text(text = title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
         }
@@ -1209,7 +1209,7 @@ private fun ProfileDetailRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
         Column(modifier = Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
