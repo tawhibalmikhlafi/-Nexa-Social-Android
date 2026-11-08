@@ -79,31 +79,59 @@ Deno.serve(async (req) => {
   const auditId = Array.isArray(auditRows) && typeof auditRows[0]?.id === "string" ? auditRows[0].id : "";
   if (!auditId) return reply(500, { error: "audit_record_id_missing" });
 
-  // Collect and delete every object stored under the user's UUID folder before
-  // deleting the Auth identity. All Nexa media upload policies use this folder layout.
+  // Recursively inventory files in the user's folder. Storage list() returns
+  // folders as entries too; deleting a folder name is not equivalent to deleting
+  // the files nested inside it.
   const buckets = [
     "post-media", "story-media", "profile-media", "message-media",
     "clips-media", "clip-covers", "nexa-pulse", "nexa-pulse-video",
   ];
   let removedObjects = 0;
-  for (const bucket of buckets) {
-    const names: string[] = [];
+
+  async function listUserFiles(bucket: string, prefix: string, depth = 0): Promise<string[]> {
+    if (depth > 20) throw new Error("storage_folder_depth_exceeded");
+    const files: string[] = [];
     for (let offset = 0; ; offset += 1000) {
       const listed = await fetch(
         `${url}/storage/v1/object/list/${encodeURIComponent(bucket)}`,
         {
           method: "POST",
           headers: secretHeaders(secret),
-          body: JSON.stringify({ prefix: targetId, limit: 1000, offset, sortBy: { column: "name", order: "asc" } }),
+          body: JSON.stringify({
+            prefix,
+            limit: 1000,
+            offset,
+            sortBy: { column: "name", order: "asc" },
+          }),
         },
       );
-      if (!listed.ok) return reply(502, { error: "storage_inventory_failed", bucket });
+      if (!listed.ok) throw new Error("storage_inventory_failed");
       const rows = await listed.json();
       if (!Array.isArray(rows) || rows.length === 0) break;
       for (const row of rows) {
-        if (typeof row?.name === "string" && row.name.length > 0) names.push(targetId + "/" + row.name);
+        if (typeof row?.name !== "string" || row.name.length === 0) continue;
+        const path = `${prefix}/${row.name}`;
+        // Supabase Storage represents folders without an object id/metadata.
+        if (row.id == null && row.metadata == null) {
+          files.push(...await listUserFiles(bucket, path, depth + 1));
+        } else {
+          files.push(path);
+        }
       }
       if (rows.length < 1000) break;
+    }
+    return files;
+  }
+
+  for (const bucket of buckets) {
+    let names: string[];
+    try {
+      names = await listUserFiles(bucket, targetId);
+    } catch (error) {
+      return reply(502, {
+        error: error instanceof Error ? error.message : "storage_inventory_failed",
+        bucket,
+      });
     }
     for (let offset = 0; offset < names.length; offset += 100) {
       const batch = names.slice(offset, offset + 100);
@@ -119,21 +147,22 @@ Deno.serve(async (req) => {
       removedObjects += batch.length;
     }
 
-    // Verify that no object remains under this user's folder before deleting Auth.
-    const verification = await fetch(
-      `${url}/storage/v1/object/list/${encodeURIComponent(bucket)}`,
-      {
-        method: "POST",
-        headers: secretHeaders(secret),
-        body: JSON.stringify({ prefix: targetId, limit: 1, offset: 0 }),
-      },
-    );
-    if (!verification.ok) {
-      return reply(502, { error: "storage_verification_failed", bucket });
+    // Verify recursively; checking only the first directory level misses nested media.
+    let remainingFiles: string[];
+    try {
+      remainingFiles = await listUserFiles(bucket, targetId);
+    } catch (error) {
+      return reply(502, {
+        error: error instanceof Error ? error.message : "storage_verification_failed",
+        bucket,
+      });
     }
-    const remaining = await verification.json();
-    if (Array.isArray(remaining) && remaining.length > 0) {
-      return reply(502, { error: "storage_objects_remaining", bucket, remaining_count_at_least: remaining.length });
+    if (remainingFiles.length > 0) {
+      return reply(502, {
+        error: "storage_objects_remaining",
+        bucket,
+        remaining_count: remainingFiles.length,
+      });
     }
   }
 
