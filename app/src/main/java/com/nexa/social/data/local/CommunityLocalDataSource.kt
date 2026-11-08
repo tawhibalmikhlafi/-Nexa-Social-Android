@@ -18,6 +18,16 @@ class CommunityLocalDataSource(private val store: JsonFileStore) {
         const val POSTS_FILE = "community_posts.json"
         const val LOCAL_COMMUNITIES_FILE = "local_communities.json"
         const val DELETED_FILE = "deleted_communities.json"
+        val LEGACY_SAMPLE_POST_IDS = setOf("cp_g1", "cp_g2", "cp_c1", "cp_t1")
+    }
+
+    init {
+        // Remove only bundled demo posts from existing installs; preserve user-created posts.
+        val existingPosts = store.readList<CommunityPost>(POSTS_FILE)
+        val realPosts = existingPosts.filterNot { it.id in LEGACY_SAMPLE_POST_IDS }
+        if (realPosts.size != existingPosts.size) {
+            store.writeList(POSTS_FILE, realPosts)
+        }
     }
 
     fun seedIfEmpty() {
