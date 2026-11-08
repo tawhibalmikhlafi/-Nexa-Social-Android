@@ -121,13 +121,14 @@ class SupabaseOwnerAdminDataSource(
         }
     }
 
-    suspend fun moderateUser(userId: String, action: String, reason: String): Boolean {
+    suspend fun moderateUser(userId: String, action: String, reason: String, durationHours: Int? = null): Boolean {
         val body = JsonObject().apply {
             addProperty("p_user_id", userId)
             addProperty("p_action", action)
             addProperty("p_reason", reason.trim().ifBlank { "إجراء إداري من لوحة مالك Nexa" })
+            add("p_duration_hours", durationHours?.let { com.google.gson.JsonPrimitive(it) } ?: com.google.gson.JsonNull.INSTANCE)
         }
-        val result = rpc("nexa_owner_moderate_user", body) ?: return false
+        val result = rpc("nexa_owner_moderate_user_timed", body) ?: return false
         return runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
     }
 
