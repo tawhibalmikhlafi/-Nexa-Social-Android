@@ -158,9 +158,11 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                 Card(Modifier.fillMaxWidth().clickable {
                                     selectedUser = user
                                     selectedUserDetails = null
+                                    moderationHistory = emptyList()
                                     userDetailsLoading = true
                                     scope.launch {
                                         selectedUserDetails = admin?.getUserDetails(user.id)
+                                        moderationHistory = admin?.moderationHistory(user.id).orEmpty()
                                         userDetailsLoading = false
                                     }
                                 }) {
