@@ -31,7 +31,8 @@ data class OwnerReportRow(
 class SupabaseOwnerAdminDataSource(
     private val config: SupabaseConfig,
     private val http: SupabaseHttp,
-    private val accessToken: () -> String?
+    private val accessToken: suspend () -> String?,
+    private val currentUid: suspend () -> String?
 ) {
     private val base get() = config.restUrl
     private fun enc(value: String) = URLEncoder.encode(value, StandardCharsets.UTF_8.name())
