@@ -76,6 +76,10 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var officialPost by remember { mutableStateOf("") }
     var settings by remember { mutableStateOf<JsonObject?>(null) }
     var confirmDelete by remember { mutableStateOf<OwnerUserRow?>(null) }
+    var moderationTarget by remember { mutableStateOf<OwnerUserRow?>(null) }
+    var moderationAction by remember { mutableStateOf("RESTRICT") }
+    var moderationReason by remember { mutableStateOf("") }
+    var moderationHistory by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
     var selectedUser by remember { mutableStateOf<OwnerUserRow?>(null) }
     var selectedUserDetails by remember { mutableStateOf<JsonObject?>(null) }
     var userDetailsLoading by remember { mutableStateOf(false) }
@@ -165,18 +169,21 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                         Text("اضغط لعرض تفاصيل الحساب", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                         Text("@${user.username} • ${user.email}")
                                         Text("التسجيل: ${user.createdAt}")
-                                        Text("الحالة: ${user.status}")
+                                        Text("الحالة: ${when(user.status) { "BANNED" -> "محظور"; "SUSPENDED" -> "مقيّد"; "ACTIVE" -> "نشط"; else -> user.status }}")
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             OutlinedButton(onClick = {
-                                                scope.launch {
-                                                    val next = if (user.status == "SUSPENDED") "ACTIVE" else "SUSPENDED"
-                                                    message = if (admin?.setUserStatus(user.id, next) == true) "تم تحديث حالة الحساب" else "تعذر تحديث الحالة"
-                                                    refresh()
-                                                }
+                                                moderationTarget = user
+                                                moderationAction = if (user.status == "SUSPENDED") "RESTORE" else "RESTRICT"
+                                                moderationReason = ""
                                             }) { Text(if (user.status == "SUSPENDED") "إلغاء التقييد" else "تقييد") }
+                                            OutlinedButton(onClick = {
+                                                moderationTarget = user
+                                                moderationAction = if (user.status == "BANNED") "RESTORE" else "BAN"
+                                                moderationReason = ""
+                                            }) { Text(if (user.status == "BANNED") "فك الحظر" else "حظر") }
                                             OutlinedButton(onClick = { confirmDelete = user }) {
                                                 Icon(Icons.Default.Delete, contentDescription = null)
-                                                Text("حذف")
+                                                Text("حذف نهائي")
                                             }
                                         }
                                     }
@@ -303,11 +310,17 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                     Text("معرّف الحساب: ${user.id}")
                     Text("تاريخ التسجيل: ${selectedUserDetails?.get("created_at")?.takeUnless { it.isJsonNull }?.asString ?: user.createdAt}")
                     Text("آخر تسجيل دخول: ${selectedUserDetails?.get("last_sign_in_at")?.takeUnless { it.isJsonNull }?.asString ?: "غير متوفر"}")
-                    Text("الحالة: ${profile?.get("account_status")?.takeUnless { it.isJsonNull }?.asString ?: user.status}")
+                    Text("الحالة: ${when(profile?.get("account_status")?.takeUnless { it.isJsonNull }?.asString ?: user.status) { "BANNED" -> "محظور"; "SUSPENDED" -> "مقيّد"; "ACTIVE" -> "نشط"; else -> user.status }}")
                     Text("التوثيق: ${if (user.verified) "موثق" else "غير موثق"}")
                     Text("المنشورات: ${selectedUserDetails?.get("posts_count")?.asString ?: "—"}")
                     Text("المتابعون: ${selectedUserDetails?.get("followers_count")?.asString ?: "—"}")
                     Text("يتابع: ${selectedUserDetails?.get("following_count")?.asString ?: "—"}")
+                    if (moderationHistory.isNotEmpty()) {
+                        Text("سجل إجراءات الإدارة", style = MaterialTheme.typography.titleMedium)
+                        moderationHistory.forEach { entry ->
+                            Text("${entry.get("action")?.asString ?: ""} • ${entry.get("reason")?.asString ?: ""} • ${entry.get("created_at")?.asString ?: ""}")
+                        }
+                    }
                     profile?.get("bio")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("النبذة: $it") }
                     profile?.get("city")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("المدينة: $it") }
                     profile?.get("place_of_origin")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("مكان المنشأ: $it") }
@@ -323,6 +336,42 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 }
             },
             confirmButton = { TextButton(onClick = { selectedUser = null; selectedUserDetails = null }) { Text("إغلاق") } }
+        )
+    }
+
+    moderationTarget?.let { user ->
+        AlertDialog(
+            onDismissRequest = { moderationTarget = null },
+            title = { Text(when(moderationAction) { "BAN" -> "حظر المستخدم"; "RESTRICT" -> "تقييد المستخدم"; else -> "إعادة تفعيل المستخدم" }) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(when(moderationAction) {
+                        "BAN" -> "سيُمنع الحساب من النشر والتفاعل وسيختفي من المساحات العامة حتى فك الحظر."
+                        "RESTRICT" -> "سيبقى الحساب موجوداً، لكن ستُمنع عمليات الكتابة والنشر حتى إلغاء التقييد."
+                        else -> "ستتم إعادة الحساب إلى الحالة النشطة."
+                    })
+                    OutlinedTextField(
+                        value = moderationReason,
+                        onValueChange = { moderationReason = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("سبب الإجراء (يُحفظ في السجل)") },
+                        minLines = 2
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val action = moderationAction
+                    val reason = moderationReason
+                    moderationTarget = null
+                    scope.launch {
+                        val ok = admin?.moderateUser(user.id, action, reason) == true
+                        message = if (ok) "تم تنفيذ الإجراء وحفظه في سجل الإدارة" else "فشل الإجراء: ${admin?.lastError.orEmpty()}"
+                        if (ok) refresh()
+                    }
+                }) { Text("تأكيد") }
+            },
+            dismissButton = { TextButton(onClick = { moderationTarget = null }) { Text("إلغاء") } }
         )
     }
 
