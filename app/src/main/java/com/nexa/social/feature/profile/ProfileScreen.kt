@@ -802,7 +802,7 @@ fun ProfileScreen(
                     }
                     Spacer(Modifier.height(NexaSpacing.sm))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
-                        LargeShortcutCard(title = "تفاصيل الملف الشخصي", icon = Icons.Filled.AutoAwesome, modifier = Modifier.weight(1f), onClick = onOpenProfileDetails, color = neonPurple)
+                        LargeShortcutCard(title = "تفاصيل الملف الشخصي", icon = Icons.Filled.Person, modifier = Modifier.weight(1f), onClick = onOpenProfileDetails, color = neonPurple)
                         LargeShortcutCard(
                             title = stringResource(R.string.post_share),
                             icon = Icons.Filled.Share,
