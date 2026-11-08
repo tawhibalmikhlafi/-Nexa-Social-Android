@@ -61,6 +61,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ScrollableTabRow
@@ -330,7 +331,7 @@ fun ProfileScreen(
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "إغلاق القائمة")
                         }
                     }
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     @Composable
                     fun MenuEntry(label: String, icon: ImageVector, action: () -> Unit) {
                         Row(
