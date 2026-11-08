@@ -100,7 +100,8 @@ class SupabaseOwnerAdminDataSource(
             addProperty("p_action", action)
             addProperty("p_reason", reason.trim().ifBlank { "إجراء إداري من لوحة مالك Nexa" })
         }
-        return rpc("nexa_owner_moderate_user", body) != null
+        val result = rpc("nexa_owner_moderate_user", body) ?: return false
+        return runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
     }
 
     suspend fun moderationHistory(userId: String): List<JsonObject> {
@@ -210,7 +211,8 @@ class SupabaseOwnerAdminDataSource(
             addProperty("p_key", key)
             add("p_value", com.google.gson.JsonPrimitive(value))
         }
-        return rpc("nexa_owner_set_setting", body) != null
+        val result = rpc("nexa_owner_set_setting", body) ?: return false
+        return runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
     }
 
     suspend fun setNumberSetting(key: String, value: Int): Boolean {
@@ -228,7 +230,8 @@ class SupabaseOwnerAdminDataSource(
             addProperty("p_duration_seconds", durationSeconds)
             addProperty("p_frequency_per_session", frequency)
         }
-        return rpc("nexa_owner_set_ads_settings", body) != null
+        val result = rpc("nexa_owner_set_ads_settings", body) ?: return false
+        return runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
     }
 
     suspend fun createOfficialPost(text: String): Boolean {
@@ -237,7 +240,8 @@ class SupabaseOwnerAdminDataSource(
             return false
         }
         val body = JsonObject().apply { addProperty("p_text", text.trim()) }
-        return rpc("nexa_owner_create_official_post", body) != null
+        val result = rpc("nexa_owner_create_official_post", body) ?: return false
+        return runCatching { JsonParser.parseString(result).asString.isNotBlank() }.getOrDefault(false)
     }
 
     suspend fun isFounderVerified(userId: String): Boolean {
