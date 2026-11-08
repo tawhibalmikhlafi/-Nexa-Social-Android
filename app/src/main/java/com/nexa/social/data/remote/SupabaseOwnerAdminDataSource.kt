@@ -18,7 +18,9 @@ data class OwnerUserRow(
     val verified: Boolean
 )
 
-data class OwnerSupportRow(val id: String, val userId: String, val subject: String, val message: String, val status: String, val reply: String, val createdAt: String)\n\ndata class OwnerReportRow(
+data class OwnerSupportRow(val id: String, val userId: String, val subject: String, val message: String, val status: String, val reply: String, val createdAt: String)
+
+data class OwnerReportRow(
     val id: String,
     val targetType: String,
     val targetId: String,
