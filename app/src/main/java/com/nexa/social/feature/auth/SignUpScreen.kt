@@ -35,7 +35,6 @@ import com.nexa.social.core.ui.failureMessage
 import com.nexa.social.domain.model.SignUpRequest
 import com.nexa.social.ui.components.AccountRequiredBanner
 import com.nexa.social.ui.components.LegalDialog
-import com.nexa.social.ui.components.LocalDataBanner
 import com.nexa.social.ui.components.NexaPasswordField
 import com.nexa.social.ui.components.NexaPrimaryButton
 import com.nexa.social.ui.components.NexaSecondaryButton
@@ -92,16 +91,6 @@ fun SignUpScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            LocalDataBanner(
-                text = stringResource(
-                    if (viewModel.remoteAuthEnabled) {
-                        R.string.notice_supabase_account
-                    } else {
-                        R.string.notice_local_account
-                    }
-                )
-            )
-
             NexaTextField(
                 value = displayName,
                 onValueChange = { displayName = it },

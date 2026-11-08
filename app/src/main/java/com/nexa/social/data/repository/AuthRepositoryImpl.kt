@@ -209,8 +209,13 @@ class AuthRepositoryImpl(
      * are retried in the background.
      */
     override fun startSessionSync(scope: CoroutineScope) {
-        val remote = supabase?.takeIf { it.available } ?: return
         scope.launch {
+            val previousSession = prefs.session.first()
+            if (previousSession is SessionState.LocalAccount || previousSession is SessionState.Guest) {
+                prefs.setSession(SessionState.None)
+                prefs.setRememberMe(false)
+            }
+            val remote = supabase?.takeIf { it.available } ?: return@launch
             if (!prefs.rememberMe.first()) {
                 remote.signOut()
                 if (prefs.sessionBackend.first() == PreferenceStorage.SessionBackend.SUPABASE) {

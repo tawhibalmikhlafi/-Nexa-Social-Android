@@ -76,13 +76,7 @@ fun SignInScreen(
             NexaTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = stringResource(
-                    if (viewModel.remoteAuthEnabled) {
-                        R.string.label_email_or_username
-                    } else {
-                        R.string.label_username
-                    }
-                )
+                label = stringResource(R.string.label_email)
             )
             NexaPasswordField(
                 value = password,
