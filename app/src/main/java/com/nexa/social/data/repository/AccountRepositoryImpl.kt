@@ -66,7 +66,7 @@ class AccountRepositoryImpl(
             ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
 
         val request = http
-            .authenticatedRequest("$restUrl/rpc/delete_own_account", token)
+            .authenticatedRequest("${http.config.functionsUrl}/delete-own-account", token)
             .post(http.emptyJsonBody)
             .build()
 
