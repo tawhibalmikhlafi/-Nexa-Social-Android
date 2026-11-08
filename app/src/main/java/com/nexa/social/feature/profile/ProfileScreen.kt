@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
@@ -140,6 +141,7 @@ fun ProfileScreen(
     onCreatePost: () -> Unit = {},
     onOpenFriends: () -> Unit = {},
     onOpenProfileDetails: () -> Unit = {},
+    onOpenOwnerDashboard: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel(
         factory = ProfileViewModel.factory(targetUserId),
         key = targetUserId ?: "self"
@@ -368,6 +370,15 @@ fun ProfileScreen(
         horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm),
         verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
     ) {
+        if (current.id == "b81639ff-c669-416e-8a58-452710658bd2") {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Button(onClick = onOpenOwnerDashboard, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.AdminPanelSettings, contentDescription = null)
+                    Text("لوحة مالك Nexa")
+                }
+            }
+        }
+
         // 1. Top Bar Header
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(
