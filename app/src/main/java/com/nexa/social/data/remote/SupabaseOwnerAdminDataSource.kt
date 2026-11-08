@@ -162,7 +162,15 @@ class SupabaseOwnerAdminDataSource(
             lastError = "فشل حذف الحساب (HTTP ${response.code}): ${response.body.take(500)}"
             return false
         }
-        lastError = null
+        val result = runCatching { JsonParser.parseString(response.body).asJsonObject }.getOrNull()
+        if (result?.get("success")?.asBoolean != true) {
+            lastError = result?.get("error")?.takeUnless { it.isJsonNull }?.asString
+                ?: "لم تؤكد خدمة Supabase اكتمال حذف الحساب"
+            return false
+        }
+        lastError = if (result.get("audit_recorded")?.asBoolean == false) {
+            "حُذف الحساب ونُظفت ملفاته، لكن تعذر تحديث سجل التدقيق النهائي؛ سجل بدء الحذف محفوظ."
+        } else null
         return true
     }
 
