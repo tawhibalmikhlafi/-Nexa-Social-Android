@@ -125,8 +125,17 @@ class SupabaseOwnerAdminDataSource(
         val response = http.execute(
             http.authenticatedRequest("${config.url.trimEnd('/')}/functions/v1/admin-delete-user", token)
                 .post(http.jsonBody(body)).build()
-        ).getOrNull() ?: return false
-        return response.successful
+        ).getOrNull()
+        if (response == null) {
+            lastError = "تعذر الاتصال بخدمة حذف الحساب"
+            return false
+        }
+        if (!response.successful) {
+            lastError = "فشل حذف الحساب (HTTP ${response.code}): ${response.body.take(500)}"
+            return false
+        }
+        lastError = null
+        return true
     }
 
     suspend fun listContent(): List<OwnerContentRow> {
@@ -254,9 +263,24 @@ class SupabaseOwnerAdminDataSource(
     }
 
     suspend fun createAnnouncement(title: String, bodyText: String): Boolean {
-        val body=JsonObject().apply { addProperty("p_title",title); addProperty("p_body",bodyText) }
+        val cleanTitle = title.trim()
+        val cleanBody = bodyText.trim()
+        if (cleanTitle.isEmpty() || cleanTitle.length > 140 || cleanBody.isEmpty() || cleanBody.length > 5000) {
+            lastError = "تحقق من الإعلان: العنوان من 1 إلى 140 حرفاً والنص من 1 إلى 5000 حرف."
+            return false
+        }
+        val body = JsonObject().apply {
+            addProperty("p_title", cleanTitle)
+            addProperty("p_body", cleanBody)
+        }
         val result = rpc("nexa_owner_create_announcement", body) ?: return false
-        return runCatching { JsonParser.parseString(result).asString.isNotBlank() }.getOrDefault(false)
+        val id = runCatching { JsonParser.parseString(result).asString }.getOrNull()
+        if (id.isNullOrBlank()) {
+            lastError = "لم تُرجع قاعدة البيانات معرّف الإعلان بعد الحفظ."
+            return false
+        }
+        lastError = null
+        return true
     }
 
     suspend fun setAdsSettings(enabled: Boolean, placement: String, durationSeconds: Int, frequency: Int): Boolean {
@@ -267,7 +291,9 @@ class SupabaseOwnerAdminDataSource(
             addProperty("p_frequency_per_session", frequency)
         }
         val result = rpc("nexa_owner_set_ads_settings", body) ?: return false
-        return runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
+        val saved = runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
+        if (!saved && lastError == null) lastError = "قاعدة البيانات لم تؤكد حفظ إعدادات الإعلانات."
+        return saved
     }
 
     suspend fun createOfficialPost(text: String): Boolean {
