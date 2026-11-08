@@ -144,7 +144,7 @@ class SupabaseOwnerAdminDataSource(
         val token=accessToken() ?: return false
         val uid=currentUid() ?: return false
         val body=JsonObject().apply {
-            addProperty("author_id",uid); addProperty("text",text.trim()); addProperty("audience","public")
+            addProperty("author_id",uid); addProperty("text",text.trim()); addProperty("audience","PUBLIC_LOCAL")
         }
         val response=http.execute(http.authenticatedRequest("$base/posts",token)
             .header("Prefer","return=minimal").post(http.jsonBody(body)).build()).getOrNull() ?: return false
