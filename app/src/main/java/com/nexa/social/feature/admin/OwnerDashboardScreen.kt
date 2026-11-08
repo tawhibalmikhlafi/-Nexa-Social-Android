@@ -788,6 +788,22 @@ private fun OwnerAdsManagementPanel(
         }
         if(mediaType!="NONE") OutlinedTextField(mediaUrl,{mediaUrl=it},Modifier.fillMaxWidth(),label={Text("رابط الوسائط")},singleLine=true)
         OutlinedTextField(clickUrl,{clickUrl=it},Modifier.fillMaxWidth(),label={Text("رابط الفتح عند الضغط")},singleLine=true)
+        if(title.isNotBlank() || body.isNotBlank() || mediaUrl.isNotBlank()) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    Text("معاينة الإعلان قبل الحفظ",style=MaterialTheme.typography.titleMedium)
+                    Text(title.ifBlank { "عنوان الإعلان" },style=MaterialTheme.typography.titleLarge)
+                    Text(body.ifBlank { "سيظهر نص الإعلان هنا" })
+                    if(mediaType=="IMAGE" && mediaUrl.startsWith("http")) {
+                        AsyncImage(model=mediaUrl,contentDescription="معاينة صورة الإعلان",modifier=Modifier.fillMaxWidth().height(180.dp),contentScale=ContentScale.Crop)
+                    } else if(mediaType=="VIDEO" && mediaUrl.startsWith("http")) {
+                        Text("معاينة فيديو: تم تحديد رابط الفيديو، وسيظهر داخل موضع الإعلان عند عرضه للمستخدمين.",style=MaterialTheme.typography.bodySmall)
+                    }
+                    Text("الموضع: $placement • الجمهور: $audience",style=MaterialTheme.typography.labelSmall)
+                    if(clickUrl.isNotBlank()) Text("رابط الضغط: $clickUrl",style=MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
         Text("مكان الظهور")
         listOf("FEED_TOP" to "أعلى الرئيسية","FEED_INLINE" to "بين المنشورات","STORIES_BETWEEN" to "بين القصص","PROFILE_FEED" to "الملف الشخصي").forEach { (v,l) ->
             FilterChip(selected=placement==v,onClick={placement=v},label={Text(l)})
