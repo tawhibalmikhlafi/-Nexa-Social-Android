@@ -170,6 +170,7 @@ fun ProfileScreen(
     val messageError by viewModel.messageError.collectAsStateWithLifecycle()
     val remoteMode = rememberRemoteMode()
     val profileExperienceDataSource = rememberAppContainer().profileExperienceDataSource
+    val ownerAdminDataSource = rememberAppContainer().ownerAdminDataSource
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var fullImageUri by remember { mutableStateOf<String?>(null) }
@@ -207,6 +208,11 @@ fun ProfileScreen(
     }
 
     val current = user
+    var ownerBadgeVerified by remember(current?.id) { mutableStateOf(false) }
+    LaunchedEffect(current?.id, ownerAdminDataSource) {
+        ownerBadgeVerified = current?.id == "b81639ff-c669-416e-8a58-452710658bd2" &&
+            ownerAdminDataSource?.isFounderVerified(current.id) == true
+    }
     val showOwnerTools = viewModel.isSelf || isOwnProfile
 
     if (!showOwnerTools && selectedTab > 1) {
