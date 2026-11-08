@@ -251,7 +251,7 @@ fun ProfileScreen(
             java.time.Instant.parse(expires).isAfter(java.time.Instant.now())
         }.getOrDefault(false)
         profileStatusLabel = status?.takeIf { active }?.let { row ->
-            val code = row.get("status_code")?.asString.orEmpty()
+            val code = row.get("status_code")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
             val custom = row.get("custom_text")?.takeIf { !it.isJsonNull }?.asString.orEmpty()
             val label = custom.ifBlank {
                 when (code) {
@@ -268,7 +268,7 @@ fun ProfileScreen(
                     else -> code
                 }
             }
-            "${row.get("emoji")?.asString.orEmpty()} $label".trim()
+            "${row.get("emoji")?.takeUnless { it.isJsonNull }?.asString.orEmpty()} $label".trim()
         }
     }
 
