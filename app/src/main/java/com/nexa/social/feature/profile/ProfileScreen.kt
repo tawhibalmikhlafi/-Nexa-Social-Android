@@ -1121,7 +1121,7 @@ private fun LargeShortcutCard(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(32.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(23.dp))
             Spacer(Modifier.height(8.dp))
             Text(text = title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
         }
