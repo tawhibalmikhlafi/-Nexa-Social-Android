@@ -83,6 +83,16 @@ class SupabaseAuthDataSource(
     }
 
     suspend fun signUpWithEmail(request: SignUpRequest): Resource<SupabaseSignUpOutcome> {
+        val registrationCheck = http.execute(
+            http.request("${config.restUrl}/rpc/nexa_signup_allowed")
+                .post(http.emptyJsonBody)
+                .build()
+        ).getOrElse { error -> return Resource.Failure(http.transportFailure(error)) }
+        if (!registrationCheck.successful) return Resource.Failure(http.failureReason(registrationCheck))
+        val registrationAllowed = runCatching {
+            com.google.gson.JsonParser.parseString(registrationCheck.body).asBoolean
+        }.getOrDefault(true)
+        if (!registrationAllowed) return Resource.Failure(FailureReason.OPERATION_NOT_ALLOWED)
         val username = request.username.trim()
         // A failed availability probe must not be reported as a network error: Supabase still
         // enforces uniqueness when the profile row is inserted right after sign-up.
