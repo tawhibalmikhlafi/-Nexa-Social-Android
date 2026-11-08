@@ -130,8 +130,7 @@ class SupabaseOwnerAdminDataSource(
 
     suspend fun createOfficialPost(text: String): Boolean {
         val token=accessToken() ?: return false
-        val me=http.execute(http.authenticatedRequest("$base/profiles?select=id&id=eq.${enc(currentUidFromToken())}",token).get().build()).getOrNull()
-        val uid=runCatching { JsonParser.parseString(me?.body).asJsonArray.first().asJsonObject.string("id") }.getOrNull() ?: return false
+        val uid=currentUid() ?: return false
         val body=JsonObject().apply {
             addProperty("author_id",uid); addProperty("text",text.trim()); addProperty("audience","public")
         }
@@ -140,5 +139,12 @@ class SupabaseOwnerAdminDataSource(
         return response.successful
     }
 
-    private fun currentUidFromToken(): String = ""
+    suspend fun enableFounderBadge(): Boolean {
+        val token=accessToken() ?: return false
+        val uid=currentUid() ?: return false
+        val body=JsonObject().apply { addProperty("is_verified",true); addProperty("verified_label","مؤسس Nexa") }
+        val response=http.execute(http.authenticatedRequest("$base/profiles?id=eq.${enc(uid)}",token)
+            .header("Prefer","return=minimal").patch(http.jsonBody(body)).build()).getOrNull() ?: return false
+        return response.successful
+    }
 }
