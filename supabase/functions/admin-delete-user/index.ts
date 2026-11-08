@@ -101,6 +101,23 @@ Deno.serve(async (req) => {
       }
       removedObjects += batch.length;
     }
+
+    // Verify that no object remains under this user's folder before deleting Auth.
+    const verification = await fetch(
+      `${url}/storage/v1/object/list/${encodeURIComponent(bucket)}`,
+      {
+        method: "POST",
+        headers: secretHeaders(secret),
+        body: JSON.stringify({ prefix: targetId, limit: 1, offset: 0 }),
+      },
+    );
+    if (!verification.ok) {
+      return reply(502, { error: "storage_verification_failed", bucket });
+    }
+    const remaining = await verification.json();
+    if (Array.isArray(remaining) && remaining.length > 0) {
+      return reply(502, { error: "storage_objects_remaining", bucket, remaining_count_at_least: remaining.length });
+    }
   }
 
   const deleted = await fetch(`${url}/auth/v1/admin/users/${encodeURIComponent(targetId)}`, {
