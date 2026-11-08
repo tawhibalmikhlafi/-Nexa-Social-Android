@@ -68,6 +68,7 @@ import com.nexa.social.data.remote.SupabaseStorageDataSource
 import com.nexa.social.data.remote.SupabaseStoryDataSource
 import com.nexa.social.data.remote.SupabaseUserDataSource
 import com.nexa.social.data.remote.SupabaseProfileExperienceDataSource
+import com.nexa.social.data.remote.SupabaseOwnerAdminDataSource
 import com.nexa.social.feature.pulse.SupabaseDailyPulseRepository
 import com.nexa.social.domain.model.UserSession
 import com.nexa.social.domain.model.accountUserId
@@ -117,6 +118,7 @@ interface AppContainer {
     val spaceRepository: SpaceRepository
     val clipRepository: ClipRepository
     val messageRepository: MessageRepository
+    val ownerAdminDataSource: SupabaseOwnerAdminDataSource?
     val profileExperienceDataSource: SupabaseProfileExperienceDataSource?
     val notesDataSource: SupabaseNotesDataSource?
     val notificationRepository: NotificationRepository
@@ -219,6 +221,17 @@ class DefaultAppContainer(context: Context) : AppContainer {
         null
     }
     override val authSession: AuthSession? = supabaseAuth
+
+    override val ownerAdminDataSource: SupabaseOwnerAdminDataSource? =
+        if (supabaseHttp != null && supabaseAuth != null) {
+            SupabaseOwnerAdminDataSource(
+                config = supabaseConfig,
+                http = supabaseHttp,
+                accessToken = { supabaseAuth.currentAccessToken() },
+                currentUid = { supabaseAuth.currentUid() }
+            )
+        } else null
+
 
     private val accessTokenProvider = object : AccessTokenProvider {
         override suspend fun token(): String? = supabaseAuth?.currentAccessToken()
