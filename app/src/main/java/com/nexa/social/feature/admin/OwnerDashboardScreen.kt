@@ -257,11 +257,21 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                                 else -> "جديد"
                                             }, style = MaterialTheme.typography.labelMedium)
                                         }
-                                        Text("المبلّغ: ${report.reporterName.ifBlank { "مستخدم Nexa" }}")
-                                        if (report.reporterUsername.isNotBlank()) Text("@${report.reporterUsername}", style = MaterialTheme.typography.bodySmall)
-                                        if (report.reporterEmail.isNotBlank()) Text(report.reporterEmail, style = MaterialTheme.typography.bodySmall)
-                                        Text("الحساب/الناشر المبلّغ عليه: ${report.targetAuthorName.ifBlank { if (report.targetType == "USER") "الحساب محل البلاغ" else "غير متاح أو حُذف المحتوى" }}")
-                                        if (report.targetAuthorUsername.isNotBlank()) Text("@${report.targetAuthorUsername}", style = MaterialTheme.typography.bodySmall)
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            AsyncImage(model=report.reporterAvatarUrl.takeIf { it.isNotBlank() },contentDescription="صورة المبلّغ",modifier=Modifier.size(40.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                                            Column {
+                                                Text("المبلّغ: ${report.reporterName.ifBlank { "مستخدم Nexa" }}")
+                                                if (report.reporterUsername.isNotBlank()) Text("@${report.reporterUsername}",style=MaterialTheme.typography.bodySmall)
+                                                if (report.reporterEmail.isNotBlank()) Text(report.reporterEmail,style=MaterialTheme.typography.bodySmall)
+                                            }
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            AsyncImage(model=report.targetAuthorAvatarUrl.takeIf { it.isNotBlank() },contentDescription="صورة الحساب المبلّغ عليه",modifier=Modifier.size(40.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                                            Column {
+                                                Text("الحساب المبلّغ عليه: ${report.targetAuthorName.ifBlank { if (report.targetType == "USER") "الحساب محل البلاغ" else "غير متاح أو حُذف المحتوى" }}")
+                                                if (report.targetAuthorUsername.isNotBlank()) Text("@${report.targetAuthorUsername}",style=MaterialTheme.typography.bodySmall)
+                                            }
+                                        }
                                         if (report.targetPreview.isNotBlank()) {
                                             Text("المحتوى المبلّغ عنه", style = MaterialTheme.typography.labelLarge)
                                             Text(report.targetPreview, style = MaterialTheme.typography.bodyMedium)
