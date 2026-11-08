@@ -49,7 +49,9 @@ data class OwnerReportRow(
     val targetAuthorId: String = "",
     val targetAuthorName: String = "",
     val targetAuthorUsername: String = "",
-    val targetPreview: String = ""
+    val targetPreview: String = "",
+    val reporterAvatarUrl: String = "",
+    val targetAuthorAvatarUrl: String = ""
 )
 
 class SupabaseOwnerAdminDataSource(
@@ -233,7 +235,9 @@ class SupabaseOwnerAdminDataSource(
                     targetAuthorId = o.string("target_author_id").orEmpty(),
                     targetAuthorName = o.string("target_author_name").orEmpty(),
                     targetAuthorUsername = o.string("target_author_username").orEmpty(),
-                    targetPreview = o.string("target_preview").orEmpty()
+                    targetPreview = o.string("target_preview").orEmpty(),
+                    reporterAvatarUrl = o.string("reporter_avatar_url").orEmpty(),
+                    targetAuthorAvatarUrl = o.string("target_author_avatar_url").orEmpty()
                 )
             }
         }.onFailure { lastError = "تعذر تحليل قائمة البلاغات: ${it.message}" }.getOrDefault(emptyList())
