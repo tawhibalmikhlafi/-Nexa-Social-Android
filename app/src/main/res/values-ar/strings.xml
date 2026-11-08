@@ -1031,6 +1031,11 @@
     <string name="privacy_manage_sessions_desc">عرض وتسجيل الخروج من الأجهزة الأخرى</string>
     <string name="privacy_download_data">تنزيل بياناتي</string>
     <string name="privacy_download_data_desc">طلب نسخة من بيانات حسابك</string>
+    <string name="privacy_deactivate_account">إلغاء تنشيط الحساب</string>
+    <string name="privacy_deactivate_account_desc">إخفاء ملفك مؤقتاً، ويمكنك استعادته بتسجيل الدخول مجدداً.</string>
+    <string name="privacy_deactivate_account_title">هل تريد إلغاء تنشيط حسابك؟</string>
+    <string name="privacy_deactivate_account_warning">سيتم إخفاء ملفك الشخصي مؤقتاً، ولن تُحذف منشوراتك أو بياناتك. يمكنك إعادة تنشيطه عند تسجيل الدخول مرة أخرى.</string>
+    <string name="privacy_action_deactivate">إلغاء التنشيط</string>
     <string name="privacy_delete_account">حذف الحساب</string>
     <string name="privacy_delete_account_desc">حذف حسابك وبياناتك نهائيًا</string>
     <string name="privacy_change_password_title">تغيير كلمة المرور</string>
