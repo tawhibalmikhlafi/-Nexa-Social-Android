@@ -22,6 +22,13 @@ data class OwnerSupportRow(val id: String, val userId: String, val subject: Stri
 
 data class OwnerContentRow(val id: String, val type: String, val body: String, val authorName: String, val createdAt: String)
 
+data class OwnerAdRow(
+    val id: String, val title: String, val body: String, val mediaUrl: String,
+    val mediaType: String, val clickUrl: String, val placement: String, val audience: String,
+    val startsAt: String, val endsAt: String, val durationSeconds: Int,
+    val frequencyPerSession: Int, val enabled: Boolean, val impressions: Long, val clicks: Long
+)
+
 data class OwnerReportRow(
     val id: String,
     val targetType: String,
@@ -232,6 +239,47 @@ class SupabaseOwnerAdminDataSource(
         }
         val raw = rpc("nexa_owner_update_report", body) ?: return false
         return runCatching { JsonParser.parseString(raw).asBoolean }.getOrDefault(false)
+    }
+
+
+    suspend fun listAds(): List<OwnerAdRow> {
+        val raw = rpc("nexa_owner_list_ads") ?: return emptyList()
+        return runCatching { JsonParser.parseString(raw).asJsonArray.map { e ->
+            val o=e.asJsonObject
+            OwnerAdRow(o.string("id").orEmpty(),o.string("title").orEmpty(),o.string("body").orEmpty(),
+                o.string("media_url").orEmpty(),o.string("media_type").orEmpty(),o.string("click_url").orEmpty(),
+                o.string("placement").orEmpty(),o.string("audience").orEmpty(),o.string("starts_at").orEmpty(),
+                o.string("ends_at").orEmpty(),o.get("duration_seconds")?.asInt ?: 15,
+                o.get("frequency_per_session")?.asInt ?: 2,o.get("is_enabled")?.asBoolean ?: false,
+                o.get("impressions")?.asLong ?: 0L,o.get("clicks")?.asLong ?: 0L)
+        }}.onFailure { lastError="تعذر تحليل الحملات الإعلانية: ${it.message}" }.getOrDefault(emptyList())
+    }
+
+    suspend fun saveAd(
+        id: String?, title: String, body: String, mediaUrl: String, mediaType: String,
+        clickUrl: String, placement: String, audience: String, startsAt: String, endsAt: String,
+        durationSeconds: Int, frequency: Int, enabled: Boolean
+    ): Boolean {
+        val payload=JsonObject().apply {
+            addProperty("p_id",id)
+            addProperty("p_title",title.trim()); addProperty("p_body",body.trim())
+            addProperty("p_media_url",mediaUrl.trim().ifBlank { null as String? })
+            addProperty("p_media_type",mediaType); addProperty("p_click_url",clickUrl.trim().ifBlank { null as String? })
+            addProperty("p_placement",placement); addProperty("p_audience",audience)
+            addProperty("p_starts_at",startsAt); addProperty("p_ends_at",endsAt)
+            addProperty("p_duration_seconds",durationSeconds); addProperty("p_frequency_per_session",frequency)
+            addProperty("p_enabled",enabled)
+        }
+        val raw=rpc("nexa_owner_save_ad",payload) ?: return false
+        val idResult=runCatching { JsonParser.parseString(raw).asString }.getOrNull()
+        if (idResult.isNullOrBlank()) { lastError="لم تُرجع قاعدة البيانات معرّف الحملة"; return false }
+        return true
+    }
+
+    suspend fun listAudit(): List<JsonObject> {
+        val raw=rpc("nexa_owner_list_audit",JsonObject().apply { addProperty("p_limit",200) }) ?: return emptyList()
+        return runCatching { JsonParser.parseString(raw).asJsonArray.map { it.asJsonObject } }
+            .onFailure { lastError="تعذر تحميل سجل العمليات: ${it.message}" }.getOrDefault(emptyList())
     }
 
     suspend fun listSupport(): List<OwnerSupportRow> {
