@@ -48,7 +48,7 @@ enum class NotificationType {
             "group_join_approved" -> GROUP_JOIN_APPROVED
             "group_join_rejected" -> GROUP_JOIN_REJECTED
             "group_post_report" -> GROUP_POST_REPORT
-            "system" -> SYSTEM
+            "system", "ADMIN_REPORT", "ANNOUNCEMENT", "SUPPORT_TICKET" -> SYSTEM
             else -> null
         }
     }
