@@ -278,7 +278,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                             Text("المحتوى المبلّغ عنه", style = MaterialTheme.typography.labelLarge)
                                             Text(report.targetPreview, style = MaterialTheme.typography.bodyMedium)
                                         }
-                                        Text("عدد البلاغات على هذا الهدف: " + reports.count { it.targetType == report.targetType && it.targetId == report.targetId })
+                                        Text("إجمالي البلاغات على هذا الهدف: ${report.targetReportCount}")
                                         Text("السبب: ${report.reason}")
                                         if (report.note.isNotBlank()) Text("تفاصيل البلاغ: ${report.note}")
                                         Text("التاريخ: ${report.createdAt}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
