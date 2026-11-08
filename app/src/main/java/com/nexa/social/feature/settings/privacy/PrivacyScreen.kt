@@ -83,6 +83,7 @@ fun PrivacyScreen(
     onBack: () -> Unit,
     onBlockedAccounts: () -> Unit = {},
     onAccountDeleted: () -> Unit = {},
+    onAccountDeactivated: () -> Unit = {},
     viewModel: PrivacyViewModel = viewModel(factory = PrivacyViewModel.Factory),
     actionsViewModel: PrivacyActionsViewModel = viewModel(factory = PrivacyActionsViewModel.Factory),
 ) {
@@ -119,6 +120,9 @@ fun PrivacyScreen(
 
     LaunchedEffect(actions.accountDeleted) {
         if (actions.accountDeleted) onAccountDeleted()
+    }
+    LaunchedEffect(actions.accountDeactivated) {
+        if (actions.accountDeactivated) onAccountDeactivated()
     }
 
     LaunchedEffect(state.error, state.successNonce) {
@@ -478,6 +482,12 @@ fun PrivacyScreen(
                 onClick = { actionsViewModel.exportData() },
             )
             NavItem(
+                title = stringResource(R.string.privacy_deactivate_account),
+                subtitle = stringResource(R.string.privacy_deactivate_account_desc),
+                enabled = state.isRemote && !actions.busy,
+                onClick = { pendingAction = SecurityAction.DEACTIVATE_ACCOUNT },
+            )
+            NavItem(
                 title = stringResource(R.string.privacy_delete_account),
                 subtitle = stringResource(R.string.privacy_delete_account_desc),
                 enabled = state.isRemote && !actions.busy,
@@ -754,6 +764,28 @@ fun PrivacyScreen(
             },
         )
 
+        SecurityAction.DEACTIVATE_ACCOUNT -> AlertDialog(
+            onDismissRequest = { pendingAction = null },
+            title = { Text(stringResource(R.string.privacy_deactivate_account_title)) },
+            text = { Text(stringResource(R.string.privacy_deactivate_account_warning)) },
+            confirmButton = {
+                TextButton(
+                    enabled = !actions.busy,
+                    onClick = {
+                        actionsViewModel.deactivateAccount()
+                        pendingAction = null
+                    },
+                ) {
+                    Text(stringResource(R.string.privacy_action_deactivate))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingAction = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+
         SecurityAction.DELETE_ACCOUNT -> AlertDialog(
             onDismissRequest = { pendingAction = null },
             title = { Text(stringResource(R.string.privacy_delete_account_title)) },
@@ -786,6 +818,7 @@ fun PrivacyScreen(
 private enum class SecurityAction {
     CHANGE_PASSWORD,
     REVOKE_SESSIONS,
+    DEACTIVATE_ACCOUNT,
     DELETE_ACCOUNT,
 }
 
