@@ -98,7 +98,7 @@ class PostRepositoryImpl(
                 sortedWithPins(applyReactionOverrides(visible, overrides), pinned)
             }
         } else {
-            _posts.asStateFlow().map { visible() }
+            kotlinx.coroutines.flow.flowOf(emptyList())
         }
     }
 
@@ -186,41 +186,18 @@ class PostRepositoryImpl(
             .distinct()
         val session = prefs.session.first()
         val remoteStore = remote
-        if (remoteStore != null && session is SessionState.RemoteAccount) {
-            return createRemotePost(
-                session = session,
-                text = text,
-                imageUris = imageUris,
-                tags = cleanTags,
-                audience = audience,
-                communityId = communityId,
-                remote = remoteStore
-            )
+        if (session !is SessionState.RemoteAccount || remoteStore == null) {
+            throw PostCreationException(FailureReason.NOT_CONFIGURED)
         }
-        val author = currentIdentity()
-        val now = System.currentTimeMillis()
-        val post = Post(
-            id = Ids.newId(),
-            author = author,
-            text = text.trim(),
-            imageUri = imageUris.firstOrNull(),
+        return createRemotePost(
+            session = session,
+            text = text,
             imageUris = imageUris,
             tags = cleanTags,
             audience = audience,
-            createdAt = now,
-            updatedAt = now,
-            likeCount = 0,
-            commentCount = 0,
-            shareCount = 0,
-            likedByMe = false,
-            savedByMe = false,
             communityId = communityId,
-            isLocal = true
+            remote = remoteStore
         )
-        _posts.value = listOf(post) + _posts.value
-        persist()
-        if (audience != Audience.ONLY_ME) achievements.record(CounterKind.POSTS_CREATED)
-        return post
     }
 
     private suspend fun createRemotePost(

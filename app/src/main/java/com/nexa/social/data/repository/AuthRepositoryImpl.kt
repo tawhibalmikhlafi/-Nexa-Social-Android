@@ -2,19 +2,12 @@ package com.nexa.social.data.repository
 
 import android.content.Context
 import com.nexa.social.core.common.FailureReason
-import com.nexa.social.core.common.Ids
 import com.nexa.social.core.common.Resource
-import com.nexa.social.core.common.Security
 import com.nexa.social.core.common.Validators
 import com.nexa.social.core.storage.PreferenceStorage
 import com.nexa.social.data.local.AccountLocalDataSource
-import com.nexa.social.data.local.LocalAccountRecord
 import com.nexa.social.data.remote.SupabaseAuthDataSource
 import com.nexa.social.data.remote.SupabaseSignUpOutcome
-import com.nexa.social.domain.model.AccountOrigin
-import com.nexa.social.domain.model.AccountStatus
-import com.nexa.social.domain.model.EmailVerificationStatus
-import com.nexa.social.domain.model.LocalCredential
 import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.model.SignUpRequest
 import com.nexa.social.domain.model.User
@@ -30,13 +23,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-/**
- * Hybrid implementation of [AuthRepository].
- *
- * - With Supabase configured, new sign-ups and email sign-ins go to Supabase Auth.
- * - Accounts created before the migration stay usable as local accounts on this device.
- * - With no Supabase configuration the app keeps the original local-only behaviour.
- */
+/** Supabase-only authentication. Local development credentials are not accepted. */
 class AuthRepositoryImpl(
     private val prefs: PreferenceStorage,
     private val accounts: AccountLocalDataSource,
@@ -82,100 +69,51 @@ class AuthRepositoryImpl(
         if (!request.acceptedTerms) {
             return Resource.Failure(FailureReason.TERMS_REQUIRED)
         }
-        if (accounts.isUsernameTaken(request.username)) {
-            return Resource.Failure(FailureReason.USERNAME_TAKEN_LOCAL)
-        }
-
         val remote = supabase?.takeIf { it.available }
-        if (remote == null && supabase?.configured == true) {
-            // Never create a silent local substitute when Supabase is configured but unreachable.
-            return Resource.Failure(FailureReason.NOT_CONFIGURED)
-        }
-        if (remote != null) {
-            return when (val result = remote.signUpWithEmail(request)) {
-                is Resource.Success -> when (val outcome = result.data) {
-                    is SupabaseSignUpOutcome.SignedIn -> {
-                        pendingVerification = false
-                        prefs.clearPendingVerificationEmail()
-                        prefs.setRememberMe(true)
-                        prefs.setSession(SessionState.RemoteAccount(outcome.user.id))
-                        Resource.Success(outcome.user)
-                    }
-                    is SupabaseSignUpOutcome.VerificationRequired -> {
-                        pendingVerification = true
-                        prefs.setPendingVerificationEmail(request.email.trim())
-                        Resource.Success(outcome.user)
-                    }
+            ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
+        return when (val result = remote.signUpWithEmail(request)) {
+            is Resource.Success -> when (val outcome = result.data) {
+                is SupabaseSignUpOutcome.SignedIn -> {
+                    pendingVerification = false
+                    prefs.clearPendingVerificationEmail()
+                    prefs.setRememberMe(true)
+                    prefs.setSession(SessionState.RemoteAccount(outcome.user.id))
+                    Resource.Success(outcome.user)
                 }
-                is Resource.Failure -> result
-                Resource.Loading -> Resource.Loading
+                is SupabaseSignUpOutcome.VerificationRequired -> {
+                    pendingVerification = true
+                    prefs.setPendingVerificationEmail(request.email.trim())
+                    Resource.Success(outcome.user)
+                }
             }
+            is Resource.Failure -> result
+            Resource.Loading -> Resource.Loading
         }
-
-        val salt = Security.newSalt()
-        val user = User(
-            id = Ids.newId(),
-            username = request.username.trim(),
-            displayName = request.displayName.trim(),
-            email = request.email.trim(),
-            emailVerification = EmailVerificationStatus.NOT_VERIFIED,
-            avatarUri = null,
-            coverUri = null,
-            bio = "",
-            createdAt = System.currentTimeMillis(),
-            accountStatus = AccountStatus.PENDING_VERIFICATION,
-            accountOrigin = AccountOrigin.LOCAL_ACCOUNT,
-            followersCount = 0,
-            followingCount = 0
-        )
-        val credential = LocalCredential(
-            userId = user.id,
-            username = user.username,
-            passwordHash = Security.hashPassword(request.password, salt),
-            salt = salt
-        )
-        accounts.add(LocalAccountRecord(user = user, credential = credential))
-        prefs.setSession(SessionState.LocalAccount(user.id))
-        return Resource.Success(user)
     }
 
     override suspend fun signIn(username: String, password: String, remember: Boolean): Resource<User> {
-        val record = accounts.findByUsername(username)
-        if (record != null) {
-            val valid = Security.verifyPassword(
-                password,
-                record.credential.salt,
-                record.credential.passwordHash
-            )
-            if (!valid) return Resource.Failure(FailureReason.INVALID_CREDENTIALS)
-            prefs.setRememberMe(remember)
-            prefs.setSession(SessionState.LocalAccount(record.user.id))
-            return Resource.Success(record.user)
+        val email = username.trim()
+        if (!Validators.isValidEmail(email)) {
+            return Resource.Failure(FailureReason.EMAIL_INVALID)
         }
-
         val remote = supabase?.takeIf { it.available }
-        if (remote == null && supabase?.configured == true && username.contains('@')) {
-            return Resource.Failure(FailureReason.NOT_CONFIGURED)
-        }
-        if (remote != null && username.contains('@')) {
-            val result = remote.signInWithEmail(username, password)
+            ?: return Resource.Failure(FailureReason.NOT_CONFIGURED)
+        return remote.signInWithEmail(email, password).also { result ->
             if (result is Resource.Success) {
                 pendingVerification = false
                 prefs.clearPendingVerificationEmail()
                 prefs.setRememberMe(remember)
                 prefs.setSession(SessionState.RemoteAccount(result.data.id))
             }
-            return result
         }
-        return Resource.Failure(FailureReason.INVALID_CREDENTIALS)
     }
 
     override suspend fun signInWithGoogle(context: Context): Resource<User> =
         Resource.Failure(FailureReason.NOT_CONFIGURED)
 
     override suspend fun enterGuestMode() {
-        supabase?.signOut()
-        prefs.setSession(SessionState.Guest)
+        // Guest/local identities are disabled; return to the authenticated entry screen.
+        prefs.setSession(SessionState.None)
     }
 
     override suspend fun signOut() {
@@ -262,17 +200,7 @@ class AuthRepositoryImpl(
     override suspend fun completeProfileSetup(displayName: String, bio: String, avatarUri: String?) {
         if (prefs.session.first() is SessionState.RemoteAccount) {
             supabase?.updateBasicProfile(displayName.trim(), bio.trim(), avatarUri)
-            return
         }
-        val userId = (session.first() as? SessionState.LocalAccount)?.userId ?: return
-        val existing = accounts.getById(userId)?.user ?: return
-        accounts.updateUser(
-            existing.copy(
-                displayName = displayName.trim().ifBlank { existing.displayName },
-                bio = bio.trim(),
-                avatarUri = avatarUri ?: existing.avatarUri
-            )
-        )
     }
 
     /**

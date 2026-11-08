@@ -26,7 +26,12 @@ class AccountLocalDataSource(private val store: JsonFileStore) {
         const val FILE = "accounts.json"
     }
 
-    private val _records = MutableStateFlow(store.readList<LocalAccountRecord>(FILE))
+    private val _records = MutableStateFlow(emptyList<LocalAccountRecord>())
+
+    init {
+        // Remove legacy development-only accounts once this version starts.
+        store.writeList(FILE, emptyList<LocalAccountRecord>())
+    }
     val records: StateFlow<List<LocalAccountRecord>> = _records.asStateFlow()
 
     fun getById(userId: String): LocalAccountRecord? = _records.value.firstOrNull { it.user.id == userId }

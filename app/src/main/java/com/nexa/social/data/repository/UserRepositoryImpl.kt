@@ -10,7 +10,6 @@ import com.nexa.social.data.local.LocalAccountRecord
 import com.nexa.social.data.media.MediaBucket
 import com.nexa.social.data.media.MediaStorage
 import com.nexa.social.data.remote.UserRemoteDataSource
-import com.nexa.social.data.sample.SampleData
 import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.model.User
 import com.nexa.social.domain.repository.UserRepository
@@ -34,8 +33,7 @@ class UserRepositoryImpl(
     private val storage: MediaStorage? = null
 ) : UserRepository {
 
-    private fun allUsers(records: List<LocalAccountRecord>): List<User> =
-        SampleData.users + records.map { it.user }
+    private fun allUsers(records: List<LocalAccountRecord>): List<User> = emptyList()
 
     /**
      * Immediately reflects a profile the user just saved, before the remote poll catches up.
@@ -92,31 +90,18 @@ class UserRepositoryImpl(
     }
 
     override fun observeAllUsers(): Flow<List<User>> = prefs.session.flatMapLatest { session ->
-        if (session is SessionState.RemoteAccount && remote != null) {
-            // Remote mode must never present bundled sample accounts as real users.
-            remote.observeUsers()
-        } else {
-            accounts.records.map { allUsers(it) }
-        }
+        if (session is SessionState.RemoteAccount && remote != null) remote.observeUsers()
+        else flowOf(emptyList())
     }
 
     override suspend fun searchUsers(query: String): List<User> {
-        val canonical = Validators.canonicalUsername(query).trim()
-        if (canonical.isBlank()) return emptyList()
-        if (prefs.session.first() is SessionState.RemoteAccount) {
-            return remote?.searchUsers(query).orEmpty()
-        }
-        val local = allUsers(accounts.records.value).filter { user ->
-            user.username.startsWith(canonical, ignoreCase = true) ||
-                user.displayName.startsWith(canonical, ignoreCase = true)
-        }
-        return local.distinctBy { it.id }
+        if (Validators.canonicalUsername(query).isBlank()) return emptyList()
+        if (prefs.session.first() !is SessionState.RemoteAccount) return emptyList()
+        return remote?.searchUsers(query).orEmpty()
     }
 
-    override suspend fun usernameTakenLocally(username: String): Boolean {
-        if (accounts.isUsernameTaken(username)) return true
-        return remote?.isUsernameAvailable(username) == false
-    }
+    override suspend fun usernameTakenLocally(username: String): Boolean =
+        remote?.isUsernameAvailable(username) == false
 
     override suspend fun updateProfile(
         userId: String,

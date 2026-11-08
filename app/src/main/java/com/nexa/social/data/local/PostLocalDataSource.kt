@@ -1,11 +1,10 @@
 package com.nexa.social.data.local
 
 import com.nexa.social.core.storage.JsonFileStore
-import com.nexa.social.data.sample.SampleData
 import com.nexa.social.domain.model.Post
 import com.nexa.social.domain.model.PostDraft
 
-/** Persists the local feed and the current draft. Seeded once from sample data. */
+/** Keeps the compose draft only. Feed posts are authoritative in Supabase. */
 class PostLocalDataSource(private val store: JsonFileStore) {
 
     private companion object {
@@ -13,16 +12,12 @@ class PostLocalDataSource(private val store: JsonFileStore) {
         const val DRAFT_FILE = "draft.json"
     }
 
-    fun seedIfEmpty() {
-        if (!store.exists(FILE)) {
-            store.writeList(FILE, SampleData.posts)
-        }
+    init {
+        // Remove legacy demo/local feed posts without touching the saved compose draft.
+        store.writeList(FILE, emptyList<Post>())
     }
 
-    fun readPosts(): List<Post> {
-        seedIfEmpty()
-        return store.readList(FILE)
-    }
+    fun readPosts(): List<Post> = emptyList()
 
     fun writePosts(posts: List<Post>) = store.writeList(FILE, posts)
 
