@@ -211,7 +211,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         Text("مركز مراجعة البلاغات", style = MaterialTheme.typography.titleLarge)
                         Text("يظهر صاحب البلاغ والحساب أو المحتوى المبلّغ عليه، مع حفظ كل قرار إداري في سجل التدقيق.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("ALL" to "الكل", "POST" to "منشورات", "COMMENT" to "تعليقات", "CLIP" to "ريلز", "USER" to "حسابات").forEach { (value, label) ->
+                            listOf("ALL" to "الكل", "POST" to "منشورات", "GROUP_POST" to "منشورات المجموعات", "COMMENT" to "تعليقات", "CLIP" to "ريلز", "USER" to "حسابات").forEach { (value, label) ->
                                 FilterChip(
                                     selected = reportFilter == value,
                                     onClick = {
@@ -232,11 +232,11 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                                 "COMMENT" -> "بلاغ تعليق"
                                                 "CLIP" -> "بلاغ ريلز"
                                                 "USER" -> "بلاغ حساب"
-                                                "COMMUNITY" -> "بلاغ مجموعة"
+                                                "COMMUNITY", "GROUP_POST" -> "بلاغ مجموعة"
                                                 else -> report.targetType
                                             }, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                                             Spacer(Modifier.weight(1f))
-                                            Text(when(report.status) {
+                                            Text(when(report.status.uppercase()) {
                                                 "REVIEWED" -> "تمت المراجعة"
                                                 "DISMISSED" -> "مرفوض"
                                                 "RESOLVED" -> "تمت المعالجة"
@@ -270,9 +270,9 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                                     }
                                                 }) { Text("ملف المبلّغ") }
                                             }
-                                            if (report.targetType == "USER" && report.targetId.isNotBlank()) {
+                                            if (report.targetAuthorId.isNotBlank()) {
                                                 OutlinedButton(onClick = {
-                                                    selectedUser = OwnerUserRow(report.targetId, "", report.targetAuthorUsername, report.targetAuthorName, "", "ACTIVE", false)
+                                                    selectedUser = OwnerUserRow(report.targetAuthorId, "", report.targetAuthorUsername, report.targetAuthorName, "", "ACTIVE", false)
                                                     selectedUserDetails = null
                                                     moderationHistory = emptyList()
                                                     userDetailsLoading = true
@@ -281,10 +281,10 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                                         moderationHistory = admin?.moderationHistory(report.targetId).orEmpty()
                                                         userDetailsLoading = false
                                                     }
-                                                }) { Text("ملف الحساب المبلّغ عليه") }
+                                                }) { Text("ملف صاحب المحتوى") }
                                             }
                                         }
-                                        if (report.status != "REVIEWED" && report.status != "RESOLVED") {
+                                        if (report.status.uppercase() !in setOf("REVIEWED", "RESOLVED", "DISMISSED")) {
                                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 OutlinedButton(onClick = {
                                                     scope.launch {
