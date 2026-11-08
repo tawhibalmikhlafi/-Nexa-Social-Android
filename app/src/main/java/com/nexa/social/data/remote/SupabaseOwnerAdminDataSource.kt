@@ -123,6 +123,18 @@ class SupabaseOwnerAdminDataSource(
         return response.successful
     }
 
+    suspend fun getSettings(): JsonObject? = rpc("nexa_owner_get_settings")?.let {
+        runCatching { JsonParser.parseString(it).asJsonObject }.getOrNull()
+    }
+
+    suspend fun setSetting(key: String, enabled: Boolean): Boolean {
+        val body=JsonObject().apply {
+            addProperty("p_key",key)
+            add("p_value",com.google.gson.JsonPrimitive(enabled))
+        }
+        return rpc("nexa_owner_set_setting",body) != null
+    }
+
     suspend fun createAnnouncement(title: String, bodyText: String): Boolean {
         val body=JsonObject().apply { addProperty("p_title",title); addProperty("p_body",bodyText) }
         return rpc("nexa_owner_create_announcement",body) != null
