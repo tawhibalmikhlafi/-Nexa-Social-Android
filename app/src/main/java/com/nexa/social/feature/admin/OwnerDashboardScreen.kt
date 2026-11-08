@@ -3,6 +3,7 @@ package com.nexa.social.feature.admin
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -209,7 +210,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                     1 -> Column(Modifier.fillMaxSize()) {
                         Text("مركز مراجعة البلاغات", style = MaterialTheme.typography.titleLarge)
                         Text("يظهر صاحب البلاغ والحساب أو المحتوى المبلّغ عليه، مع حفظ كل قرار إداري في سجل التدقيق.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf("ALL" to "الكل", "POST" to "منشورات", "COMMENT" to "تعليقات", "CLIP" to "ريلز", "USER" to "حسابات").forEach { (value, label) ->
                                 FilterChip(
                                     selected = reportFilter == value,
@@ -255,6 +256,34 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                         if (report.note.isNotBlank()) Text("تفاصيل البلاغ: ${report.note}")
                                         Text("التاريخ: ${report.createdAt}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         Text("معرّف البلاغ: ${report.id}", style = MaterialTheme.typography.labelSmall)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            if (report.reporterId.isNotBlank()) {
+                                                OutlinedButton(onClick = {
+                                                    selectedUser = OwnerUserRow(report.reporterId, report.reporterEmail, report.reporterUsername, report.reporterName, "", "ACTIVE", false)
+                                                    selectedUserDetails = null
+                                                    moderationHistory = emptyList()
+                                                    userDetailsLoading = true
+                                                    scope.launch {
+                                                        selectedUserDetails = admin?.getUserDetails(report.reporterId)
+                                                        moderationHistory = admin?.moderationHistory(report.reporterId).orEmpty()
+                                                        userDetailsLoading = false
+                                                    }
+                                                }) { Text("ملف المبلّغ") }
+                                            }
+                                            if (report.targetType == "USER" && report.targetId.isNotBlank()) {
+                                                OutlinedButton(onClick = {
+                                                    selectedUser = OwnerUserRow(report.targetId, "", report.targetAuthorUsername, report.targetAuthorName, "", "ACTIVE", false)
+                                                    selectedUserDetails = null
+                                                    moderationHistory = emptyList()
+                                                    userDetailsLoading = true
+                                                    scope.launch {
+                                                        selectedUserDetails = admin?.getUserDetails(report.targetId)
+                                                        moderationHistory = admin?.moderationHistory(report.targetId).orEmpty()
+                                                        userDetailsLoading = false
+                                                    }
+                                                }) { Text("ملف الحساب المبلّغ عليه") }
+                                            }
+                                        }
                                         if (report.status != "REVIEWED" && report.status != "RESOLVED") {
                                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 OutlinedButton(onClick = {
