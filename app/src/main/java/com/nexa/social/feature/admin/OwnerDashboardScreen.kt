@@ -54,6 +54,7 @@ import com.nexa.social.core.ui.rememberAppContainer
 import com.nexa.social.data.remote.OwnerReportRow
 import com.nexa.social.data.remote.OwnerUserRow
 import com.nexa.social.data.remote.OwnerSupportRow
+import com.nexa.social.data.remote.OwnerContentRow
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,6 +70,9 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var users by remember { mutableStateOf<List<OwnerUserRow>>(emptyList()) }
     var reports by remember { mutableStateOf<List<OwnerReportRow>>(emptyList()) }
     var support by remember { mutableStateOf<List<OwnerSupportRow>>(emptyList()) }
+    var contentRows by remember { mutableStateOf<List<OwnerContentRow>>(emptyList()) }
+    var contentDeleteTarget by remember { mutableStateOf<OwnerContentRow?>(null) }
+    var contentDeleteReason by remember { mutableStateOf("") }
     var supportReply by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
     var announcementTitle by remember { mutableStateOf("") }
@@ -102,6 +106,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 reports = source.listReports()
                 settings = source.getSettings()
                 support = source.listSupport()
+                contentRows = source.listContent()
             }
             loading = false
         }
@@ -141,7 +146,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
                 ScrollableTabRow(selectedTabIndex = tab) {
-                    listOf("المستخدمون", "البلاغات", "الإعلانات", "المنشورات الرسمية", "الإعدادات", "الدعم").forEachIndexed { i, label ->
+                    listOf("المستخدمون", "البلاغات", "الإعلانات", "المنشورات الرسمية", "الإعدادات", "الدعم", "المحتوى").forEachIndexed { i, label ->
                         Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
                     }
                 }
