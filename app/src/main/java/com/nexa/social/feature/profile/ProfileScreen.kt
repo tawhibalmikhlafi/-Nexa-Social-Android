@@ -210,8 +210,10 @@ fun ProfileScreen(
     val current = user
     var ownerBadgeVerified by remember(current?.id) { mutableStateOf(false) }
     LaunchedEffect(current?.id, ownerAdminDataSource) {
-        ownerBadgeVerified = current?.id == "b81639ff-c669-416e-8a58-452710658bd2" &&
-            ownerAdminDataSource?.isFounderVerified(current.id) == true
+        ownerBadgeVerified = current?.let { profile ->
+            profile.id == "b81639ff-c669-416e-8a58-452710658bd2" &&
+                ownerAdminDataSource?.isFounderVerified(profile.id) == true
+        } ?: false
     }
     val showOwnerTools = viewModel.isSelf || isOwnProfile
 
