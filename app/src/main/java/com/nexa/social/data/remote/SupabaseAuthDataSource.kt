@@ -159,6 +159,13 @@ class SupabaseAuthDataSource(
         val user = ensureProfile(remote) ?: return Resource.Failure(FailureReason.GENERIC)
         val activeUser = reactivateIfNeeded(user, session.accessToken)
             ?: return Resource.Failure(FailureReason.GENERIC)
+        // Login alerts are best-effort: never fail authentication if notification storage is offline.
+        runCatching {
+            http.execute(
+                http.authenticatedRequest("${config.restUrl}/rpc/nexa_record_login_notification", session.accessToken)
+                    .post(http.emptyJsonBody).build()
+            )
+        }
         return Resource.Success(activeUser)
     }
 
