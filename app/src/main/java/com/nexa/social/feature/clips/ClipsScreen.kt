@@ -3,6 +3,8 @@ package com.nexa.social.feature.clips
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,8 +13,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmark
@@ -20,6 +26,9 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import androidx.compose.ui.Modifier
@@ -116,72 +126,83 @@ fun ClipsScreen(
                 body = stringResource(R.string.clips_empty_body)
             )
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = NexaSpacing.lg),
-                verticalArrangement = Arrangement.spacedBy(NexaSpacing.md)
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize().padding(horizontal = NexaSpacing.md),
+                verticalArrangement = Arrangement.spacedBy(NexaSpacing.md),
+                horizontalArrangement = Arrangement.spacedBy(NexaSpacing.md)
             ) {
                 items(clips, key = { it.id }) { clip ->
-                    NexaCard(onClick = { onOpenClip(clip.id) }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            NexaAvatar(
-                                displayName = clip.author.displayName,
-                                avatarUri = clip.author.avatarUri,
-                                size = 36.dp
-                            )
-                            Spacer(Modifier.width(NexaSpacing.sm))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(text = clip.author.displayName, style = MaterialTheme.typography.titleSmall)
-                                Text(
-                                    text = TimeUtils.relativeFromNow(clip.createdAt),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Card(
+                        onClick = { onOpenClip(clip.id) },
+                        modifier = Modifier.fillMaxWidth().aspectRatio(0.68f),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    ) {
+                        Box(Modifier.fillMaxSize()) {
+                            if (!clip.coverUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = clip.coverUrl,
+                                    contentDescription = "غلاف الريلز",
+                                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)),
+                                    contentScale = ContentScale.Crop
                                 )
+                            } else {
+                                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Filled.Videocam, contentDescription = null, modifier = Modifier.size(42.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
-                        }
-                        clip.coverUrl?.let { cover ->
-                            Spacer(Modifier.height(NexaSpacing.sm))
-                            AsyncImage(
-                                model = cover,
-                                contentDescription = "غلاف الريل",
-                                modifier = Modifier.fillMaxWidth().height(220.dp),
-                                contentScale = ContentScale.Crop
+                            Icon(
+                                Icons.Filled.PlayArrow,
+                                contentDescription = "تشغيل الريلز",
+                                tint = Color.White,
+                                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(30.dp)
+                                    .background(Color.Black.copy(alpha = 0.42f), RoundedCornerShape(50)).padding(4.dp)
                             )
-                        }
-                        if (clip.caption.isNotBlank()) {
-                            Spacer(Modifier.height(NexaSpacing.sm))
-                            Text(text = clip.caption, style = MaterialTheme.typography.bodyMedium)
-                        }
-                        clip.uploadState?.let { state ->
-                            val statusText = when (state) {
-                                "uploading" -> "جارٍ رفع الفيديو " + (((clip.uploadProgress ?: 0f) * 100).toInt()) + "٪"
-                                "publishing" -> "اكتمل الرفع، جارٍ نشر الريل"
-                                else -> "محفوظ محليًا — بانتظار الاتصال"
-                            }
-                            Text(
-                                text = statusText,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.padding(top = NexaSpacing.sm),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(onClick = { viewModel.toggleLike(clip.id) }) {
-                                Icon(
-                                    imageVector = if (clip.likedByMe) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                    contentDescription = stringResource(R.string.post_like)
-                                )
-                            }
-                            Text(text = clip.likeCount.toString(), style = MaterialTheme.typography.labelMedium)
-                            Spacer(Modifier.width(NexaSpacing.sm))
-                            IconButton(onClick = { viewModel.toggleSave(clip.id) }) {
-                                Icon(
-                                    imageVector = if (clip.savedByMe) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                                    contentDescription = stringResource(R.string.post_save)
-                                )
+                            Column(
+                                Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                                    .background(Color.Black.copy(alpha = 0.68f))
+                                    .padding(horizontal = 10.dp, vertical = 11.dp),
+                                verticalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    NexaAvatar(clip.author.displayName, clip.author.avatarUri, size = 27.dp)
+                                    Spacer(Modifier.width(7.dp))
+                                    Text(
+                                        clip.author.displayName.ifBlank { clip.author.username },
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                if (clip.caption.isNotBlank()) {
+                                    Text(clip.caption, color = Color.White, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        if (clip.likedByMe) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                        contentDescription = null,
+                                        tint = if (clip.likedByMe) Color(0xFFFF5577) else Color.White,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Text(" " + clip.likeCount, color = Color.White, style = MaterialTheme.typography.labelSmall)
+                                    Spacer(Modifier.width(12.dp))
+                                    Icon(Icons.Filled.BookmarkBorder, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+                                    Text(" " + clip.viewCount, color = Color.White, style = MaterialTheme.typography.labelSmall)
+                                }
+                                clip.uploadState?.let { state ->
+                                    Text(
+                                        when (state) {
+                                            "uploading" -> "جارٍ الرفع " + (((clip.uploadProgress ?: 0f) * 100).toInt()) + "٪"
+                                            "publishing" -> "جارٍ النشر"
+                                            else -> "بانتظار الاتصال"
+                                        },
+                                        color = Color(0xFFFFD180),
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
                             }
                         }
                     }
