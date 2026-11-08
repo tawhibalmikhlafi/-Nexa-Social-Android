@@ -39,7 +39,8 @@ class SupabaseProfileExperienceDataSource(
         if (table !in ownerTables || profileId.isBlank()) return emptyList()
         val token = accessToken() ?: return emptyList()
         val owner = ownerColumn(table)
-        val url = "$rest/$table?select=*&$owner=eq.${encode(profileId)}&limit=300"
+        val ordering = if (table == "nexa_profile_analytics_events") "&order=created_at.desc" else ""
+        val url = "$rest/$table?select=*&$owner=eq.${encode(profileId)}$ordering&limit=300"
         val response = http.execute(http.authenticatedRequest(url, token).get().build()).getOrNull()
             ?: return emptyList()
         if (!response.successful) return emptyList()
