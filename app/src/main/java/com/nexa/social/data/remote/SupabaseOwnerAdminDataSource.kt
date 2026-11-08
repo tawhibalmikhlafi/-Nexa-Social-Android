@@ -20,6 +20,8 @@ data class OwnerUserRow(
 
 data class OwnerSupportRow(val id: String, val userId: String, val subject: String, val message: String, val status: String, val reply: String, val createdAt: String)
 
+data class OwnerContentRow(val id: String, val type: String, val body: String, val authorName: String, val createdAt: String)
+
 data class OwnerReportRow(
     val id: String,
     val targetType: String,
@@ -126,6 +128,57 @@ class SupabaseOwnerAdminDataSource(
         ).getOrNull() ?: return false
         return response.successful
     }
+
+    suspend fun listContent(): List<OwnerContentRow> {
+        val body = JsonObject().apply { addProperty("p_type", "ALL"); addProperty("p_limit", 200) }
+        val raw = rpc("nexa_owner_list_content", body) ?: return emptyList()
+        return runCatching {
+            JsonParser.parseString(raw).asJsonArray.map { e ->
+                val o = e.asJsonObject
+                OwnerContentRow(
+                    o.string("id").orEmpty(),
+                    o.string("content_type").orEmpty(),
+                    o.string("body").orEmpty(),
+                    o.string("author_name").orEmpty(),
+                    o.string("created_at").orEmpty()
+                )
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    suspend fun deleteContent(type: String, contentId: String, reason: String): Boolean {
+        val body = JsonObject().apply {
+            addProperty("p_type", type)
+            addProperty("p_content_id", contentId)
+            addProperty("p_reason", reason.trim().ifBlank { "حذف إداري من لوحة مالك Nexa" })
+        }
+        val raw = rpc("nexa_owner_delete_content", body) ?: return false
+        val result = runCatching { JsonParser.parseString(raw).asJsonObject }.getOrNull() ?: return false
+        if (result.get("success")?.asBoolean != true) return false
+
+        val token = accessToken() ?: return true
+        val media = result.getAsJsonArray("media_paths") ?: return true
+        val failed = mutableListOf<String>()
+        media.forEach { entry ->
+            val item = entry.asJsonObject
+            val bucket = item.string("bucket").orEmpty()
+            val storagePath = item.string("path").orEmpty()
+            if (bucket.isBlank() || storagePath.isBlank() || storagePath == "null") return@forEach
+            val payload = JsonObject().apply {
+                add("prefixes", com.google.gson.JsonArray().apply { add(storagePath) })
+            }
+            val response = http.execute(
+                http.authenticatedRequest("${config.url.trimEnd('/')}/storage/v1/object/${enc(bucket)}", token)
+                    .delete(http.jsonBody(payload)).build()
+            ).getOrNull()
+            if (response == null || !response.successful) failed += "$bucket/$storagePath"
+        }
+        if (failed.isNotEmpty()) lastError = "حُذف المحتوى، لكن تعذر تنظيف بعض الوسائط: ${failed.size}"
+        notifyOwnerContentChanged()
+        return true
+    }
+
+    private fun notifyOwnerContentChanged() = Unit
 
     suspend fun listReports(): List<OwnerReportRow> {
         val token = accessToken() ?: return emptyList()
