@@ -138,78 +138,7 @@ object SampleData {
     private val khaled = UserSummary.from(users[4])
     private val fatima = UserSummary.from(users[5])
 
-    val posts: List<Post> = listOf(
-        Post(
-            id = "sample_post_1",
-            author = mohammed,
-            text = "بدأنا اليوم بتحدي تصميم واجهة لتطبيق مجتمعي. شاركونا أفكاركم في مجتمع Creative World.",
-            imageUri = null,
-            audience = com.nexa.social.domain.model.Audience.PUBLIC_LOCAL,
-            createdAt = hoursAgo(5),
-            likeCount = 1200,
-            commentCount = 256,
-            likedByMe = false,
-            savedByMe = false,
-            communityId = null,
-            isLocal = true
-        ),
-        Post(
-            id = "sample_post_2",
-            author = sara,
-            text = "أفضل ممارسة لتقسيم الكود في Compose: افصل الحالة عن الواجهة، واستخدم طبقة بيانات واضحة.",
-            imageUri = null,
-            audience = com.nexa.social.domain.model.Audience.PUBLIC_LOCAL,
-            createdAt = hoursAgo(9),
-            likeCount = 640,
-            commentCount = 98,
-            likedByMe = true,
-            savedByMe = false,
-            communityId = null,
-            isLocal = true
-        ),
-        Post(
-            id = "sample_post_3",
-            author = ahmed,
-            text = "مساء الخير من عالم الألعاب! جاهزون لفعالية نهاية الأسبوع؟",
-            imageUri = null,
-            audience = com.nexa.social.domain.model.Audience.PUBLIC_LOCAL,
-            createdAt = daysAgo(1),
-            likeCount = 3200,
-            commentCount = 512,
-            likedByMe = false,
-            savedByMe = true,
-            communityId = null,
-            isLocal = true
-        ),
-        Post(
-            id = "sample_post_4",
-            author = layla,
-            text = "أنهيت اليوم أول لوحة رقمية بعنوان «مدن الغد». رأيكم؟",
-            imageUri = null,
-            audience = com.nexa.social.domain.model.Audience.PUBLIC_LOCAL,
-            createdAt = daysAgo(2),
-            likeCount = 980,
-            commentCount = 140,
-            likedByMe = false,
-            savedByMe = false,
-            communityId = null,
-            isLocal = true
-        ),
-        Post(
-            id = "sample_post_5",
-            author = fatima,
-            text = "نصيحة لأصحاب المشاريع: ابدأ صغيرًا واختبر الفكرة قبل التوسع.",
-            imageUri = null,
-            audience = com.nexa.social.domain.model.Audience.PUBLIC_LOCAL,
-            createdAt = daysAgo(3),
-            likeCount = 520,
-            commentCount = 61,
-            likedByMe = false,
-            savedByMe = false,
-            communityId = null,
-            isLocal = true
-        )
-    )
+    val posts: List<Post> = emptyList()
 
     val communities: List<Community> = listOf(
         Community(
@@ -306,56 +235,7 @@ object SampleData {
 
     fun communityById(id: String): Community? = communities.firstOrNull { it.id == id }
 
-    val communityPosts: List<CommunityPost> = listOf(
-        CommunityPost(
-            id = "cp_g1",
-            communityId = "world_gaming",
-            author = ahmed,
-            text = "من يريد الانضمام لفريق البطولة؟ نحتاج لاعبين اثنين.",
-            imageUri = null,
-            createdAt = hoursAgo(3),
-            likeCount = 210,
-            commentCount = 42,
-            likedByMe = false,
-            isLocal = true
-        ),
-        CommunityPost(
-            id = "cp_g2",
-            communityId = "world_gaming",
-            author = khaled,
-            text = "ملخص بطولة الأسبوع الماضي، كانت مباريات قوية!",
-            imageUri = null,
-            createdAt = daysAgo(1),
-            likeCount = 530,
-            commentCount = 88,
-            likedByMe = false,
-            isLocal = true
-        ),
-        CommunityPost(
-            id = "cp_c1",
-            communityId = "world_creative",
-            author = layla,
-            text = "شاركوا أعمالكم في تحدّي هذا الأسبوع: «مدن الغد».",
-            imageUri = null,
-            createdAt = hoursAgo(7),
-            likeCount = 340,
-            commentCount = 51,
-            likedByMe = false,
-            isLocal = true
-        ),
-        CommunityPost(
-            id = "cp_t1",
-            communityId = "world_tech",
-            author = sara,
-            text = "أفضل ممارسة: استخدم StateFlow بدل المتغيرات العامة.",
-            imageUri = null,
-            createdAt = hoursAgo(11),
-            likeCount = 410,
-            commentCount = 37,
-            likedByMe = false,
-            isLocal = true
-        )
-    )
+    val communityPosts: List<CommunityPost> = emptyList()
 
     val conversations: List<Conversation> = listOf(
         Conversation(
