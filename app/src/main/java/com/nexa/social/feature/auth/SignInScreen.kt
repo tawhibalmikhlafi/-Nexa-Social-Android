@@ -1,5 +1,8 @@
 package com.nexa.social.feature.auth
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +16,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexa.social.R
 import com.nexa.social.core.ui.failureMessage
+import com.nexa.social.core.notifications.NotificationChannels
 import com.nexa.social.ui.components.AccountRequiredBanner
 import com.nexa.social.ui.components.NexaPasswordField
 import com.nexa.social.ui.components.NexaPrimaryButton
@@ -51,9 +57,19 @@ fun SignInScreen(
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var remember by rememberSaveable { mutableStateOf(true) }
+    val loginNotificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) NotificationChannels.showLoginSuccess(context)
+    }
 
     LaunchedEffect(state.authenticated) {
-        if (state.authenticated) onSignedIn()
+        if (state.authenticated) {
+            if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                loginNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                NotificationChannels.showLoginSuccess(context)
+            }
+            onSignedIn()
+        }
     }
 
     val generalError = failureMessage(state.failure)
