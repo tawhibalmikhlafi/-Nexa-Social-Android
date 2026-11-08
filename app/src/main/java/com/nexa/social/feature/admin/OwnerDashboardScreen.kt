@@ -244,8 +244,8 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(ticket.subject, style = MaterialTheme.typography.titleMedium)
                                     Text(ticket.message)
-                                    Text("الحالة: \${ticket.status} • \${ticket.createdAt}")
-                                    if (ticket.reply.isNotBlank()) Text("الرد السابق: \${ticket.reply}")
+                                    Text("الحالة: ${ticket.status} • ${ticket.createdAt}")
+                                    if (ticket.reply.isNotBlank()) Text("الرد السابق: ${ticket.reply}")
                                     OutlinedTextField(supportReply, { supportReply = it }, Modifier.fillMaxWidth(), label = { Text("اكتب رد الدعم") }, minLines = 2)
                                     Button(onClick = {
                                         scope.launch {
