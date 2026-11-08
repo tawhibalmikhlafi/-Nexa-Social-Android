@@ -61,9 +61,11 @@ language sql
 stable
 security definer
 set search_path = public
-as $$
-  select public.nexa_is_owner()
-    or (
+as $
+  select coalesce(p_feature in ('posts_enabled', 'comments_enabled', 'stories_enabled', 'reels_enabled'), false)
+    and (
+      public.nexa_is_owner()
+      or (
       public.nexa_can_write()
       and coalesce(
         (select s.setting_value = 'true'::jsonb
@@ -71,8 +73,9 @@ as $$
           where s.setting_key = p_feature),
         true
       )
+      )
     );
-$$;
+$;
 revoke all on function public.nexa_can_use_feature(text) from public, anon;
 grant execute on function public.nexa_can_use_feature(text) to authenticated;
 
