@@ -443,7 +443,7 @@ fun ProfileScreen(
             text = { Text(stringResource(R.string.profile_block_confirm_message, current.displayName.ifBlank { current.username })) },
             confirmButton = {
                 TextButton(onClick = blockProfile, enabled = !blockBusy) {
-                    Text(if (blockBusy) stringResource(R.string.action_loading) else stringResource(R.string.profile_block))
+                    Text(if (blockBusy) stringResource(R.string.profile_block_busy) else stringResource(R.string.profile_block))
                 }
             },
             dismissButton = {
