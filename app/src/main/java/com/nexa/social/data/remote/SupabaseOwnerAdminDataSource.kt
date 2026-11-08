@@ -20,7 +20,8 @@ data class OwnerUserRow(
     val lastSignInAt: String = "",
     val postsCount: Long = 0,
     val followersCount: Long = 0,
-    val followingCount: Long = 0
+    val followingCount: Long = 0,
+    val restrictionExpiresAt: String = ""
 )
 
 data class OwnerSupportRow(val id: String, val userId: String, val subject: String, val message: String, val status: String, val reply: String, val createdAt: String)
@@ -108,7 +109,7 @@ class SupabaseOwnerAdminDataSource(
                     o.get("is_verified")?.asBoolean ?: false,
                     o.string("avatar_url").orEmpty(), o.string("last_sign_in_at").orEmpty(),
                     o.get("posts_count")?.asLong ?: 0L, o.get("followers_count")?.asLong ?: 0L,
-                    o.get("following_count")?.asLong ?: 0L
+                    o.get("following_count")?.asLong ?: 0L, o.string("restriction_expires_at").orEmpty()
                 )
             }
         }.getOrDefault(emptyList())
