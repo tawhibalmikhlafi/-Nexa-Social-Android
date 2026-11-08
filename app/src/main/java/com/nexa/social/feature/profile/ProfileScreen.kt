@@ -344,7 +344,7 @@ fun ProfileScreen(
                 val result = runCatching { safetyRepository.block(UserSummary.from(current)) }.getOrNull()
                 blockBusy = false
                 showBlockConfirmation = false
-                if (result is Resource.Success) {
+                if (result is Resource.Success<*>) {
                     snackbarHost?.showSnackbar(blockSuccessMessage)
                     onBack?.invoke()
                 } else {
