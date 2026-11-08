@@ -120,14 +120,14 @@ class SupabaseProfileExperienceDataSource(
         val token = accessToken() ?: return false
         val owner = ownerColumn(table)
         val filter = if (table == "nexa_profile_status") {
-            "user_id=eq.\${encode(uid)}"
+            "user_id=eq.${encode(uid)}"
         } else if (table == "nexa_profile_achievements") {
-            "user_id=eq.\${encode(uid)}&achievement_code=eq.\${encode(id)}"
+            "user_id=eq.${encode(uid)}&achievement_code=eq.${encode(id)}"
         } else {
-            "id=eq.\${encode(id)}&\$owner=eq.\${encode(uid)}"
+            "id=eq.${encode(id)}&$owner=eq.${encode(uid)}"
         }
         val response = http.execute(
-            http.authenticatedRequest("\$rest/\$table?\$filter", token)
+            http.authenticatedRequest("$rest/$table?$filter", token)
                 .header("Prefer", "return=minimal")
                 .patch(http.jsonBody(patch))
                 .build()
@@ -141,7 +141,7 @@ class SupabaseProfileExperienceDataSource(
             addProperty("recipient_email", recipientEmail?.trim()?.takeIf { it.isNotBlank() })
         }
         val response = http.execute(
-            http.authenticatedRequest("\$rest/rpc/nexa_create_testimonial_request", token)
+            http.authenticatedRequest("$rest/rpc/nexa_create_testimonial_request", token)
                 .post(http.jsonBody(body))
                 .build()
         ).getOrNull() ?: return null
@@ -177,7 +177,7 @@ class SupabaseProfileExperienceDataSource(
             addProperty("linkedin_url", linkedinUrl?.trim()?.takeIf { it.isNotBlank() })
         }
         val response = http.execute(
-            http.authenticatedRequest("\$rest/rpc/nexa_submit_testimonial", token)
+            http.authenticatedRequest("$rest/rpc/nexa_submit_testimonial", token)
                 .post(http.jsonBody(body))
                 .build()
         ).getOrNull()
@@ -196,7 +196,7 @@ class SupabaseProfileExperienceDataSource(
             addProperty("event_label", eventKey)
         }
         val response = http.execute(
-            http.authenticatedRequest("\$rest/rpc/nexa_record_profile_analytics", token)
+            http.authenticatedRequest("$rest/rpc/nexa_record_profile_analytics", token)
                 .post(http.jsonBody(body))
                 .build()
         ).getOrNull()
