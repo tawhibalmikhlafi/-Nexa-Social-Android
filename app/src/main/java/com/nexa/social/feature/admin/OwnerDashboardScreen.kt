@@ -10,9 +10,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -182,12 +188,15 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                         val visibleName = user.displayName.trim().ifBlank {
                                             user.username.trim().ifBlank { user.email.substringBefore("@").ifBlank { "مستخدم Nexa" } }
                                         }
-                                        Text(visibleName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                                        Text(
-                                            listOf(user.username.takeIf { it.isNotBlank() }?.let { "@$it" }, user.email.takeIf { it.isNotBlank() })
-                                                .filterNotNull().joinToString(" • ").ifBlank { "حساب Nexa" },
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            AsyncImage(model = user.avatarUrl.takeIf { it.isNotBlank() }, contentDescription = "صورة الحساب", modifier = Modifier.size(48.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                                            Column {
+                                                Text(visibleName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                                Text(listOf(user.username.takeIf { it.isNotBlank() }?.let { "@$it" }, user.email.takeIf { it.isNotBlank() }).filterNotNull().joinToString(" • ").ifBlank { "حساب Nexa" }, style = MaterialTheme.typography.bodySmall)
+                                            }
+                                        }
+                                        Text("المنشورات: ${user.postsCount} • المتابعون: ${user.followersCount} • يتابع: ${user.followingCount}", style = MaterialTheme.typography.bodySmall)
+                                        Text("آخر دخول: ${user.lastSignInAt.ifBlank { "غير متوفر" }}", style = MaterialTheme.typography.labelSmall)
                                         Text("اضغط لعرض تفاصيل الحساب", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                         Text("التسجيل: ${user.createdAt}")
                                         Text("الحالة: ${when(user.status) { "BANNED" -> "محظور"; "SUSPENDED" -> "مقيّد"; "ACTIVE" -> "نشط"; else -> user.status }}")
