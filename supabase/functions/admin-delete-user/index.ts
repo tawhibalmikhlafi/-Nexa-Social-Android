@@ -52,11 +52,45 @@ Deno.serve(async (req) => {
   if (targetId === actorId) return reply(400, { error: "cannot_delete_owner" });
   if (payload.confirmation !== "DELETE_ACCOUNT") return reply(400, { error: "confirmation_required" });
 
+  // Collect and delete every object stored under the user's UUID folder before
+  // deleting the Auth identity. All Nexa media upload policies use this folder layout.
+  const buckets = [
+    "post-media", "story-media", "profile-media", "message-media",
+    "clips-media", "clip-covers", "nexa-pulse", "nexa-pulse-video",
+  ];
+  let removedObjects = 0;
+  for (const bucket of buckets) {
+    const listed = await fetch(
+      `${url}/rest/v1/objects?select=name&bucket_id=eq.${encodeURIComponent(bucket)}&name=like.${encodeURIComponent(targetId + "/")}*`,
+      { headers: secretHeaders(secret) },
+    );
+    if (!listed.ok) {
+      return reply(502, { error: "storage_inventory_failed", bucket });
+    }
+    const rows = await listed.json();
+    const names = Array.isArray(rows)
+      ? rows.map((row: { name?: unknown }) => row.name).filter((name): name is string => typeof name === "string" && name.length > 0)
+      : [];
+    for (let offset = 0; offset < names.length; offset += 100) {
+      const batch = names.slice(offset, offset + 100);
+      if (batch.length === 0) continue;
+      const removed = await fetch(`${url}/storage/v1/object/${encodeURIComponent(bucket)}`, {
+        method: "DELETE",
+        headers: secretHeaders(secret),
+        body: JSON.stringify({ prefixes: batch }),
+      });
+      if (!removed.ok) {
+        return reply(502, { error: "storage_cleanup_failed", bucket, remaining: names.length - offset });
+      }
+      removedObjects += batch.length;
+    }
+  }
+
   const deleted = await fetch(`${url}/auth/v1/admin/users/${encodeURIComponent(targetId)}`, {
     method: "DELETE",
     headers: secretHeaders(secret),
   });
   if (deleted.status === 404) return reply(404, { error: "user_not_found" });
   if (!deleted.ok) return reply(500, { error: "delete_failed" });
-  return reply(200, { success: true, user_id: targetId });
+  return reply(200, { success: true, user_id: targetId, removed_storage_objects: removedObjects });
 });
