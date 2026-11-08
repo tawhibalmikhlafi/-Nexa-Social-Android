@@ -61,7 +61,7 @@ language sql
 stable
 security definer
 set search_path = public
-as $
+as $$
   select coalesce(p_feature in ('posts_enabled', 'comments_enabled', 'stories_enabled', 'reels_enabled'), false)
     and (
       public.nexa_is_owner()
@@ -75,7 +75,7 @@ as $
       )
       )
     );
-$;
+$$;
 revoke all on function public.nexa_can_use_feature(text) from public, anon;
 grant execute on function public.nexa_can_use_feature(text) to authenticated;
 
