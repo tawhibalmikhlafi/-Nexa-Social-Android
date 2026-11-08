@@ -671,7 +671,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                     confirmDelete = null
                     scope.launch {
                         val deleted = admin?.deleteUser(user.id) == true
-                        message = if (deleted) "تم حذف الحساب وطلب تنظيف ملفاته من Storage" else "فشل حذف الحساب: ${admin?.lastError ?: "راجع الاتصال وصلاحيات المالك"}"
+                        message = if (deleted) admin?.lastError ?: "تم حذف الحساب نهائياً والتحقق من تنظيف ملفاته في Storage وسجل العملية" else "فشل حذف الحساب: ${admin?.lastError ?: "راجع الاتصال وصلاحيات المالك"}"
                         refresh()
                     }
                 }) { Text("تأكيد الحذف") }
