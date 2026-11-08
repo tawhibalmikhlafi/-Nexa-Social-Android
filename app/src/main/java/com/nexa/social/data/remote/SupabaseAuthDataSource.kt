@@ -147,7 +147,9 @@ class SupabaseAuthDataSource(
             ?: fetchUser(session.accessToken).getOrNull()
             ?: return Resource.Failure(FailureReason.GENERIC)
         val user = ensureProfile(remote) ?: return Resource.Failure(FailureReason.GENERIC)
-        return Resource.Success(user)
+        val activeUser = reactivateIfNeeded(user, session.accessToken)
+            ?: return Resource.Failure(FailureReason.GENERIC)
+        return Resource.Success(activeUser)
     }
 
     suspend fun requestPasswordReset(email: String): Resource<Unit> {
@@ -256,7 +258,9 @@ class SupabaseAuthDataSource(
         if (!tokens.save(session)) return Resource.Failure(FailureReason.GENERIC)
         _uid.value = session.userId
         val user = ensureProfile(remote) ?: return Resource.Failure(FailureReason.GENERIC)
-        return Resource.Success(user)
+        val activeUser = reactivateIfNeeded(user, session.accessToken)
+            ?: return Resource.Failure(FailureReason.GENERIC)
+        return Resource.Success(activeUser)
     }
 
     suspend fun sendEmailVerification(fallbackEmail: String?): Resource<Unit> {
@@ -412,6 +416,22 @@ class SupabaseAuthDataSource(
             username = store.uniqueUsername(preferred)
         }
         return null
+    }
+
+    private suspend fun reactivateIfNeeded(user: User, accessToken: String): User? {
+        if (user.accountStatus != AccountStatus.DEACTIVATED) return user
+        val body = JsonObject().apply { addProperty("account_status", "ACTIVE") }
+        val response = http.execute(
+            http.authenticatedRequest(
+                "${config.restUrl}/profiles?id=eq.${URLEncoder.encode(user.id, StandardCharsets.UTF_8.name())}",
+                accessToken
+            )
+                .header("Prefer", "return=minimal")
+                .patch(http.jsonBody(body))
+                .build()
+        ).getOrElse { return null }
+        if (!response.successful) return null
+        return user.copy(accountStatus = AccountStatus.ACTIVE)
     }
 
     private fun parseSession(json: JsonObject): StoredSupabaseSession? {
