@@ -35,6 +35,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,6 +69,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var announcementTitle by remember { mutableStateOf("") }
     var announcementBody by remember { mutableStateOf("") }
     var officialPost by remember { mutableStateOf("") }
+    var settings by remember { mutableStateOf<JsonObject?>(null) }
     var confirmDelete by remember { mutableStateOf<OwnerUserRow?>(null) }
 
     fun refresh() {
@@ -86,6 +88,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 stats = source.dashboardStats()
                 users = source.listUsers(search)
                 reports = source.listReports()
+                settings = source.getSettings()
             }
             loading = false
         }
@@ -125,7 +128,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
                 TabRow(selectedTabIndex = tab) {
-                    listOf("المستخدمون", "البلاغات", "الإعلانات", "المنشورات الرسمية").forEachIndexed { i, label ->
+                    listOf("المستخدمون", "البلاغات", "الإعلانات", "المنشورات الرسمية", "الإعدادات").forEachIndexed { i, label ->
                         Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
                     }
                 }
@@ -191,7 +194,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                             Icon(Icons.Default.Campaign, contentDescription = null); Text("نشر إعلان لجميع المستخدمين")
                         }
                     }
-                    else -> Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    3 -> Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("النشر الرسمي من حساب المالك الحالي. إنشاء حساب Nexa مستقل يتطلب هوية دخول مستقلة.")
                         OutlinedTextField(officialPost, { officialPost = it }, Modifier.fillMaxWidth(), minLines = 5, label = { Text("نص المنشور الرسمي") })
                         Button(onClick = {
@@ -206,6 +209,30 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                 message = if (admin?.enableFounderBadge() == true) "تم تفعيل شارة مؤسس Nexa" else "تعذر تفعيل الشارة"
                             }
                         }) { Icon(Icons.Default.AdminPanelSettings, contentDescription = null); Text("تفعيل شارة مؤسس Nexa") }
+                    }
+                    else -> Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("إعدادات التشغيل العامة • التغييرات تحفظ مباشرة في Supabase")
+                        OwnerSettingRow("وضع الصيانة", settings?.get("maintenance_mode")?.asBoolean ?: false) { enabled ->
+                            scope.launch {
+                                val ok = admin?.setSetting("maintenance_mode", enabled) == true
+                                message = if (ok) "تم حفظ وضع الصيانة" else "تعذر حفظ الإعداد"
+                                settings = admin?.getSettings()
+                            }
+                        }
+                        OwnerSettingRow("السماح بالتسجيل الجديد", settings?.get("new_registrations_enabled")?.asBoolean ?: true) { enabled ->
+                            scope.launch {
+                                val ok = admin?.setSetting("new_registrations_enabled", enabled) == true
+                                message = if (ok) "تم حفظ إعداد التسجيل" else "تعذر حفظ الإعداد"
+                                settings = admin?.getSettings()
+                            }
+                        }
+                        OwnerSettingRow("تفعيل شارة التوثيق الرسمية", settings?.get("official_badge_enabled")?.asBoolean ?: true) { enabled ->
+                            scope.launch {
+                                val ok = admin?.setSetting("official_badge_enabled", enabled) == true
+                                message = if (ok) "تم حفظ إعداد الشارة" else "تعذر حفظ الإعداد"
+                                settings = admin?.getSettings()
+                            }
+                        }
                     }
                 }
                 message?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp)) }
@@ -238,6 +265,17 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
         Column(Modifier.padding(12.dp)) {
             Text(value, style = MaterialTheme.typography.headlineSmall)
             Text(label, style = MaterialTheme.typography.labelMedium)
+        }
+    }
+}
+
+
+@Composable
+private fun OwnerSettingRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Card(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            Switch(checked = checked, onCheckedChange = onChange)
         }
     }
 }
