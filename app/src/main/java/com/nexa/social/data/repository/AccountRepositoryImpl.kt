@@ -61,6 +61,25 @@ class AccountRepositoryImpl(
         Resource.Success(pretty)
     }
 
+    override suspend fun deactivateAccount(): Resource<Unit> = withContext(Dispatchers.IO) {
+        val token = auth.currentAccessToken()
+            ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val uid = auth.currentUid()
+            ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
+        val body = JsonObject().apply { addProperty("account_status", "DEACTIVATED") }
+        val request = http.authenticatedRequest("$restUrl/profiles?id=eq.$uid", token)
+            .header("Prefer", "return=minimal")
+            .patch(http.jsonBody(body))
+            .build()
+        val response = http.execute(request).getOrElse { error ->
+            return@withContext Resource.Failure(http.transportFailure(error))
+        }
+        if (!response.successful) {
+            return@withContext Resource.Failure(http.failureReason(response))
+        }
+        Resource.Success(Unit)
+    }
+
     override suspend fun deleteAccount(): Resource<Unit> = withContext(Dispatchers.IO) {
         val token = auth.currentAccessToken()
             ?: return@withContext Resource.Failure(FailureReason.NOT_AUTHENTICATED)
