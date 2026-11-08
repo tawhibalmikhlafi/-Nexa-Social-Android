@@ -69,6 +69,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var stats by remember { mutableStateOf<JsonObject?>(null) }
     var users by remember { mutableStateOf<List<OwnerUserRow>>(emptyList()) }
     var reports by remember { mutableStateOf<List<OwnerReportRow>>(emptyList()) }
+    var reportFilter by remember { mutableStateOf("ALL") }
     var support by remember { mutableStateOf<List<OwnerSupportRow>>(emptyList()) }
     var contentRows by remember { mutableStateOf<List<OwnerContentRow>>(emptyList()) }
     var contentDeleteTarget by remember { mutableStateOf<OwnerContentRow?>(null) }
@@ -205,19 +206,82 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                             }
                         }
                     }
-                    1 -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(reports, key = { it.id }) { report ->
-                            Card(Modifier.fillMaxWidth()) {
-                                Column(Modifier.padding(12.dp)) {
-                                    Text("${report.targetType} • ${report.reason}", style = MaterialTheme.typography.titleMedium)
-                                    Text(report.note)
-                                    Text("الحالة: ${report.status} • ${report.createdAt}")
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        OutlinedButton(onClick = { scope.launch { admin?.updateReport(report.id, "REVIEWED"); refresh() } }) { Text("تمت المراجعة") }
-                                        OutlinedButton(onClick = { scope.launch { admin?.updateReport(report.id, "DISMISSED"); refresh() } }) { Text("رفض البلاغ") }
+                    1 -> Column(Modifier.fillMaxSize()) {
+                        Text("مركز مراجعة البلاغات", style = MaterialTheme.typography.titleLarge)
+                        Text("يظهر صاحب البلاغ والحساب أو المحتوى المبلّغ عليه، مع حفظ كل قرار إداري في سجل التدقيق.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("ALL" to "الكل", "POST" to "منشورات", "COMMENT" to "تعليقات", "CLIP" to "ريلز", "USER" to "حسابات").forEach { (value, label) ->
+                                FilterChip(
+                                    selected = reportFilter == value,
+                                    onClick = {
+                                        reportFilter = value
+                                        scope.launch { reports = admin?.listReports(value).orEmpty() }
+                                    },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(reports, key = { it.id }) { report ->
+                                Card(Modifier.fillMaxWidth()) {
+                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(when(report.targetType) {
+                                                "POST" -> "بلاغ منشور"
+                                                "COMMENT" -> "بلاغ تعليق"
+                                                "CLIP" -> "بلاغ ريلز"
+                                                "USER" -> "بلاغ حساب"
+                                                "COMMUNITY" -> "بلاغ مجموعة"
+                                                else -> report.targetType
+                                            }, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                            Spacer(Modifier.weight(1f))
+                                            Text(when(report.status) {
+                                                "REVIEWED" -> "تمت المراجعة"
+                                                "DISMISSED" -> "مرفوض"
+                                                "RESOLVED" -> "تمت المعالجة"
+                                                else -> "جديد"
+                                            }, style = MaterialTheme.typography.labelMedium)
+                                        }
+                                        Text("المبلّغ: ${report.reporterName.ifBlank { "مستخدم Nexa" }}")
+                                        if (report.reporterUsername.isNotBlank()) Text("@${report.reporterUsername}", style = MaterialTheme.typography.bodySmall)
+                                        if (report.reporterEmail.isNotBlank()) Text(report.reporterEmail, style = MaterialTheme.typography.bodySmall)
+                                        Text("الحساب/الناشر المبلّغ عليه: ${report.targetAuthorName.ifBlank { if (report.targetType == "USER") "الحساب محل البلاغ" else "غير متاح أو حُذف المحتوى" }}")
+                                        if (report.targetAuthorUsername.isNotBlank()) Text("@${report.targetAuthorUsername}", style = MaterialTheme.typography.bodySmall)
+                                        if (report.targetPreview.isNotBlank()) {
+                                            Text("المحتوى المبلّغ عنه", style = MaterialTheme.typography.labelLarge)
+                                            Text(report.targetPreview, style = MaterialTheme.typography.bodyMedium)
+                                        }
+                                        Text("السبب: ${report.reason}")
+                                        if (report.note.isNotBlank()) Text("تفاصيل البلاغ: ${report.note}")
+                                        Text("التاريخ: ${report.createdAt}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text("معرّف البلاغ: ${report.id}", style = MaterialTheme.typography.labelSmall)
+                                        if (report.status != "REVIEWED" && report.status != "RESOLVED") {
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                OutlinedButton(onClick = {
+                                                    scope.launch {
+                                                        val ok = admin?.updateReport(report.id, "REVIEWED", "تمت المراجعة من لوحة المالك") == true
+                                                        message = if (ok) "تم حفظ قرار مراجعة البلاغ" else "تعذر تحديث البلاغ: ${admin?.lastError.orEmpty()}"
+                                                        reports = admin?.listReports(reportFilter).orEmpty()
+                                                    }
+                                                }) { Text("تمت المراجعة") }
+                                                OutlinedButton(onClick = {
+                                                    scope.launch {
+                                                        val ok = admin?.updateReport(report.id, "DISMISSED", "تم رفض البلاغ من لوحة المالك") == true
+                                                        message = if (ok) "تم رفض البلاغ وحفظ القرار" else "تعذر رفض البلاغ: ${admin?.lastError.orEmpty()}"
+                                                        reports = admin?.listReports(reportFilter).orEmpty()
+                                                    }
+                                                }) { Text("رفض البلاغ") }
+                                            }
+                                        }
                                     }
                                 }
                             }
+                            if (reports.isEmpty()) item {
+                                Text("لا توجد بلاغات في هذا التصنيف.", modifier = Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        OutlinedButton(onClick = { scope.launch { reports = admin?.listReports(reportFilter).orEmpty() } }, modifier = Modifier.fillMaxWidth()) {
+                            Text("تحديث البلاغات")
                         }
                     }
                     2 -> Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
