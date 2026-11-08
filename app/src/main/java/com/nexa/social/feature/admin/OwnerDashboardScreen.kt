@@ -250,25 +250,26 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         }) { Icon(Icons.Default.AdminPanelSettings, contentDescription = null); Text("تفعيل شارة مؤسس Nexa") }
                     }
                     4 -> Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("إعدادات التشغيل العامة • التغييرات تحفظ مباشرة في Supabase")
+                        Text("إعدادات التشغيل العامة", style = MaterialTheme.typography.titleLarge)
+                        Text("تُحفظ المفاتيح فور تغييرها في Supabase، أما إعدادات الإعلان فتُحفظ بزر مستقل بعد مراجعتها.")
                         OwnerSettingRow("وضع الصيانة", settings?.get("maintenance_mode")?.asBoolean ?: false) { enabled ->
                             scope.launch {
                                 val ok = admin?.setSetting("maintenance_mode", enabled) == true
-                                message = if (ok) "تم حفظ وضع الصيانة" else "تعذر حفظ الإعداد"
+                                message = if (ok) "تم حفظ وضع الصيانة في قاعدة البيانات" else "تعذر حفظ وضع الصيانة: ${admin?.lastError.orEmpty()}"
                                 settings = admin?.getSettings()
                             }
                         }
                         OwnerSettingRow("السماح بالتسجيل الجديد", settings?.get("new_registrations_enabled")?.asBoolean ?: true) { enabled ->
                             scope.launch {
                                 val ok = admin?.setSetting("new_registrations_enabled", enabled) == true
-                                message = if (ok) "تم حفظ إعداد التسجيل" else "تعذر حفظ الإعداد"
+                                message = if (ok) "تم حفظ إعداد التسجيل في قاعدة البيانات" else "تعذر حفظ إعداد التسجيل: ${admin?.lastError.orEmpty()}"
                                 settings = admin?.getSettings()
                             }
                         }
                         OwnerSettingRow("تفعيل شارة التوثيق الرسمية", settings?.get("official_badge_enabled")?.asBoolean ?: true) { enabled ->
                             scope.launch {
                                 val ok = admin?.setSetting("official_badge_enabled", enabled) == true
-                                message = if (ok) "تم حفظ إعداد الشارة" else "تعذر حفظ الإعداد: ${admin?.lastError.orEmpty()}"
+                                message = if (ok) "تم حفظ إعداد الشارة في قاعدة البيانات" else "تعذر حفظ إعداد الشارة: ${admin?.lastError.orEmpty()}"
                                 settings = admin?.getSettings()
                             }
                         }
