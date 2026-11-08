@@ -52,6 +52,16 @@ Deno.serve(async (req) => {
   if (targetId === actorId) return reply(400, { error: "cannot_delete_owner" });
   if (payload.confirmation !== "DELETE_ACCOUNT") return reply(400, { error: "confirmation_required" });
 
+  const targetOwnerCheck = await fetch(
+    `${url}/rest/v1/nexa_admin_roles?user_id=eq.${encodeURIComponent(targetId)}&role=eq.OWNER&select=user_id&limit=1`,
+    { headers: secretHeaders(secret) },
+  );
+  if (!targetOwnerCheck.ok) return reply(500, { error: "target_role_check_failed" });
+  const targetOwnerRoles = await targetOwnerCheck.json();
+  if (Array.isArray(targetOwnerRoles) && targetOwnerRoles.length > 0) {
+    return reply(403, { error: "cannot_delete_owner_account" });
+  }
+
   // Collect and delete every object stored under the user's UUID folder before
   // deleting the Auth identity. All Nexa media upload policies use this folder layout.
   const buckets = [
