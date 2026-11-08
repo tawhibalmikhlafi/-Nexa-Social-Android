@@ -290,6 +290,21 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                                 }) { Text("ملف صاحب المحتوى") }
                                             }
                                         }
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            if (report.targetType in setOf("POST","COMMENT","CLIP")) {
+                                                OutlinedButton(onClick = {
+                                                    contentDeleteTarget = OwnerContentRow(report.targetId, report.targetType, report.targetPreview, report.targetAuthorName, report.createdAt)
+                                                    contentDeleteReason = "حذف نتيجة بلاغ رقم ${report.id}"
+                                                }) { Text("حذف المحتوى") }
+                                            }
+                                            if (report.targetAuthorId.isNotBlank()) {
+                                                OutlinedButton(onClick = {
+                                                    moderationTarget = OwnerUserRow(report.targetAuthorId, "", report.targetAuthorUsername, report.targetAuthorName, "", "ACTIVE", false)
+                                                    moderationAction = "RESTRICT"
+                                                    moderationReason = "إجراء بسبب البلاغ ${report.id}"
+                                                }) { Text("تقييد صاحب المحتوى") }
+                                            }
+                                        }
                                         if (report.status.uppercase() !in setOf("REVIEWED", "RESOLVED", "DISMISSED")) {
                                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 OutlinedButton(onClick = {
