@@ -261,7 +261,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                             }
                         }
                         Spacer(Modifier.height(8.dp))
-                        Divider()
+                        Spacer(Modifier.height(4.dp))
                         Text("التحكم في ميزات المنصة", style = MaterialTheme.typography.titleLarge)
                         Text("إيقاف الميزة يمنع استخدامها من خلال سياسات قاعدة البيانات، وليس مجرد إخفاء زرها.")
                         listOf(
