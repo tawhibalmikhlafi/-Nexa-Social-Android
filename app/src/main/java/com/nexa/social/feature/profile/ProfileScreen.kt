@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -55,6 +56,9 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
@@ -142,6 +146,7 @@ fun ProfileScreen(
     onCreatePost: () -> Unit = {},
     onOpenFriends: () -> Unit = {},
     onOpenProfileDetails: () -> Unit = {},
+    onOpenAchievements: () -> Unit = {},
     onOpenOwnerDashboard: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel(
         factory = ProfileViewModel.factory(targetUserId),
@@ -308,12 +313,24 @@ fun ProfileScreen(
 
     if (showProfileMenu) {
         Dialog(onDismissRequest = { showProfileMenu = false }) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.CenterEnd
             ) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.48f))
+                        .clickable { showProfileMenu = false }
+                )
+                AnimatedVisibility(
+                    visible = showProfileMenu,
+                    enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                ) {
+                    Surface(
+                        modifier = Modifier.fillMaxHeight().width(320.dp),
+                        shape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 12.dp
+                    ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -347,14 +364,18 @@ fun ProfileScreen(
                     }
                     MenuEntry("تفاصيل الملف الشخصي", Icons.Filled.Person, onOpenProfileDetails)
                     MenuEntry("الإحصائيات", Icons.Filled.GridView, onOpenLabs)
-                    MenuEntry("الإنجازات", Icons.Filled.AutoAwesome, onOpenStudio)
+                    MenuEntry("الإنجازات والشهادات", Icons.Filled.AutoAwesome, onOpenAchievements)
                     MenuEntry("المحفوظات", Icons.Filled.Bookmark, onOpenSaved)
                     MenuEntry("الأصدقاء", Icons.Filled.Person, onOpenFriends)
                     MenuEntry("الإشعارات", Icons.Filled.Notifications, onOpenNotifications)
+                    MenuEntry("Nexa Labs", Icons.Filled.GridView, onOpenLabs)
+                    MenuEntry("استوديو Nexa", Icons.Filled.AutoAwesome, onOpenStudio)
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     MenuEntry("الإعدادات", Icons.Filled.Settings, onSettings)
                     if (showOwnerTools && current.id == "b81639ff-c669-416e-8a58-452710658bd2") {
                         MenuEntry("لوحة مالك Nexa", Icons.Filled.AdminPanelSettings, onOpenOwnerDashboard)
+                    }
+                }
                     }
                 }
             }
