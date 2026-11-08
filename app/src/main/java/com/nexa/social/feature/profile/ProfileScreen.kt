@@ -802,16 +802,7 @@ fun ProfileScreen(
                     }
                     Spacer(Modifier.height(NexaSpacing.sm))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
-                        LargeShortcutCard(title = stringResource(R.string.profile_friends), icon = Icons.Filled.Person, modifier = Modifier.weight(1f), onClick = onOpenFriends, color = neonBlue)
-                        LargeShortcutCard(title = stringResource(R.string.profile_saved_tab), icon = Icons.Filled.Bookmark, modifier = Modifier.weight(1f), onClick = onOpenSaved, color = neonPurple)
-                    }
-                    Spacer(Modifier.height(NexaSpacing.sm))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
-                        LargeShortcutCard(title = stringResource(R.string.title_settings), icon = Icons.Filled.Settings, modifier = Modifier.weight(1f), onClick = onSettings, color = neonBlue)
                         LargeShortcutCard(title = "تفاصيل الملف الشخصي", icon = Icons.Filled.AutoAwesome, modifier = Modifier.weight(1f), onClick = onOpenProfileDetails, color = neonPurple)
-                    }
-                    Spacer(Modifier.height(NexaSpacing.sm))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
                         LargeShortcutCard(
                             title = stringResource(R.string.post_share),
                             icon = Icons.Filled.Share,
@@ -821,7 +812,7 @@ fun ProfileScreen(
                                     scope.launch { snackbarHost?.showSnackbar(shareFailedMessage) }
                                 }
                             },
-                            color = neonPurple
+                            color = neonBlue
                         )
                     }
                     if (!remoteMode) {
@@ -1118,7 +1109,7 @@ private fun LargeShortcutCard(
 ) {
     Card(
         modifier = modifier
-            .aspectRatio(1.5f)
+            .aspectRatio(2.35f)
             .clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f)),
@@ -1129,9 +1120,9 @@ private fun LargeShortcutCard(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(19.dp))
-            Spacer(Modifier.height(8.dp))
-            Text(text = title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.height(4.dp))
+            Text(text = title, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
     }
 }
