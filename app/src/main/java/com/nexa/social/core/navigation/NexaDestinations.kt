@@ -19,6 +19,7 @@ object NexaDestinations {
     const val CREATE = "create"
     const val MESSAGES = "messages"
     const val PROFILE = "profile"
+    const val PROFILE_DETAILS = "profile_details"
 
     const val SEARCH = "search"
     const val NOTIFICATIONS = "notifications"
