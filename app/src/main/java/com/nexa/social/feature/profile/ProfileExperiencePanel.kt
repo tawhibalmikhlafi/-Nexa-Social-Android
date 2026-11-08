@@ -391,6 +391,44 @@ fun ProfileExperiencePanel(
             else TextButton(onClick = { requestToken = ""; testimonialName = ""; testimonialTitle = ""; testimonialCompany = ""; testimonialBody = ""; testimonialRating = "5"; dialog = "submit" }) { Text("لديك رمز طلب؟ أرسل توصية") }
         }
 
+        // Server-awarded points and progression level.
+        if (isOwner) {
+            val earnedPoints = achievements
+                .filter { it.get("unlocked_at")?.takeIf { value -> !value.isJsonNull } != null }
+                .sumOf { it.get("reward_points")?.asInt ?: 0 }
+            val levels = listOf(
+                Triple(0, 50, "مبتدئ"),
+                Triple(50, 100, "نشط"),
+                Triple(100, 150, "متفاعل"),
+                Triple(150, 200, "مؤثر"),
+                Triple(200, Int.MAX_VALUE, "نجم Nexa")
+            )
+            val currentLevel = levels.lastOrNull { earnedPoints >= it.first } ?: levels.first()
+            val nextLevel = levels.firstOrNull { earnedPoints < it.second }
+            val levelProgress = if (nextLevel == null) 1f else
+                ((earnedPoints - currentLevel.first).toFloat() /
+                    (currentLevel.second - currentLevel.first).coerceAtLeast(1)).coerceIn(0f, 1f)
+            ExperienceCard("⭐ مستوى حسابك", false, null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(currentLevel.third, style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.weight(1f))
+                    Text("$earnedPoints نقطة", style = MaterialTheme.typography.titleMedium)
+                }
+                LinearProgressIndicator(progress = { levelProgress }, modifier = Modifier.fillMaxWidth())
+                Text(
+                    if (nextLevel == null) "وصلت إلى أعلى مستوى متاح حالياً."
+                    else "تحتاج ${nextLevel.first - earnedPoints} نقطة للوصول إلى ${nextLevel.third}.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "تُحتسب النقاط تلقائياً عند فتح الإنجازات من نشاطك الحقيقي في Nexa.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
         // Achievements
         ExperienceCard("🏆 الإنجازات والشارات", isOwner, null) {
             achievements.filter { isOwner || it.get("is_visible")?.asBoolean != false }
@@ -433,10 +471,36 @@ fun ProfileExperiencePanel(
                 val links = analytics.count { it.get("event_type")?.asString == "SOCIAL_LINK_CLICK" }
                 val downloads = analytics.count { it.get("event_type")?.asString == "CV_DOWNLOAD" }
                 val qr = analytics.count { it.get("event_type")?.asString == "QR_SCAN" }
+                val now = Instant.now()
+                val thisWeekStart = now.minus(7, ChronoUnit.DAYS)
+                val previousWeekStart = now.minus(14, ChronoUnit.DAYS)
+                fun occurredBetween(row: JsonObject, start: Instant, end: Instant): Boolean =
+                    row.get("created_at")?.takeIf { !it.isJsonNull }?.asString
+                        ?.let { runCatching { Instant.parse(it).let { timestamp -> !timestamp.isBefore(start) && timestamp.isBefore(end) } }.getOrDefault(false) }
+                        ?: false
+                val weeklyViews = analytics.count {
+                    it.get("event_type")?.asString == "PROFILE_VIEW" && occurredBetween(it, thisWeekStart, now)
+                }
+                val previousWeeklyViews = analytics.count {
+                    it.get("event_type")?.asString == "PROFILE_VIEW" && occurredBetween(it, previousWeekStart, thisWeekStart)
+                }
+                val weeklyInteractions = analytics.count {
+                    it.get("event_type")?.asString in setOf("SKILL_CLICK", "SOCIAL_LINK_CLICK", "CV_DOWNLOAD", "QR_SCAN") &&
+                        occurredBetween(it, thisWeekStart, now)
+                }
                 val topSkill = analytics.filter { it.get("event_type")?.asString == "SKILL_CLICK" }
                     .mapNotNull { it.get("event_key")?.takeIf { value -> !value.isJsonNull }?.asString }
                     .groupingBy { it }.eachCount().maxByOrNull { it.value }
                 Text("👁️ مشاهدات الملف: $views")
+                Text("📅 مشاهدات آخر 7 أيام: $weeklyViews")
+                Text(
+                    if (weeklyViews > previousWeeklyViews) "📈 ارتفعت المشاهدات ${weeklyViews - previousWeeklyViews} عن الأسبوع السابق"
+                    else if (weeklyViews < previousWeeklyViews) "📉 انخفضت المشاهدات ${previousWeeklyViews - weeklyViews} عن الأسبوع السابق"
+                    else "➖ المشاهدات مساوية للأسبوع السابق",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text("⚡ تفاعلات الملف آخر 7 أيام: $weeklyInteractions")
                 Text("🎯 نقرات المهارات: $skills")
                 topSkill?.let { Text("⭐ أكثر مهارة اهتماماً: ${it.key} (${it.value})") }
                 Text("🔗 نقرات الروابط: $links")
