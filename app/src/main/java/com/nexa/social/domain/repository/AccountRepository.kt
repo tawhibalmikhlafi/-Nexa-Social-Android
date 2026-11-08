@@ -10,6 +10,9 @@ interface AccountRepository {
     /** Serializes every row owned by the current account into a single JSON document. */
     suspend fun exportData(): Resource<String>
 
+    /** Temporarily hides the profile; the next successful sign-in reactivates it. */
+    suspend fun deactivateAccount(): Resource<Unit>
+
     /** Deletes the Supabase auth user; profiles and owned rows cascade away. */
     suspend fun deleteAccount(): Resource<Unit>
 }
