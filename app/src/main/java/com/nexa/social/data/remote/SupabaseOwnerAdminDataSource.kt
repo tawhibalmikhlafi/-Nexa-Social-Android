@@ -186,6 +186,18 @@ class SupabaseOwnerAdminDataSource(
         return response.successful
     }
 
+    suspend fun isFounderVerified(userId: String): Boolean {
+        val token = accessToken() ?: return false
+        val response = http.execute(
+            http.authenticatedRequest("$base/profiles?id=eq.${enc(userId)}&select=is_verified&limit=1", token)
+                .get().build()
+        ).getOrNull()?.takeIf { it.successful } ?: return false
+        return runCatching {
+            JsonParser.parseString(response.body).asJsonArray.first().asJsonObject
+                .get("is_verified")?.asBoolean == true
+        }.getOrDefault(false)
+    }
+
     suspend fun enableFounderBadge(): Boolean {
         val token=accessToken() ?: return false
         val uid=currentUid() ?: return false
