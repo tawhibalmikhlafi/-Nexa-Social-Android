@@ -85,6 +85,7 @@ import com.nexa.social.feature.post.SavedPostsScreen
 import com.nexa.social.feature.profile.EditProfileScreen
 import com.nexa.social.feature.profile.FriendsScreen
 import com.nexa.social.feature.profile.ProfileScreen
+import com.nexa.social.feature.profile.ProfileDetailsScreen
 import com.nexa.social.feature.pulse.PulseScreen
 import com.nexa.social.feature.safety.SafetyScreen
 import com.nexa.social.feature.settings.privacy.PrivacyScreen
