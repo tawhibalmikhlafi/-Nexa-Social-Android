@@ -94,6 +94,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var moderationTarget by remember { mutableStateOf<OwnerUserRow?>(null) }
     var moderationAction by remember { mutableStateOf("RESTRICT") }
     var moderationReason by remember { mutableStateOf("") }
+    var moderationDurationHours by remember { mutableStateOf("24") }
     var moderationHistory by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
     var selectedUser by remember { mutableStateOf<OwnerUserRow?>(null) }
     var selectedUserDetails by remember { mutableStateOf<JsonObject?>(null) }
@@ -621,15 +622,28 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         label = { Text("سبب الإجراء (يُحفظ في السجل)") },
                         minLines = 2
                     )
+                    if (moderationAction == "RESTRICT") {
+                        OutlinedTextField(
+                            value = moderationDurationHours,
+                            onValueChange = { if (it.length <= 4 && it.all(Char::isDigit)) moderationDurationHours = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("مدة التقييد بالساعات (اتركها فارغة للتقييد الدائم)") },
+                            singleLine = true
+                        )
+                        Text("الحد المسموح: من ساعة إلى 8760 ساعة (سنة).", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(
+                    enabled = moderationAction != "RESTRICT" || moderationDurationHours.isBlank() || (moderationDurationHours.toIntOrNull() ?: 0) in 1..8760,
+                    onClick = {
                     val action = moderationAction
                     val reason = moderationReason
+                    val duration = if (action == "RESTRICT") moderationDurationHours.toIntOrNull() else null
                     moderationTarget = null
                     scope.launch {
-                        val ok = admin?.moderateUser(user.id, action, reason) == true
+                        val ok = admin?.moderateUser(user.id, action, reason, duration) == true
                         message = if (ok) "تم تنفيذ الإجراء وحفظه في سجل الإدارة" else "فشل الإجراء: ${admin?.lastError.orEmpty()}"
                         if (ok) refresh()
                     }
