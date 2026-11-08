@@ -61,15 +61,21 @@ Deno.serve(async (req) => {
   let removedObjects = 0;
   for (const bucket of buckets) {
     const listed = await fetch(
-      `${url}/rest/v1/objects?select=name&bucket_id=eq.${encodeURIComponent(bucket)}&name=like.${encodeURIComponent(targetId + "/")}*`,
-      { headers: secretHeaders(secret) },
+      `${url}/storage/v1/object/list/${encodeURIComponent(bucket)}`,
+      {
+        method: "POST",
+        headers: secretHeaders(secret),
+        body: JSON.stringify({ prefix: targetId, limit: 1000, offset: 0, sortBy: { column: "name", order: "asc" } }),
+      },
     );
     if (!listed.ok) {
       return reply(502, { error: "storage_inventory_failed", bucket });
     }
     const rows = await listed.json();
     const names = Array.isArray(rows)
-      ? rows.map((row: { name?: unknown }) => row.name).filter((name): name is string => typeof name === "string" && name.length > 0)
+      ? rows.map((row: { name?: unknown; id?: unknown }) => row.name)
+          .filter((name): name is string => typeof name === "string" && name.length > 0)
+          .map((name) => targetId + "/" + name)
       : [];
     for (let offset = 0; offset < names.length; offset += 100) {
       const batch = names.slice(offset, offset + 100);
