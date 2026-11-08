@@ -24,6 +24,7 @@ data class PrivacyActionsState(
     val passwordUpdated: Boolean = false,
     val sessionsRevoked: Boolean = false,
     val accountDeleted: Boolean = false,
+    val accountDeactivated: Boolean = false,
     val exportPayload: String? = null,
     val sessions: List<UserSession> = emptyList(),
     val loadingSessions: Boolean = false,
@@ -138,6 +139,23 @@ class PrivacyActionsViewModel(
     }
 
     fun consumeExport() = _state.update { it.copy(exportPayload = null) }
+
+    fun deactivateAccount() {
+        if (_state.value.busy) return
+        _state.update { it.copy(busy = true, error = null, accountDeactivated = false) }
+        viewModelScope.launch {
+            when (val result = accountRepository.deactivateAccount()) {
+                is Resource.Success -> {
+                    authRepository.signOut()
+                    _state.update { it.copy(busy = false, accountDeactivated = true) }
+                }
+                is Resource.Failure -> _state.update {
+                    it.copy(busy = false, error = result.reason)
+                }
+                Resource.Loading -> Unit
+            }
+        }
+    }
 
     fun deleteAccount() {
         if (_state.value.busy) return
