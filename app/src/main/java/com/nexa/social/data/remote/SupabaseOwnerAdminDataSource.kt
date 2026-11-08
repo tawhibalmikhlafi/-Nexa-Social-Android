@@ -206,7 +206,7 @@ class SupabaseOwnerAdminDataSource(
     suspend fun createAnnouncement(title: String, bodyText: String): Boolean {
         val body=JsonObject().apply { addProperty("p_title",title); addProperty("p_body",bodyText) }
         val result = rpc("nexa_owner_create_announcement", body) ?: return false
-        return runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
+        return runCatching { JsonParser.parseString(result).asString.isNotBlank() }.getOrDefault(false)
     }
 
     suspend fun setAdsSettings(enabled: Boolean, placement: String, durationSeconds: Int, frequency: Int): Boolean {
