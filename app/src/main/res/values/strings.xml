@@ -266,7 +266,7 @@
     <string name="profile_block">Block</string>
     <string name="profile_block_busy">Blocking…</string>
     <string name="profile_block_confirm_title">Block this account?</string>
-    <string name="profile_block_confirm_message">You will no longer be able to see or interact with this account after blocking: %1$s</string>
+    <string name="profile_block_confirm_message">%1$s will be added to your blocked accounts list. You can manage blocked accounts in Safety settings.</string>
     <string name="profile_block_success">Account blocked successfully.</string>
     <string name="profile_block_failed">Could not block this account. Check your connection and try again.</string>
     <string name="profile_share">Share profile</string>
