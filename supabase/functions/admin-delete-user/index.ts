@@ -62,6 +62,23 @@ Deno.serve(async (req) => {
     return reply(403, { error: "cannot_delete_owner_account" });
   }
 
+  // Persist an owner audit record before destructive storage/auth operations.
+  const auditInsert = await fetch(`${url}/rest/v1/nexa_owner_audit_events`, {
+    method: "POST",
+    headers: new Headers([...secretHeaders(secret).entries(), ["Prefer", "return=representation"]]),
+    body: JSON.stringify({
+      actor_id: actorId,
+      action: "USER_DELETE_STARTED",
+      entity_type: "USER",
+      entity_id: targetId,
+      details: { phase: "started", storage_cleanup_verified: false },
+    }),
+  });
+  if (!auditInsert.ok) return reply(500, { error: "audit_record_failed_before_deletion" });
+  const auditRows = await auditInsert.json();
+  const auditId = Array.isArray(auditRows) && typeof auditRows[0]?.id === "string" ? auditRows[0].id : "";
+  if (!auditId) return reply(500, { error: "audit_record_id_missing" });
+
   // Collect and delete every object stored under the user's UUID folder before
   // deleting the Auth identity. All Nexa media upload policies use this folder layout.
   const buckets = [
@@ -126,5 +143,22 @@ Deno.serve(async (req) => {
   });
   if (deleted.status === 404) return reply(404, { error: "user_not_found" });
   if (!deleted.ok) return reply(500, { error: "delete_failed" });
-  return reply(200, { success: true, user_id: targetId, removed_storage_objects: removedObjects });
+
+  const auditUpdate = await fetch(
+    `${url}/rest/v1/nexa_owner_audit_events?id=eq.${encodeURIComponent(auditId)}`,
+    {
+      method: "PATCH",
+      headers: secretHeaders(secret),
+      body: JSON.stringify({
+        action: "USER_DELETED",
+        details: { phase: "completed", storage_cleanup_verified: true, removed_storage_objects: removedObjects },
+      }),
+    },
+  );
+  return reply(200, {
+    success: true,
+    user_id: targetId,
+    removed_storage_objects: removedObjects,
+    audit_recorded: auditUpdate.ok,
+  });
 });
