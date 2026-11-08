@@ -51,6 +51,7 @@ import com.google.gson.JsonObject
 import com.nexa.social.core.ui.rememberAppContainer
 import com.nexa.social.data.remote.OwnerReportRow
 import com.nexa.social.data.remote.OwnerUserRow
+import com.nexa.social.data.remote.OwnerSupportRow
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +66,8 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var stats by remember { mutableStateOf<JsonObject?>(null) }
     var users by remember { mutableStateOf<List<OwnerUserRow>>(emptyList()) }
     var reports by remember { mutableStateOf<List<OwnerReportRow>>(emptyList()) }
+    var support by remember { mutableStateOf<List<OwnerSupportRow>>(emptyList()) }
+    var supportReply by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
     var announcementTitle by remember { mutableStateOf("") }
     var announcementBody by remember { mutableStateOf("") }
@@ -89,6 +92,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 users = source.listUsers(search)
                 reports = source.listReports()
                 settings = source.getSettings()
+                support = source.listSupport()
             }
             loading = false
         }
@@ -128,7 +132,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
                 TabRow(selectedTabIndex = tab) {
-                    listOf("المستخدمون", "البلاغات", "الإعلانات", "المنشورات الرسمية", "الإعدادات").forEachIndexed { i, label ->
+                    listOf("المستخدمون", "البلاغات", "الإعلانات", "المنشورات الرسمية", "الإعدادات", "الدعم").forEachIndexed { i, label ->
                         Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
                     }
                 }
@@ -210,7 +214,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                             }
                         }) { Icon(Icons.Default.AdminPanelSettings, contentDescription = null); Text("تفعيل شارة مؤسس Nexa") }
                     }
-                    else -> Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    4 -> Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("إعدادات التشغيل العامة • التغييرات تحفظ مباشرة في Supabase")
                         OwnerSettingRow("وضع الصيانة", settings?.get("maintenance_mode")?.asBoolean ?: false) { enabled ->
                             scope.launch {
@@ -231,6 +235,27 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                 val ok = admin?.setSetting("official_badge_enabled", enabled) == true
                                 message = if (ok) "تم حفظ إعداد الشارة" else "تعذر حفظ الإعداد"
                                 settings = admin?.getSettings()
+                            }
+                        }
+                    }
+                    else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(support, key = { it.id }) { ticket ->
+                            Card(Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(ticket.subject, style = MaterialTheme.typography.titleMedium)
+                                    Text(ticket.message)
+                                    Text("الحالة: \${ticket.status} • \${ticket.createdAt}")
+                                    if (ticket.reply.isNotBlank()) Text("الرد السابق: \${ticket.reply}")
+                                    OutlinedTextField(supportReply, { supportReply = it }, Modifier.fillMaxWidth(), label = { Text("اكتب رد الدعم") }, minLines = 2)
+                                    Button(onClick = {
+                                        scope.launch {
+                                            val ok = admin?.replySupport(ticket.id, supportReply) == true
+                                            message = if (ok) "تم إرسال الرد" else "تعذر إرسال الرد"
+                                            if (ok) supportReply = ""
+                                            refresh()
+                                        }
+                                    }, enabled = supportReply.isNotBlank()) { Text("إرسال الرد وإغلاق الطلب") }
+                                }
                             }
                         }
                     }
