@@ -694,3 +694,75 @@ private fun OwnerAdsSettingsPanel(
         }
     }
 }
+
+@Composable
+private fun OwnerAdsManagementPanel(
+    ads: List<OwnerAdRow>,
+    onRefresh: () -> Unit,
+    onSave: (String?,String,String,String,String,String,String,String,String,String,Int,Int,Boolean) -> Unit
+) {
+    var editingId by remember { mutableStateOf<String?>(null) }
+    var title by remember { mutableStateOf("") }
+    var body by remember { mutableStateOf("") }
+    var mediaUrl by remember { mutableStateOf("") }
+    var mediaType by remember { mutableStateOf("NONE") }
+    var clickUrl by remember { mutableStateOf("") }
+    var placement by remember { mutableStateOf("FEED_INLINE") }
+    var audience by remember { mutableStateOf("ALL") }
+    var startsAt by remember { mutableStateOf("") }
+    var endsAt by remember { mutableStateOf("") }
+    var duration by remember { mutableStateOf("15") }
+    var frequency by remember { mutableStateOf("2") }
+    var enabled by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(if (editingId == null) "إنشاء حملة إعلانية" else "تعديل الحملة الإعلانية", style = MaterialTheme.typography.titleLarge)
+        OutlinedTextField(title,{title=it},Modifier.fillMaxWidth(),label={Text("عنوان الإعلان")},singleLine=true)
+        OutlinedTextField(body,{body=it},Modifier.fillMaxWidth(),label={Text("نص الإعلان")},minLines=3)
+        Text("أدخل رابطاً عاماً مباشراً للصورة أو الفيديو. رفع الملفات من الجهاز غير متاح في هذه الشاشة حالياً.",style=MaterialTheme.typography.bodySmall)
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            listOf("NONE" to "بدون","IMAGE" to "صورة","VIDEO" to "فيديو").forEach { (v,l) ->
+                FilterChip(selected=mediaType==v,onClick={mediaType=v},label={Text(l)})
+            }
+        }
+        if(mediaType!="NONE") OutlinedTextField(mediaUrl,{mediaUrl=it},Modifier.fillMaxWidth(),label={Text("رابط الوسائط")},singleLine=true)
+        OutlinedTextField(clickUrl,{clickUrl=it},Modifier.fillMaxWidth(),label={Text("رابط الفتح عند الضغط")},singleLine=true)
+        Text("مكان الظهور")
+        listOf("FEED_TOP" to "أعلى الرئيسية","FEED_INLINE" to "بين المنشورات","STORIES_BETWEEN" to "بين القصص","PROFILE_FEED" to "الملف الشخصي").forEach { (v,l) ->
+            FilterChip(selected=placement==v,onClick={placement=v},label={Text(l)})
+        }
+        Text("الجمهور المستهدف")
+        listOf("ALL" to "الجميع","NEW_USERS" to "المستخدمون الجدد","VERIFIED" to "الموثقون","FOLLOWERS" to "المتابعون").forEach { (v,l) ->
+            FilterChip(selected=audience==v,onClick={audience=v},label={Text(l)})
+        }
+        OutlinedTextField(startsAt,{startsAt=it},Modifier.fillMaxWidth(),label={Text("تاريخ البداية ISO-8601")},placeholder={Text("2026-11-08T09:00:00Z")})
+        OutlinedTextField(endsAt,{endsAt=it},Modifier.fillMaxWidth(),label={Text("تاريخ النهاية ISO-8601")},placeholder={Text("2026-12-08T09:00:00Z")})
+        OutlinedTextField(duration,{if(it.length<=3&&it.all(Char::isDigit))duration=it},Modifier.fillMaxWidth(),label={Text("مدة العرض بالثواني (5–120)")})
+        OutlinedTextField(frequency,{if(it.length<=2&&it.all(Char::isDigit))frequency=it},Modifier.fillMaxWidth(),label={Text("مرات العرض في الجلسة (1–10)")})
+        OwnerSettingRow("تفعيل الحملة",enabled){enabled=it}
+        Button(
+            onClick={onSave(editingId,title,body,mediaUrl,mediaType,clickUrl,placement,audience,startsAt,endsAt,duration.toInt(),frequency.toInt(),enabled)},
+            enabled=title.isNotBlank()&&body.isNotBlank()&&startsAt.isNotBlank()&&endsAt.isNotBlank()&&duration.toIntOrNull() in 5..120&&frequency.toIntOrNull() in 1..10&&(mediaType=="NONE"||mediaUrl.startsWith("http")),
+            modifier=Modifier.fillMaxWidth()
+        ) { Text(if(editingId==null)"إنشاء الحملة" else "حفظ التعديلات") }
+        OutlinedButton(onClick={editingId=null;title="";body="";mediaUrl="";mediaType="NONE";clickUrl="";placement="FEED_INLINE";audience="ALL";startsAt="";endsAt="";duration="15";frequency="2";enabled=false},modifier=Modifier.fillMaxWidth()) { Text("حملة جديدة") }
+        Text("الحملات المسجلة",style=MaterialTheme.typography.titleLarge)
+        ads.forEach { ad ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                    Text(ad.title,style=MaterialTheme.typography.titleMedium)
+                    Text(ad.body)
+                    Text("الموضع: ${ad.placement} • الجمهور: ${ad.audience}")
+                    Text("المشاهدات: ${ad.impressions} • النقرات: ${ad.clicks}")
+                    Text(if(ad.enabled)"مفعّل" else "متوقف")
+                    Text("${ad.startsAt} — ${ad.endsAt}",style=MaterialTheme.typography.labelSmall)
+                    OutlinedButton(onClick={
+                        editingId=ad.id;title=ad.title;body=ad.body;mediaUrl=ad.mediaUrl;mediaType=ad.mediaType
+                        clickUrl=ad.clickUrl;placement=ad.placement;audience=ad.audience;startsAt=ad.startsAt;endsAt=ad.endsAt
+                        duration=ad.durationSeconds.toString();frequency=ad.frequencyPerSession.toString();enabled=ad.enabled
+                    }) { Text("تعديل الحملة") }
+                }
+            }
+        }
+        OutlinedButton(onClick=onRefresh,modifier=Modifier.fillMaxWidth()) { Text("تحديث الحملات") }
+    }
+}
