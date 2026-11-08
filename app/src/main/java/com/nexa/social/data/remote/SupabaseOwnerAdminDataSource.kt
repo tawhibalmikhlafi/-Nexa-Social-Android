@@ -34,6 +34,7 @@ data class OwnerReportRow(
     val reporterName: String = "",
     val reporterUsername: String = "",
     val reporterEmail: String = "",
+    val targetAuthorId: String = "",
     val targetAuthorName: String = "",
     val targetAuthorUsername: String = "",
     val targetPreview: String = ""
@@ -214,6 +215,7 @@ class SupabaseOwnerAdminDataSource(
                     reporterName = o.string("reporter_name").orEmpty(),
                     reporterUsername = o.string("reporter_username").orEmpty(),
                     reporterEmail = o.string("reporter_email").orEmpty(),
+                    targetAuthorId = o.string("target_author_id").orEmpty(),
                     targetAuthorName = o.string("target_author_name").orEmpty(),
                     targetAuthorUsername = o.string("target_author_username").orEmpty(),
                     targetPreview = o.string("target_preview").orEmpty()
