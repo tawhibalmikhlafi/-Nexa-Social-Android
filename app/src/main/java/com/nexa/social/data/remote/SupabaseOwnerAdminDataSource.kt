@@ -212,10 +212,13 @@ class SupabaseOwnerAdminDataSource(
     }
 
     suspend fun setAdsSettings(enabled: Boolean, placement: String, durationSeconds: Int, frequency: Int): Boolean {
-        if (!setSetting("ads_enabled", enabled)) return false
-        if (!setTextSetting("ads_placement", placement)) return false
-        if (!setNumberSetting("ads_duration_seconds", durationSeconds)) return false
-        return setNumberSetting("ads_frequency_per_session", frequency)
+        val body = JsonObject().apply {
+            addProperty("p_enabled", enabled)
+            addProperty("p_placement", placement)
+            addProperty("p_duration_seconds", durationSeconds)
+            addProperty("p_frequency_per_session", frequency)
+        }
+        return rpc("nexa_owner_set_ads_settings", body) != null
     }
 
     suspend fun createOfficialPost(text: String): Boolean {
