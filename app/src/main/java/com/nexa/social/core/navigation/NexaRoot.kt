@@ -374,6 +374,7 @@ fun NexaRoot() {
                         onCreatePost = { navController.navigateTab(NexaDestinations.CREATE) },
                         onOpenFriends = { navController.navigate(NexaDestinations.FRIENDS) },
                         onOpenProfileDetails = { navController.navigate(NexaDestinations.PROFILE_DETAILS) },
+                        onOpenAchievements = { navController.navigate(NexaDestinations.ACHIEVEMENTS) },
                         onOpenOwnerDashboard = { navController.navigate(NexaDestinations.OWNER_DASHBOARD) }
                     )
                 }
