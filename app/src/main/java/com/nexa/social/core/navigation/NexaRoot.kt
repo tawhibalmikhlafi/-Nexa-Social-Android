@@ -370,8 +370,13 @@ fun NexaRoot() {
                         onOpenFollowing = { id -> navController.navigate(NexaDestinations.following(id)) },
                         onCreateStory = { navController.navigate(NexaDestinations.CREATE_STORY) },
                         onCreatePost = { navController.navigateTab(NexaDestinations.CREATE) },
-                        onOpenFriends = { navController.navigate(NexaDestinations.FRIENDS) }
+                        onOpenFriends = { navController.navigate(NexaDestinations.FRIENDS) },
+                        onOpenProfileDetails = { navController.navigate(NexaDestinations.PROFILE_DETAILS) }
                     )
+                }
+
+                composable(NexaDestinations.PROFILE_DETAILS) {
+                    ProfileDetailsScreen(onBack = { navController.popBackStack() })
                 }
 
                 composable(NexaDestinations.SEARCH) {
