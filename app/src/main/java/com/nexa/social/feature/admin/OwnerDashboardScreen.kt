@@ -309,6 +309,17 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                     Text("المتابعون: ${selectedUserDetails?.get("followers_count")?.asString ?: "—"}")
                     Text("يتابع: ${selectedUserDetails?.get("following_count")?.asString ?: "—"}")
                     profile?.get("bio")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("النبذة: $it") }
+                    profile?.get("city")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("المدينة: $it") }
+                    profile?.get("place_of_origin")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("مكان المنشأ: $it") }
+                    profile?.get("current_residence")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("مكان الإقامة: $it") }
+                    profile?.get("birth_date")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("تاريخ الميلاد: $it") }
+                    profile?.get("website")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("الموقع: $it") }
+                    profile?.get("skills")?.takeIf { it.isJsonArray }?.asJsonArray?.takeIf { it.size() > 0 }?.let { values ->
+                        Text("المهارات: " + values.joinToString("، ") { it.asString })
+                    }
+                    profile?.get("hobbies")?.takeIf { it.isJsonArray }?.asJsonArray?.takeIf { it.size() > 0 }?.let { values ->
+                        Text("الهوايات: " + values.joinToString("، ") { it.asString })
+                    }
                 }
             },
             confirmButton = { TextButton(onClick = { selectedUser = null; selectedUserDetails = null }) { Text("إغلاق") } }
