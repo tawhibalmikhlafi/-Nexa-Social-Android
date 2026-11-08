@@ -1024,6 +1024,11 @@
     <string name="privacy_manage_sessions_desc">View and sign out from other devices</string>
     <string name="privacy_download_data">Download My Data</string>
     <string name="privacy_download_data_desc">Request a copy of your account data</string>
+    <string name="privacy_deactivate_account">Deactivate Account</string>
+    <string name="privacy_deactivate_account_desc">Temporarily hide your profile. Sign in again to reactivate it.</string>
+    <string name="privacy_deactivate_account_title">Deactivate your account?</string>
+    <string name="privacy_deactivate_account_warning">Your profile will be hidden until you sign in again. Your posts and account data will not be deleted.</string>
+    <string name="privacy_action_deactivate">Deactivate</string>
     <string name="privacy_delete_account">Delete Account</string>
     <string name="privacy_delete_account_desc">Permanently delete your account and data</string>
     <string name="privacy_change_password_title">Change password</string>
