@@ -193,34 +193,34 @@ fun ProfileExperiencePanel(
     fun openCredential(row: JsonObject?) {
         clearCredentialForm()
         if (row != null) {
-            editingId = row.get("id")?.asString
-            credentialTitle = row.get("title")?.asString.orEmpty()
-            credentialIssuer = row.get("issuer")?.asString.orEmpty()
-            credentialType = row.get("record_type")?.asString ?: "CERTIFICATE"
-            credentialCategory = row.get("category")?.asString ?: "ACADEMIC"
-            credentialStart = row.get("start_date")?.asString.orEmpty()
-            credentialEnd = row.get("end_date")?.asString.orEmpty()
-            credentialCurrent = row.get("is_current")?.asBoolean == true
-            credentialLocation = row.get("location")?.asString.orEmpty()
-            credentialDescription = row.get("description")?.asString.orEmpty()
-            credentialVerifyUrl = row.get("verification_url")?.asString.orEmpty()
-            credentialDocumentUrl = row.get("document_url")?.asString.orEmpty()
-            credentialLogoUrl = row.get("organization_logo_url")?.asString.orEmpty()
+            editingId = row.get("id")?.takeUnless { it.isJsonNull }?.asString
+            credentialTitle = row.get("title")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            credentialIssuer = row.get("issuer")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            credentialType = row.get("record_type")?.takeUnless { it.isJsonNull }?.asString ?: "CERTIFICATE"
+            credentialCategory = row.get("category")?.takeUnless { it.isJsonNull }?.asString ?: "ACADEMIC"
+            credentialStart = row.get("start_date")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            credentialEnd = row.get("end_date")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            credentialCurrent = row.get("is_current")?.takeUnless { it.isJsonNull }?.asBoolean == true
+            credentialLocation = row.get("location")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            credentialDescription = row.get("description")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            credentialVerifyUrl = row.get("verification_url")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            credentialDocumentUrl = row.get("document_url")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            credentialLogoUrl = row.get("organization_logo_url")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
         }
         dialog = "credential"
     }
     fun openFavorite(row: JsonObject?) {
         clearFavoriteForm()
         if (row != null) {
-            editingId = row.get("id")?.asString
-            favoriteTitle = row.get("title")?.asString.orEmpty()
-            favoriteCreator = row.get("creator")?.asString.orEmpty()
-            favoriteCategory = row.get("category")?.asString ?: "BOOK"
-            favoriteYear = row.get("year")?.asString.orEmpty()
-            favoriteImage = row.get("image_url")?.asString.orEmpty()
-            favoriteUrl = row.get("external_url")?.asString.orEmpty()
-            favoriteQuote = row.get("quote")?.asString.orEmpty()
-            favoriteDescription = row.get("description")?.asString.orEmpty()
+            editingId = row.get("id")?.takeUnless { it.isJsonNull }?.asString
+            favoriteTitle = row.get("title")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            favoriteCreator = row.get("creator")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            favoriteCategory = row.get("category")?.takeUnless { it.isJsonNull }?.asString ?: "BOOK"
+            favoriteYear = row.get("year")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            favoriteImage = row.get("image_url")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            favoriteUrl = row.get("external_url")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            favoriteQuote = row.get("quote")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            favoriteDescription = row.get("description")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
         }
         dialog = "favorite"
     }
@@ -232,18 +232,18 @@ fun ProfileExperiencePanel(
         // Professional timeline
         ExperienceCard("🕰️ رحلتي الزمنية", isOwner, { eventTitle = ""; eventDate = ""; eventDescription = ""; eventType = "EDUCATION"; dialog = "timeline" }) {
             if (timeline.isEmpty()) Text("لا توجد أحداث ظاهرة بعد.", style = MaterialTheme.typography.bodySmall)
-            timeline.sortedWith(compareByDescending<JsonObject> { it.get("is_pinned")?.asBoolean == true }.thenByDescending { it.get("event_date")?.asString.orEmpty() }).forEach { row ->
-                val icon = when (row.get("event_type")?.asString) { "EDUCATION" -> "🎓"; "WORK" -> "💼"; "ACHIEVEMENT" -> "🏆"; "TRAVEL" -> "✈️"; else -> "💍" }
+            timeline.sortedWith(compareByDescending<JsonObject> { it.get("is_pinned")?.takeUnless { it.isJsonNull }?.asBoolean == true }.thenByDescending { it.get("event_date")?.takeUnless { it.isJsonNull }?.asString.orEmpty() }).forEach { row ->
+                val icon = when (row.get("event_type")?.takeUnless { it.isJsonNull }?.asString) { "EDUCATION" -> "🎓"; "WORK" -> "💼"; "ACHIEVEMENT" -> "🏆"; "TRAVEL" -> "✈️"; else -> "💍" }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(icon)
                     Column(Modifier.weight(1f)) {
-                        Text(row.get("title")?.asString.orEmpty(), style = MaterialTheme.typography.titleSmall)
-                        Text(row.get("event_date")?.asString.orEmpty(), style = MaterialTheme.typography.labelSmall)
-                        Text(row.get("description")?.asString.orEmpty(), style = MaterialTheme.typography.bodySmall)
+                        Text(row.get("title")?.takeUnless { it.isJsonNull }?.asString.orEmpty(), style = MaterialTheme.typography.titleSmall)
+                        Text(row.get("event_date")?.takeUnless { it.isJsonNull }?.asString.orEmpty(), style = MaterialTheme.typography.labelSmall)
+                        Text(row.get("description")?.takeUnless { it.isJsonNull }?.asString.orEmpty(), style = MaterialTheme.typography.bodySmall)
                     }
                     if (isOwner) {
                         IconButton(onClick = {
-                            val id = row.get("id")?.asString
+                            val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString
                             if (id != null) scope.launch { dataSource.deleteRow("nexa_profile_timeline", id); refresh() }
                         }) { Icon(Icons.Default.Delete, contentDescription = "حذف") }
                     }
@@ -253,20 +253,20 @@ fun ProfileExperiencePanel(
 
         // Languages
         ExperienceCard("🌍 اللغات", isOwner, { selectedLanguage = profileLanguageChoices.first(); selectedLevel = "BEGINNER"; languagePrivate = false; dialog = "language" }) {
-            languages.sortedWith(compareByDescending<JsonObject> { it.get("is_native")?.asBoolean == true }.thenBy { it.get("sort_order")?.asInt ?: 0 })
-                .filter { isOwner || it.get("is_private")?.asBoolean != true }
+            languages.sortedWith(compareByDescending<JsonObject> { it.get("is_native")?.takeUnless { it.isJsonNull }?.asBoolean == true }.thenBy { it.get("sort_order")?.takeUnless { it.isJsonNull }?.asInt ?: 0 })
+                .filter { isOwner || it.get("is_private")?.takeUnless { it.isJsonNull }?.asBoolean != true }
                 .forEach { row ->
-                    val level = row.get("proficiency")?.asString ?: "BEGINNER"
+                    val level = row.get("proficiency")?.takeUnless { it.isJsonNull }?.asString ?: "BEGINNER"
                     val percent = when (level) { "NATIVE" -> 100; "FLUENT" -> 90; "ADVANCED" -> 75; "INTERMEDIATE" -> 50; else -> 25 }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(row.get("flag_emoji")?.asString.orEmpty().ifBlank { "🌐" })
+                        Text(row.get("flag_emoji")?.takeUnless { it.isJsonNull }?.asString.orEmpty().ifBlank { "🌐" })
                         Column(Modifier.weight(1f)) {
-                            Text(row.get("language_name")?.asString.orEmpty(), style = MaterialTheme.typography.titleSmall)
+                            Text(row.get("language_name")?.takeUnless { it.isJsonNull }?.asString.orEmpty(), style = MaterialTheme.typography.titleSmall)
                             Text(languageLevels.firstOrNull { it.first == level }?.second.orEmpty(), style = MaterialTheme.typography.labelSmall)
                             LinearProgressIndicator(progress = { percent / 100f }, modifier = Modifier.fillMaxWidth())
                         }
                         if (isOwner) IconButton(onClick = {
-                            val id = row.get("id")?.asString
+                            val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString
                             if (id != null) scope.launch { dataSource.deleteRow("nexa_profile_languages", id); refresh() }
                         }) { Icon(Icons.Default.Delete, contentDescription = "حذف اللغة") }
                     }
@@ -276,40 +276,40 @@ fun ProfileExperiencePanel(
         // Certificates and experience
         ExperienceCard("🏅 الشهادات والخبرات", isOwner, { openCredential(null) }) {
             if (credentials.isEmpty()) Text("أضف شهاداتك وخبراتك المهنية لعرضها هنا.", style = MaterialTheme.typography.bodySmall)
-            credentials.filter { isOwner || it.get("is_visible")?.asBoolean != false }
-                .sortedWith(compareByDescending<JsonObject> { it.get("is_pinned")?.asBoolean == true }.thenByDescending { it.get("end_date")?.asString.orEmpty() })
+            credentials.filter { isOwner || it.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean != false }
+                .sortedWith(compareByDescending<JsonObject> { it.get("is_pinned")?.takeUnless { it.isJsonNull }?.asBoolean == true }.thenByDescending { it.get("end_date")?.takeUnless { it.isJsonNull }?.asString.orEmpty() })
                 .forEach { row ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text((if (row.get("record_type")?.asString == "EXPERIENCE") "💼 " else "🎓 ") + row.get("title")?.asString.orEmpty(), style = MaterialTheme.typography.titleSmall)
-                            Text(row.get("issuer")?.asString.orEmpty(), style = MaterialTheme.typography.bodySmall)
+                            Text((if (row.get("record_type")?.takeUnless { it.isJsonNull }?.asString == "EXPERIENCE") "💼 " else "🎓 ") + row.get("title")?.takeUnless { it.isJsonNull }?.asString.orEmpty(), style = MaterialTheme.typography.titleSmall)
+                            Text(row.get("issuer")?.takeUnless { it.isJsonNull }?.asString.orEmpty(), style = MaterialTheme.typography.bodySmall)
                             Text(
-                                (row.get("start_date")?.asString.orEmpty()) + " – " +
-                                    if (row.get("is_current")?.asBoolean == true) "حتى الآن" else row.get("end_date")?.asString.orEmpty(),
+                                (row.get("start_date")?.takeUnless { it.isJsonNull }?.asString.orEmpty()) + " – " +
+                                    if (row.get("is_current")?.takeUnless { it.isJsonNull }?.asBoolean == true) "حتى الآن" else row.get("end_date")?.takeUnless { it.isJsonNull }?.asString.orEmpty(),
                                 style = MaterialTheme.typography.labelSmall
                             )
-                            if (row.get("is_verified")?.asBoolean == true) Text("✓ موثّقة", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
-                            row.get("description")?.asString?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                            row.get("verification_url")?.asString?.takeIf { it.isNotBlank() }?.let { Text("رابط التحقق مرفق", style = MaterialTheme.typography.labelSmall) }
+                            if (row.get("is_verified")?.takeUnless { it.isJsonNull }?.asBoolean == true) Text("✓ موثّقة", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
+                            row.get("description")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                            row.get("verification_url")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("رابط التحقق مرفق", style = MaterialTheme.typography.labelSmall) }
                         }
                         if (isOwner) {
                             IconButton(onClick = { openCredential(row) }) { Icon(Icons.Default.Edit, contentDescription = "تعديل") }
                             IconButton(onClick = {
-                                val id = row.get("id")?.asString ?: return@IconButton
-                                val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.asBoolean != true) }
+                                val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString ?: return@IconButton
+                                val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean != true) }
                                 scope.launch { dataSource.updateRow("nexa_profile_credentials", id, patch); refresh() }
-                            }) { Text(if (row.get("is_visible")?.asBoolean == false) "🙈" else "👁") }
+                            }) { Text(if (row.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean == false) "🙈" else "👁") }
                             IconButton(onClick = {
-                                val id = row.get("id")?.asString ?: return@IconButton
-                                val patch = JsonObject().apply { addProperty("is_pinned", row.get("is_pinned")?.asBoolean != true) }
+                                val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString ?: return@IconButton
+                                val patch = JsonObject().apply { addProperty("is_pinned", row.get("is_pinned")?.takeUnless { it.isJsonNull }?.asBoolean != true) }
                                 scope.launch {
                                     val ok = dataSource.updateRow("nexa_profile_credentials", id, patch)
                                     if (!ok) message = "يمكن تثبيت شهادة أو خبرة أساسية واحدة فقط."
                                     refresh()
                                 }
-                            }) { Text(if (row.get("is_pinned")?.asBoolean == true) "📌" else "☆") }
+                            }) { Text(if (row.get("is_pinned")?.takeUnless { it.isJsonNull }?.asBoolean == true) "📌" else "☆") }
                             IconButton(onClick = {
-                                val id = row.get("id")?.asString
+                                val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString
                                 if (id != null) scope.launch { dataSource.deleteRow("nexa_profile_credentials", id); refresh() }
                             }) { Icon(Icons.Default.Delete, contentDescription = "حذف") }
                         }
@@ -326,10 +326,10 @@ fun ProfileExperiencePanel(
             }
             if (current == null) Text("لا توجد حالة نشطة.", style = MaterialTheme.typography.bodySmall)
             else {
-                val code = current.get("status_code")?.asString.orEmpty()
+                val code = current.get("status_code")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
                 Text(
-                    "${current.get("emoji")?.asString.orEmpty()} " +
-                        (current.get("custom_text")?.asString?.takeIf { it.isNotBlank() }
+                    "${current.get("emoji")?.takeUnless { it.isJsonNull }?.asString.orEmpty()} " +
+                        (current.get("custom_text")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }
                             ?: statusChoices.firstOrNull { it.first == code }?.second ?: code),
                     style = MaterialTheme.typography.titleSmall
                 )
@@ -346,42 +346,42 @@ fun ProfileExperiencePanel(
             testimonialName = ""; testimonialTitle = ""; testimonialCompany = ""; testimonialBody = ""
             testimonialRating = "5"; testimonialLinkedIn = ""; editingId = null; dialog = "testimonial"
         }) {
-            val visible = testimonials.filter { (isOwner || it.get("is_visible")?.asBoolean != false) && (isOwner || it.get("is_approved")?.asBoolean != false) }
-                .sortedWith(compareByDescending<JsonObject> { it.get("is_pinned")?.asBoolean == true }.thenByDescending { it.get("created_at")?.asString.orEmpty() })
+            val visible = testimonials.filter { (isOwner || it.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean != false) && (isOwner || it.get("is_approved")?.takeUnless { it.isJsonNull }?.asBoolean != false) }
+                .sortedWith(compareByDescending<JsonObject> { it.get("is_pinned")?.takeUnless { it.isJsonNull }?.asBoolean == true }.thenByDescending { it.get("created_at")?.takeUnless { it.isJsonNull }?.asString.orEmpty() })
             val rated = visible.mapNotNull { it.get("rating")?.takeIf { v -> !v.isJsonNull }?.asInt }
             if (rated.isNotEmpty()) Text("⭐ ${"%.1f".format(rated.average())} من ${rated.size} توصية", style = MaterialTheme.typography.titleSmall)
             if (visible.isEmpty()) Text("لا توجد توصيات بعد.", style = MaterialTheme.typography.bodySmall)
             visible.forEach { row ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(row.get("author_name")?.asString.orEmpty(), style = MaterialTheme.typography.titleSmall)
-                        Text(row.get("body")?.asString.orEmpty(), style = MaterialTheme.typography.bodySmall)
-                        Text("⭐".repeat((row.get("rating")?.asInt ?: 0).coerceIn(0, 5)), style = MaterialTheme.typography.labelSmall)
-                        if (row.get("is_verified")?.asBoolean == true) Text("✓ توصية مؤكدة من صاحبها", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
+                        Text(row.get("author_name")?.takeUnless { it.isJsonNull }?.asString.orEmpty(), style = MaterialTheme.typography.titleSmall)
+                        Text(row.get("body")?.takeUnless { it.isJsonNull }?.asString.orEmpty(), style = MaterialTheme.typography.bodySmall)
+                        Text("⭐".repeat((row.get("rating")?.takeUnless { it.isJsonNull }?.asInt ?: 0).coerceIn(0, 5)), style = MaterialTheme.typography.labelSmall)
+                        if (row.get("is_verified")?.takeUnless { it.isJsonNull }?.asBoolean == true) Text("✓ توصية مؤكدة من صاحبها", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
                     }
                     if (isOwner) {
                         IconButton(onClick = {
-                            editingId = row.get("id")?.asString
-                            testimonialName = row.get("author_name")?.asString.orEmpty()
-                            testimonialTitle = row.get("author_title")?.asString.orEmpty()
-                            testimonialCompany = row.get("author_company")?.asString.orEmpty()
-                            testimonialBody = row.get("body")?.asString.orEmpty()
+                            editingId = row.get("id")?.takeUnless { it.isJsonNull }?.asString
+                            testimonialName = row.get("author_name")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                            testimonialTitle = row.get("author_title")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                            testimonialCompany = row.get("author_company")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                            testimonialBody = row.get("body")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
                             testimonialRating = (row.get("rating")?.takeIf { !it.isJsonNull }?.asInt ?: 5).toString()
-                            testimonialLinkedIn = row.get("linkedin_url")?.asString.orEmpty()
+                            testimonialLinkedIn = row.get("linkedin_url")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
                             dialog = "testimonial"
                         }) { Icon(Icons.Default.Edit, contentDescription = "تعديل") }
                         IconButton(onClick = {
-                            val id = row.get("id")?.asString ?: return@IconButton
-                            val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.asBoolean != true) }
+                            val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString ?: return@IconButton
+                            val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean != true) }
                             scope.launch { dataSource.updateRow("nexa_profile_testimonials", id, patch); refresh() }
-                        }) { Text(if (row.get("is_visible")?.asBoolean == false) "👁" else "🙈") }
+                        }) { Text(if (row.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean == false) "👁" else "🙈") }
                         IconButton(onClick = {
-                            val id = row.get("id")?.asString ?: return@IconButton
-                            val patch = JsonObject().apply { addProperty("is_pinned", row.get("is_pinned")?.asBoolean != true) }
+                            val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString ?: return@IconButton
+                            val patch = JsonObject().apply { addProperty("is_pinned", row.get("is_pinned")?.takeUnless { it.isJsonNull }?.asBoolean != true) }
                             scope.launch { dataSource.updateRow("nexa_profile_testimonials", id, patch); refresh() }
-                        }) { Text(if (row.get("is_pinned")?.asBoolean == true) "📌" else "☆") }
+                        }) { Text(if (row.get("is_pinned")?.takeUnless { it.isJsonNull }?.asBoolean == true) "📌" else "☆") }
                         IconButton(onClick = {
-                            val id = row.get("id")?.asString
+                            val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString
                             if (id != null) scope.launch { dataSource.deleteRow("nexa_profile_testimonials", id); refresh() }
                         }) { Icon(Icons.Default.Delete, contentDescription = "حذف") }
                     }
@@ -395,7 +395,7 @@ fun ProfileExperiencePanel(
         if (isOwner) {
             val earnedPoints = achievements
                 .filter { it.get("unlocked_at")?.takeIf { value -> !value.isJsonNull } != null }
-                .sumOf { it.get("reward_points")?.asInt ?: 0 }
+                .sumOf { it.get("reward_points")?.takeUnless { it.isJsonNull }?.asInt ?: 0 }
             val levels = listOf(
                 Triple(0, 50, "مبتدئ"),
                 Triple(50, 100, "نشط"),
@@ -431,33 +431,33 @@ fun ProfileExperiencePanel(
 
         // Achievements
         ExperienceCard("🏆 الإنجازات والشارات", isOwner, null) {
-            achievements.filter { isOwner || it.get("is_visible")?.asBoolean != false }
-                .sortedWith(compareByDescending<JsonObject> { it.get("is_featured")?.asBoolean == true }.thenByDescending { it.get("unlocked_at")?.takeIf { v -> !v.isJsonNull } != null })
+            achievements.filter { isOwner || it.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean != false }
+                .sortedWith(compareByDescending<JsonObject> { it.get("is_featured")?.takeUnless { it.isJsonNull }?.asBoolean == true }.thenByDescending { it.get("unlocked_at")?.takeIf { v -> !v.isJsonNull } != null })
                 .forEach { row ->
-                    val target = row.get("target")?.asInt ?: 1
-                    val progress = row.get("progress")?.asInt ?: 0
+                    val target = row.get("target")?.takeUnless { it.isJsonNull }?.asInt ?: 1
+                    val progress = row.get("progress")?.takeUnless { it.isJsonNull }?.asInt ?: 0
                     val unlocked = row.get("unlocked_at")?.takeIf { !it.isJsonNull } != null
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(achievementTitle(row.get("achievement_code")?.asString.orEmpty()), style = MaterialTheme.typography.titleSmall)
+                            Text(achievementTitle(row.get("achievement_code")?.takeUnless { it.isJsonNull }?.asString.orEmpty()), style = MaterialTheme.typography.titleSmall)
                             LinearProgressIndicator(progress = { (progress.toFloat() / target.coerceAtLeast(1)).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
                             Text(if (unlocked) "مفتوحة ✓" else "$progress / $target", style = MaterialTheme.typography.labelSmall)
                         }
                         if (isOwner) {
                             IconButton(onClick = {
-                                val code = row.get("achievement_code")?.asString ?: return@IconButton
-                                val patch = JsonObject().apply { addProperty("is_featured", row.get("is_featured")?.asBoolean != true) }
+                                val code = row.get("achievement_code")?.takeUnless { it.isJsonNull }?.asString ?: return@IconButton
+                                val patch = JsonObject().apply { addProperty("is_featured", row.get("is_featured")?.takeUnless { it.isJsonNull }?.asBoolean != true) }
                                 scope.launch {
                                     val ok = dataSource.updateRow("nexa_profile_achievements", code, patch)
                                     if (!ok) message = "يمكن تثبيت 3 شارات كحد أقصى."
                                     refresh()
                                 }
-                            }) { Text(if (row.get("is_featured")?.asBoolean == true) "📌" else "☆") }
+                            }) { Text(if (row.get("is_featured")?.takeUnless { it.isJsonNull }?.asBoolean == true) "📌" else "☆") }
                             IconButton(onClick = {
-                                val code = row.get("achievement_code")?.asString ?: return@IconButton
-                                val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.asBoolean != true) }
+                                val code = row.get("achievement_code")?.takeUnless { it.isJsonNull }?.asString ?: return@IconButton
+                                val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean != true) }
                                 scope.launch { dataSource.updateRow("nexa_profile_achievements", code, patch); refresh() }
-                            }) { Text(if (row.get("is_visible")?.asBoolean == false) "🙈" else "👁") }
+                            }) { Text(if (row.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean == false) "🙈" else "👁") }
                         }
                     }
                 }
@@ -466,11 +466,11 @@ fun ProfileExperiencePanel(
         // Private analytics dashboard
         if (isOwner) {
             ExperienceCard("📊 إحصائيات ملفك (خاصة بك)", false, {}) {
-                val views = analytics.count { it.get("event_type")?.asString == "PROFILE_VIEW" }
-                val skills = analytics.count { it.get("event_type")?.asString == "SKILL_CLICK" }
-                val links = analytics.count { it.get("event_type")?.asString == "SOCIAL_LINK_CLICK" }
-                val downloads = analytics.count { it.get("event_type")?.asString == "CV_DOWNLOAD" }
-                val qr = analytics.count { it.get("event_type")?.asString == "QR_SCAN" }
+                val views = analytics.count { it.get("event_type")?.takeUnless { it.isJsonNull }?.asString == "PROFILE_VIEW" }
+                val skills = analytics.count { it.get("event_type")?.takeUnless { it.isJsonNull }?.asString == "SKILL_CLICK" }
+                val links = analytics.count { it.get("event_type")?.takeUnless { it.isJsonNull }?.asString == "SOCIAL_LINK_CLICK" }
+                val downloads = analytics.count { it.get("event_type")?.takeUnless { it.isJsonNull }?.asString == "CV_DOWNLOAD" }
+                val qr = analytics.count { it.get("event_type")?.takeUnless { it.isJsonNull }?.asString == "QR_SCAN" }
                 val now = Instant.now()
                 val thisWeekStart = now.minus(7, ChronoUnit.DAYS)
                 val previousWeekStart = now.minus(14, ChronoUnit.DAYS)
@@ -479,16 +479,16 @@ fun ProfileExperiencePanel(
                         ?.let { runCatching { Instant.parse(it).let { timestamp -> !timestamp.isBefore(start) && timestamp.isBefore(end) } }.getOrDefault(false) }
                         ?: false
                 val weeklyViews = analytics.count {
-                    it.get("event_type")?.asString == "PROFILE_VIEW" && occurredBetween(it, thisWeekStart, now)
+                    it.get("event_type")?.takeUnless { it.isJsonNull }?.asString == "PROFILE_VIEW" && occurredBetween(it, thisWeekStart, now)
                 }
                 val previousWeeklyViews = analytics.count {
-                    it.get("event_type")?.asString == "PROFILE_VIEW" && occurredBetween(it, previousWeekStart, thisWeekStart)
+                    it.get("event_type")?.takeUnless { it.isJsonNull }?.asString == "PROFILE_VIEW" && occurredBetween(it, previousWeekStart, thisWeekStart)
                 }
                 val weeklyInteractions = analytics.count {
-                    it.get("event_type")?.asString in setOf("SKILL_CLICK", "SOCIAL_LINK_CLICK", "CV_DOWNLOAD", "QR_SCAN") &&
+                    it.get("event_type")?.takeUnless { it.isJsonNull }?.asString in setOf("SKILL_CLICK", "SOCIAL_LINK_CLICK", "CV_DOWNLOAD", "QR_SCAN") &&
                         occurredBetween(it, thisWeekStart, now)
                 }
-                val topSkill = analytics.filter { it.get("event_type")?.asString == "SKILL_CLICK" }
+                val topSkill = analytics.filter { it.get("event_type")?.takeUnless { it.isJsonNull }?.asString == "SKILL_CLICK" }
                     .mapNotNull { it.get("event_key")?.takeIf { value -> !value.isJsonNull }?.asString }
                     .groupingBy { it }.eachCount().maxByOrNull { it.value }
                 Text("👁️ مشاهدات الملف: $views")
@@ -513,34 +513,34 @@ fun ProfileExperiencePanel(
 
         // Favorites
         ExperienceCard("🎬 مفضلاتي", isOwner, { openFavorite(null) }) {
-            favorites.filter { isOwner || it.get("is_visible")?.asBoolean != false }
-                .sortedWith(compareByDescending<JsonObject> { it.get("is_pinned")?.asBoolean == true }.thenBy { it.get("sort_order")?.asInt ?: 0 })
+            favorites.filter { isOwner || it.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean != false }
+                .sortedWith(compareByDescending<JsonObject> { it.get("is_pinned")?.takeUnless { it.isJsonNull }?.asBoolean == true }.thenBy { it.get("sort_order")?.takeUnless { it.isJsonNull }?.asInt ?: 0 })
                 .forEach { row ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            val category = favoriteCategories.firstOrNull { it.first == row.get("category")?.asString }?.second.orEmpty()
-                            Text("$category · ${row.get("title")?.asString.orEmpty()}", style = MaterialTheme.typography.titleSmall)
-                            Text(row.get("creator")?.asString.orEmpty(), style = MaterialTheme.typography.bodySmall)
-                            Text(row.get("quote")?.asString.orEmpty(), style = MaterialTheme.typography.labelSmall)
+                            val category = favoriteCategories.firstOrNull { it.first == row.get("category")?.takeUnless { it.isJsonNull }?.asString }?.second.orEmpty()
+                            Text("$category · ${row.get("title")?.takeUnless { it.isJsonNull }?.asString.orEmpty()}", style = MaterialTheme.typography.titleSmall)
+                            Text(row.get("creator")?.takeUnless { it.isJsonNull }?.asString.orEmpty(), style = MaterialTheme.typography.bodySmall)
+                            Text(row.get("quote")?.takeUnless { it.isJsonNull }?.asString.orEmpty(), style = MaterialTheme.typography.labelSmall)
                         }
                         if (isOwner) {
                             IconButton(onClick = { openFavorite(row) }) { Icon(Icons.Default.Edit, contentDescription = "تعديل") }
                             IconButton(onClick = {
-                                val id = row.get("id")?.asString ?: return@IconButton
-                                val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.asBoolean != true) }
+                                val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString ?: return@IconButton
+                                val patch = JsonObject().apply { addProperty("is_visible", row.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean != true) }
                                 scope.launch { dataSource.updateRow("nexa_profile_favorites", id, patch); refresh() }
-                            }) { Text(if (row.get("is_visible")?.asBoolean == false) "🙈" else "👁") }
+                            }) { Text(if (row.get("is_visible")?.takeUnless { it.isJsonNull }?.asBoolean == false) "🙈" else "👁") }
                             IconButton(onClick = {
-                                val id = row.get("id")?.asString ?: return@IconButton
-                                val patch = JsonObject().apply { addProperty("is_pinned", row.get("is_pinned")?.asBoolean != true) }
+                                val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString ?: return@IconButton
+                                val patch = JsonObject().apply { addProperty("is_pinned", row.get("is_pinned")?.takeUnless { it.isJsonNull }?.asBoolean != true) }
                                 scope.launch {
                                     val ok = dataSource.updateRow("nexa_profile_favorites", id, patch)
                                     if (!ok) message = "يمكن تثبيت 3 مفضلات كحد أقصى."
                                     refresh()
                                 }
-                            }) { Text(if (row.get("is_pinned")?.asBoolean == true) "📌" else "☆") }
+                            }) { Text(if (row.get("is_pinned")?.takeUnless { it.isJsonNull }?.asBoolean == true) "📌" else "☆") }
                             IconButton(onClick = {
-                                val id = row.get("id")?.asString
+                                val id = row.get("id")?.takeUnless { it.isJsonNull }?.asString
                                 if (id != null) scope.launch { dataSource.deleteRow("nexa_profile_favorites", id); refresh() }
                             }) { Icon(Icons.Default.Delete, contentDescription = "حذف") }
                         }
