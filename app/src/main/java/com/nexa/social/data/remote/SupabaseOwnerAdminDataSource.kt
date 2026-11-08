@@ -94,13 +94,23 @@ class SupabaseOwnerAdminDataSource(
         }
     }
 
-    suspend fun setUserStatus(userId: String, status: String): Boolean {
+    suspend fun moderateUser(userId: String, action: String, reason: String): Boolean {
         val body = JsonObject().apply {
             addProperty("p_user_id", userId)
-            addProperty("p_status", status)
-            addProperty("p_reason", "إجراء إداري من لوحة مالك Nexa")
+            addProperty("p_action", action)
+            addProperty("p_reason", reason.trim().ifBlank { "إجراء إداري من لوحة مالك Nexa" })
         }
-        return rpc("nexa_owner_set_user_status", body) != null
+        return rpc("nexa_owner_moderate_user", body) != null
+    }
+
+    suspend fun moderationHistory(userId: String): List<JsonObject> {
+        val body = JsonObject().apply {
+            addProperty("p_user_id", userId)
+            addProperty("p_limit", 50)
+        }
+        val raw = rpc("nexa_owner_list_moderation_log", body) ?: return emptyList()
+        return runCatching { JsonParser.parseString(raw).asJsonArray.map { it.asJsonObject } }
+            .getOrDefault(emptyList())
     }
 
     suspend fun deleteUser(userId: String): Boolean {
