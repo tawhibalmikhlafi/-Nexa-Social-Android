@@ -37,6 +37,8 @@ class SupabaseOwnerAdminDataSource(
     private val currentUid: suspend () -> String?
 ) {
     private val base get() = config.restUrl
+    var lastError: String? = null
+        private set
     private fun enc(value: String) = URLEncoder.encode(value, StandardCharsets.UTF_8.name())
 
     private suspend fun rpc(name: String, body: JsonObject = JsonObject()): String? {
@@ -44,8 +46,17 @@ class SupabaseOwnerAdminDataSource(
         val response = http.execute(
             http.authenticatedRequest("$base/rpc/$name", token)
                 .post(http.jsonBody(body)).build()
-        ).getOrNull() ?: return null
-        return response.takeIf { it.successful }?.body
+        ).getOrNull()
+        if (response == null) {
+            lastError = "تعذر الاتصال بخدمة Supabase"
+            return null
+        }
+        if (!response.successful) {
+            lastError = "Supabase HTTP ${response.code}: ${response.body.take(500)}"
+            return null
+        }
+        lastError = null
+        return response.body
     }
 
     suspend fun isOwner(): Boolean = rpc("nexa_is_owner")?.let {
@@ -74,6 +85,13 @@ class SupabaseOwnerAdminDataSource(
                 )
             }
         }.getOrDefault(emptyList())
+    }
+
+    suspend fun getUserDetails(userId: String): JsonObject? {
+        val body = JsonObject().apply { addProperty("p_user_id", userId) }
+        return rpc("nexa_owner_user_details", body)?.let {
+            runCatching { JsonParser.parseString(it).asJsonObject }.getOrNull()
+        }
     }
 
     suspend fun setUserStatus(userId: String, status: String): Boolean {
@@ -177,15 +195,36 @@ class SupabaseOwnerAdminDataSource(
         return rpc("nexa_owner_create_announcement",body) != null
     }
 
-    suspend fun createOfficialPost(text: String): Boolean {
-        val token=accessToken() ?: return false
-        val uid=currentUid() ?: return false
-        val body=JsonObject().apply {
-            addProperty("author_id",uid); addProperty("text",text.trim()); addProperty("audience","PUBLIC_LOCAL")
+    suspend fun setTextSetting(key: String, value: String): Boolean {
+        val body = JsonObject().apply {
+            addProperty("p_key", key)
+            add("p_value", com.google.gson.JsonPrimitive(value))
         }
-        val response=http.execute(http.authenticatedRequest("$base/posts",token)
-            .header("Prefer","return=minimal").post(http.jsonBody(body)).build()).getOrNull() ?: return false
-        return response.successful
+        return rpc("nexa_owner_set_setting", body) != null
+    }
+
+    suspend fun setNumberSetting(key: String, value: Int): Boolean {
+        val body = JsonObject().apply {
+            addProperty("p_key", key)
+            add("p_value", com.google.gson.JsonPrimitive(value))
+        }
+        return rpc("nexa_owner_set_setting", body) != null
+    }
+
+    suspend fun setAdsSettings(enabled: Boolean, placement: String, durationSeconds: Int, frequency: Int): Boolean {
+        if (!setSetting("ads_enabled", enabled)) return false
+        if (!setTextSetting("ads_placement", placement)) return false
+        if (!setNumberSetting("ads_duration_seconds", durationSeconds)) return false
+        return setNumberSetting("ads_frequency_per_session", frequency)
+    }
+
+    suspend fun createOfficialPost(text: String): Boolean {
+        if (text.isBlank()) {
+            lastError = "اكتب نص المنشور أولاً"
+            return false
+        }
+        val body = JsonObject().apply { addProperty("p_text", text.trim()) }
+        return rpc("nexa_owner_create_official_post", body) != null
     }
 
     suspend fun isFounderVerified(userId: String): Boolean {
