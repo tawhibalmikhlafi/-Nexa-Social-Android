@@ -351,7 +351,7 @@ fun ProfileScreen(
                     MenuEntry("المحفوظات", Icons.Filled.Bookmark, onOpenSaved)
                     MenuEntry("الأصدقاء", Icons.Filled.Person, onOpenFriends)
                     MenuEntry("الإشعارات", Icons.Filled.Notifications, onOpenNotifications)
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     MenuEntry("الإعدادات", Icons.Filled.Settings, onSettings)
                     if (showOwnerTools && current.id == "b81639ff-c669-416e-8a58-452710658bd2") {
                         MenuEntry("لوحة مالك Nexa", Icons.Filled.AdminPanelSettings, onOpenOwnerDashboard)
