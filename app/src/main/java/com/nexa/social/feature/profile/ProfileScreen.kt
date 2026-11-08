@@ -175,6 +175,7 @@ fun ProfileScreen(
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var fullImageUri by remember { mutableStateOf<String?>(null) }
     var fullImageTitle by remember { mutableStateOf("") }
+    var showProfileMenu by rememberSaveable { mutableStateOf(false) }
 
     val snackbarHost = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
@@ -304,6 +305,61 @@ fun ProfileScreen(
 
     val totalLikes = remember(posts) { posts.sumOf { it.likeCount } }
 
+    if (showProfileMenu) {
+        Dialog(onDismissRequest = { showProfileMenu = false }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Nexa", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                            Text("Connect • Share • Belong", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        IconButton(onClick = { showProfileMenu = false }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "إغلاق القائمة")
+                        }
+                    }
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                    @Composable
+                    fun MenuEntry(label: String, icon: ImageVector, action: () -> Unit) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                .clickable { showProfileMenu = false; action() }
+                                .padding(horizontal = 12.dp, vertical = 13.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                    MenuEntry("تفاصيل الملف الشخصي", Icons.Filled.Person, onOpenProfileDetails)
+                    MenuEntry("الإحصائيات", Icons.Filled.GridView, onOpenLabs)
+                    MenuEntry("الإنجازات", Icons.Filled.AutoAwesome, onOpenStudio)
+                    MenuEntry("المحفوظات", Icons.Filled.Bookmark, onOpenSaved)
+                    MenuEntry("الأصدقاء", Icons.Filled.Person, onOpenFriends)
+                    MenuEntry("الإشعارات", Icons.Filled.Notifications, onOpenNotifications)
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                    MenuEntry("الإعدادات", Icons.Filled.Settings, onSettings)
+                    if (showOwnerTools && current.id == "b81639ff-c669-416e-8a58-452710658bd2") {
+                        MenuEntry("لوحة مالك Nexa", Icons.Filled.AdminPanelSettings, onOpenOwnerDashboard)
+                    }
+                }
+            }
+        }
+    }
+
     // Full-screen viewer shared by profile avatar and cover image.
     fullImageUri?.let { imageUri ->
         Dialog(onDismissRequest = { fullImageUri = null }) {
@@ -396,13 +452,14 @@ fun ProfileScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (onBack != null) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(17.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع", modifier = Modifier.size(17.dp))
+                        }
                     }
-                } else {
-                    IconButton(onClick = onSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.title_settings), modifier = Modifier.size(17.dp))
+                    IconButton(onClick = { showProfileMenu = true }) {
+                        Icon(Icons.Filled.GridView, contentDescription = "فتح قائمة الملف الشخصي", modifier = Modifier.size(19.dp))
                     }
                 }
 
