@@ -169,16 +169,13 @@ class SupabaseOwnerAdminDataSource(
             }
             val response = http.execute(
                 http.authenticatedRequest("${config.url.trimEnd('/')}/storage/v1/object/${enc(bucket)}", token)
-                    .delete(http.jsonBody(payload)).build()
+                    .method("DELETE", http.jsonBody(payload)).build()
             ).getOrNull()
             if (response == null || !response.successful) failed += "$bucket/$storagePath"
         }
         if (failed.isNotEmpty()) lastError = "حُذف المحتوى، لكن تعذر تنظيف بعض الوسائط: ${failed.size}"
-        notifyOwnerContentChanged()
         return true
     }
-
-    private fun notifyOwnerContentChanged() = Unit
 
     suspend fun listReports(): List<OwnerReportRow> {
         val token = accessToken() ?: return emptyList()
