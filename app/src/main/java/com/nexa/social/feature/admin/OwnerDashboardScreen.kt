@@ -310,7 +310,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                             }
                                         }
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            if (report.targetType in setOf("POST","COMMENT","CLIP")) {
+                                            if (report.targetType in setOf("POST","GROUP_POST","COMMENT","CLIP")) {
                                                 OutlinedButton(onClick = {
                                                     contentDeleteTarget = OwnerContentRow(report.targetId, report.targetType, report.targetPreview, report.targetAuthorName, report.createdAt)
                                                     contentDeleteReason = "حذف نتيجة بلاغ رقم ${report.id}"
