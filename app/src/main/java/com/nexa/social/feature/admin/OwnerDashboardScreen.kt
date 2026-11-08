@@ -242,7 +242,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                             }, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                                             Spacer(Modifier.weight(1f))
                                             Text(when(report.status.uppercase()) {
-                                                "REVIEWED" -> "تمت المراجعة"
+                                                "REVIEWED" -> "قيد المراجعة"
                                                 "DISMISSED" -> "مرفوض"
                                                 "RESOLVED" -> "تمت المعالجة"
                                                 else -> "جديد"
@@ -257,6 +257,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                             Text("المحتوى المبلّغ عنه", style = MaterialTheme.typography.labelLarge)
                                             Text(report.targetPreview, style = MaterialTheme.typography.bodyMedium)
                                         }
+                                        Text("عدد البلاغات على هذا الهدف: " + reports.count { it.targetType == report.targetType && it.targetId == report.targetId })
                                         Text("السبب: ${report.reason}")
                                         if (report.note.isNotBlank()) Text("تفاصيل البلاغ: ${report.note}")
                                         Text("التاريخ: ${report.createdAt}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -297,7 +298,14 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                                         message = if (ok) "تم حفظ قرار مراجعة البلاغ" else "تعذر تحديث البلاغ: ${admin?.lastError.orEmpty()}"
                                                         reports = admin?.listReports(reportFilter).orEmpty()
                                                     }
-                                                }) { Text("تمت المراجعة") }
+                                                }) { Text("قيد المراجعة") }
+                                                OutlinedButton(onClick = {
+                                                    scope.launch {
+                                                        val ok = admin?.updateReport(report.id, "RESOLVED", "تمت معالجة البلاغ من لوحة المالك") == true
+                                                        message = if (ok) "تمت معالجة البلاغ وإغلاقه" else "تعذر إغلاق البلاغ: ${admin?.lastError.orEmpty()}"
+                                                        reports = admin?.listReports(reportFilter).orEmpty()
+                                                    }
+                                                }) { Text("تمت المعالجة") }
                                                 OutlinedButton(onClick = {
                                                     scope.launch {
                                                         val ok = admin?.updateReport(report.id, "DISMISSED", "تم رفض البلاغ من لوحة المالك") == true
