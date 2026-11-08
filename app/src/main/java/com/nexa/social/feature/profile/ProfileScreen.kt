@@ -363,7 +363,6 @@ fun ProfileScreen(
                         }
                     }
                     MenuEntry("تفاصيل الملف الشخصي", Icons.Filled.Person, onOpenProfileDetails)
-                    MenuEntry("الإحصائيات", Icons.Filled.GridView, onOpenLabs)
                     MenuEntry("الإنجازات والشهادات", Icons.Filled.AutoAwesome, onOpenAchievements)
                     MenuEntry("المحفوظات", Icons.Filled.Bookmark, onOpenSaved)
                     MenuEntry("الأصدقاء", Icons.Filled.Person, onOpenFriends)
