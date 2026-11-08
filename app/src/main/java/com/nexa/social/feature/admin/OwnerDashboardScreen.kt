@@ -467,12 +467,15 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
             title = { Text("حذف الحساب نهائياً؟") },
-            text = { Text("سيتم حذف حساب ${user.email} من Supabase Auth. لا يمكن التراجع عن هذا الإجراء.") },
+            text = {
+                Text("سيتم حذف حساب ${user.displayName.ifBlank { user.username.ifBlank { user.email } }} نهائياً، مع سجلاته المرتبطة وملفاته في مخازن post-media وstory-media وclips-media وclip-covers وprofile-media وmessage-media وnexa-pulse. لا يمكن التراجع عن الحذف.")
+            },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = null
                     scope.launch {
-                        message = if (admin?.deleteUser(user.id) == true) "تم حذف الحساب" else "فشل حذف الحساب"
+                        val deleted = admin?.deleteUser(user.id) == true
+                        message = if (deleted) "تم حذف الحساب وطلب تنظيف ملفاته من Storage" else "فشل حذف الحساب: ${admin?.lastError ?: "راجع الاتصال وصلاحيات المالك"}"
                         refresh()
                     }
                 }) { Text("تأكيد الحذف") }
