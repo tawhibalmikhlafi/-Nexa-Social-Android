@@ -56,6 +56,7 @@ import com.nexa.social.data.remote.OwnerReportRow
 import com.nexa.social.data.remote.OwnerUserRow
 import com.nexa.social.data.remote.OwnerSupportRow
 import com.nexa.social.data.remote.OwnerContentRow
+import com.nexa.social.data.remote.OwnerAdRow
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +74,8 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var reportFilter by remember { mutableStateOf("ALL") }
     var support by remember { mutableStateOf<List<OwnerSupportRow>>(emptyList()) }
     var contentRows by remember { mutableStateOf<List<OwnerContentRow>>(emptyList()) }
+    var ads by remember { mutableStateOf<List<OwnerAdRow>>(emptyList()) }
+    var auditRows by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
     var contentDeleteTarget by remember { mutableStateOf<OwnerContentRow?>(null) }
     var contentDeleteReason by remember { mutableStateOf("") }
     var supportReply by remember { mutableStateOf("") }
@@ -109,6 +112,8 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 settings = source.getSettings()
                 support = source.listSupport()
                 contentRows = source.listContent()
+                ads = source.listAds()
+                auditRows = source.listAudit()
             }
             loading = false
         }
@@ -148,7 +153,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
                 ScrollableTabRow(selectedTabIndex = tab) {
-                    listOf("المستخدمون", "البلاغات", "الإعلانات", "المنشورات الرسمية", "الإعدادات", "الدعم", "المحتوى").forEachIndexed { i, label ->
+                    listOf("المستخدمون", "البلاغات", "الإعلانات الرسمية", "المنشورات الرسمية", "إعدادات المنصة", "الدعم الفني", "إدارة المحتوى", "الحملات الإعلانية", "الصلاحيات والأمان", "سجل العمليات").forEachIndexed { i, label ->
                         Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
                     }
                 }
@@ -277,8 +282,8 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                                     moderationHistory = emptyList()
                                                     userDetailsLoading = true
                                                     scope.launch {
-                                                        selectedUserDetails = admin?.getUserDetails(report.targetId)
-                                                        moderationHistory = admin?.moderationHistory(report.targetId).orEmpty()
+                                                        selectedUserDetails = admin?.getUserDetails(report.targetAuthorId)
+                                                        moderationHistory = admin?.moderationHistory(report.targetAuthorId).orEmpty()
                                                         userDetailsLoading = false
                                                     }
                                                 }) { Text("ملف صاحب المحتوى") }
@@ -438,6 +443,41 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         OutlinedButton(onClick = { scope.launch { contentRows = admin?.listContent().orEmpty() } }, modifier = Modifier.fillMaxWidth()) {
                             Text("تحديث المحتوى")
                         }
+                    }
+                }
+                if (tab == 7) {
+                    OwnerAdsManagementPanel(ads, { scope.launch { ads = admin?.listAds().orEmpty() } }) { id,title,body,mediaUrl,mediaType,clickUrl,placement,audience,startsAt,endsAt,duration,frequency,enabled ->
+                        scope.launch {
+                            val ok = admin?.saveAd(id,title,body,mediaUrl,mediaType,clickUrl,placement,audience,startsAt,endsAt,duration,frequency,enabled) == true
+                            message = if (ok) "تم حفظ الحملة الإعلانية" else "فشل الحفظ: " + admin?.lastError.orEmpty()
+                            if (ok) ads = admin?.listAds().orEmpty()
+                        }
+                    }
+                }
+                if (tab == 8) {
+                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("الصلاحيات والأمان", style = MaterialTheme.typography.titleLarge)
+                        Text("الدخول محصور بمالك Nexa عبر nexa_is_owner(). عمليات الحظر والتقييد والحذف تمر عبر دوال محمية في Supabase.")
+                        Text("حذف الحسابات يتم على الخادم عبر Edge Function ولا يُكشف مفتاح الخدمة داخل تطبيق Android.")
+                        Text("يمكن التحكم في التسجيل والمنشورات والتعليقات والقصص والريلز من إعدادات المنصة.")
+                    }
+                }
+                if (tab == 9) {
+                    Column(Modifier.fillMaxSize()) {
+                        Text("سجل العمليات", style = MaterialTheme.typography.titleLarge)
+                        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(auditRows) { entry ->
+                                Card(Modifier.fillMaxWidth()) {
+                                    Column(Modifier.padding(12.dp)) {
+                                        Text((entry.get("action")?.takeUnless { it.isJsonNull }?.asString ?: "إجراء") + " • " + (entry.get("entity_type")?.takeUnless { it.isJsonNull }?.asString ?: ""))
+                                        Text("المعرّف: " + (entry.get("entity_id")?.takeUnless { it.isJsonNull }?.asString ?: "—"))
+                                        Text("المنفذ: " + (entry.get("actor_id")?.takeUnless { it.isJsonNull }?.asString ?: "—"))
+                                        Text("التاريخ: " + (entry.get("created_at")?.takeUnless { it.isJsonNull }?.asString ?: "—"))
+                                    }
+                                }
+                            }
+                        }
+                        OutlinedButton(onClick = { scope.launch { auditRows = admin?.listAudit().orEmpty() } }, modifier = Modifier.fillMaxWidth()) { Text("تحديث السجل") }
                     }
                 }
                 message?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp)) }
