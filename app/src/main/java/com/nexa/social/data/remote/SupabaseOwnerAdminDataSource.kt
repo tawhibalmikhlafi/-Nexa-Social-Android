@@ -220,7 +220,8 @@ class SupabaseOwnerAdminDataSource(
             addProperty("p_key", key)
             add("p_value", com.google.gson.JsonPrimitive(value))
         }
-        return rpc("nexa_owner_set_setting", body) != null
+        val result = rpc("nexa_owner_set_setting", body) ?: return false
+        return runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
     }
 
     suspend fun setAdsSettings(enabled: Boolean, placement: String, durationSeconds: Int, frequency: Int): Boolean {
