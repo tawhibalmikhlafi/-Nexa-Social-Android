@@ -261,6 +261,24 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                             }
                         }
                         Spacer(Modifier.height(8.dp))
+                        Divider()
+                        Text("التحكم في ميزات المنصة", style = MaterialTheme.typography.titleLarge)
+                        Text("إيقاف الميزة يمنع استخدامها من خلال سياسات قاعدة البيانات، وليس مجرد إخفاء زرها.")
+                        listOf(
+                            Triple("posts_enabled", "السماح بإنشاء المنشورات", true),
+                            Triple("comments_enabled", "السماح بالتعليقات والردود", true),
+                            Triple("stories_enabled", "السماح بنشر القصص", true),
+                            Triple("reels_enabled", "السماح بنشر المقاطع القصيرة", true)
+                        ).forEach { (key, label, defaultValue) ->
+                            OwnerSettingRow(label, settings?.get(key)?.asBoolean ?: defaultValue) { enabled ->
+                                scope.launch {
+                                    val ok = admin?.setSetting(key, enabled) == true
+                                    message = if (ok) "تم تحديث: $label" else "تعذر تحديث $label: ${admin?.lastError.orEmpty()}"
+                                    settings = admin?.getSettings()
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
                         Text("إعدادات الإعلانات", style = MaterialTheme.typography.titleLarge)
                         Text("تحكم في موضع الإعلان ومدة بقائه وعدد مرات عرضه في الجلسة.")
                         OwnerAdsSettingsPanel(settings = settings) { enabled, placement, duration, frequency ->
