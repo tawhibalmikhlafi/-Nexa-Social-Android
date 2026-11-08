@@ -172,9 +172,16 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                     }
                                 }) {
                                     Column(Modifier.padding(12.dp)) {
-                                        Text(user.displayName.ifBlank { user.username }, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                        val visibleName = user.displayName.trim().ifBlank {
+                                            user.username.trim().ifBlank { user.email.substringBefore("@").ifBlank { "مستخدم Nexa" } }
+                                        }
+                                        Text(visibleName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                        Text(
+                                            listOf(user.username.takeIf { it.isNotBlank() }?.let { "@$it" }, user.email.takeIf { it.isNotBlank() })
+                                                .filterNotNull().joinToString(" • ").ifBlank { "حساب Nexa" },
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
                                         Text("اضغط لعرض تفاصيل الحساب", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                                        Text("@${user.username} • ${user.email}")
                                         Text("التسجيل: ${user.createdAt}")
                                         Text("الحالة: ${when(user.status) { "BANNED" -> "محظور"; "SUSPENDED" -> "مقيّد"; "ACTIVE" -> "نشط"; else -> user.status }}")
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -219,7 +226,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         Button(onClick = {
                             scope.launch {
                                 val ok = admin?.createAnnouncement(announcementTitle, announcementBody) == true
-                                message = if (ok) "تم نشر الإعلان" else "فشل نشر الإعلان"
+                                message = if (ok) "تم نشر الإعلان وإضافته إلى إشعارات المستخدمين" else "فشل نشر الإعلان: ${admin?.lastError ?: "تحقق من اتصال Supabase وصلاحيات المالك"}"
                                 if (ok) { announcementTitle = ""; announcementBody = "" }
                             }
                         }, enabled = announcementTitle.isNotBlank() && announcementBody.isNotBlank()) {
