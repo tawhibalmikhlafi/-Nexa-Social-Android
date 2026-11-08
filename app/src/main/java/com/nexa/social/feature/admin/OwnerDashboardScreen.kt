@@ -268,7 +268,8 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                             Triple("posts_enabled", "السماح بإنشاء المنشورات", true),
                             Triple("comments_enabled", "السماح بالتعليقات والردود", true),
                             Triple("stories_enabled", "السماح بنشر القصص", true),
-                            Triple("reels_enabled", "السماح بنشر المقاطع القصيرة", true)
+                            Triple("reels_enabled", "السماح بنشر المقاطع القصيرة", true),
+                            Triple("verified_only_posting", "قصر النشر على الحسابات الموثقة", false)
                         ).forEach { (key, label, defaultValue) ->
                             OwnerSettingRow(label, settings?.get(key)?.asBoolean ?: defaultValue) { enabled ->
                                 scope.launch {
