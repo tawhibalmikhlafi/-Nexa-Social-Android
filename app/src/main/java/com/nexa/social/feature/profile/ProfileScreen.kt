@@ -674,7 +674,9 @@ fun ProfileScreen(
                         !current.currentResidence.isNullOrBlank() ||
                         !current.birthDate.isNullOrBlank() ||
                         current.skills.orEmpty().isNotEmpty() || current.hobbies.orEmpty().isNotEmpty()
-                    if (hasPersonalDetails && (!current.isPrivateAccount || isFollowing || showOwnerTools)) {
+                    if ((hasPersonalDetails || showOwnerTools) &&
+                        (!current.isPrivateAccount || isFollowing || showOwnerTools)
+                    ) {
                         Spacer(Modifier.height(NexaSpacing.sm))
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -688,24 +690,28 @@ fun ProfileScreen(
                                 verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
                             ) {
                                 Text("معلومات شخصية", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                if (!current.placeOfOrigin.isNullOrBlank()) {
-                                    ProfileDetailRow("مكان المنشأ", current.placeOfOrigin, Icons.Filled.Place)
+                                if (!current.placeOfOrigin.isNullOrBlank() || showOwnerTools) {
+                                    ProfileDetailRow("مكان المنشأ", current.placeOfOrigin?.takeIf { it.isNotBlank() } ?: "لم يُضف بعد", Icons.Filled.Place)
                                 }
-                                if (!current.currentResidence.isNullOrBlank()) {
-                                    ProfileDetailRow("مكان الإقامة", current.currentResidence, Icons.Filled.Home)
+                                if (!current.currentResidence.isNullOrBlank() || showOwnerTools) {
+                                    ProfileDetailRow("مكان الإقامة", current.currentResidence?.takeIf { it.isNotBlank() } ?: "لم يُضف بعد", Icons.Filled.Home)
                                 }
-                                if (!current.birthDate.isNullOrBlank()) {
+                                if (!current.birthDate.isNullOrBlank() || showOwnerTools) {
                                     val birthLabel = remember(current.birthDate) {
-                                        runCatching {
-                                            LocalDate.parse(current.birthDate.orEmpty())
-                                                .format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("ar")))
-                                        }.getOrDefault(current.birthDate.orEmpty())
+                                        current.birthDate?.takeIf { it.isNotBlank() }?.let { value ->
+                                            runCatching {
+                                                LocalDate.parse(value)
+                                                    .format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("ar")))
+                                            }.getOrDefault(value)
+                                        } ?: "لم يُضف بعد"
                                     }
                                     ProfileDetailRow("تاريخ الميلاد", birthLabel, Icons.Filled.Cake)
                                 }
-                                if (current.skills.orEmpty().isNotEmpty()) {
+                                if (current.skills.orEmpty().isNotEmpty() || showOwnerTools) {
                                     Text("المهارات", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
+                                    if (current.skills.orEmpty().isEmpty()) {
+                                        Text("لم تُضف مهارات بعد", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    } else FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
                                         current.skills.orEmpty().forEach { skill ->
                                             Surface(
                                                 modifier = Modifier.clickable {
@@ -721,9 +727,11 @@ fun ProfileScreen(
                                         }
                                     }
                                 }
-                                if (current.hobbies.orEmpty().isNotEmpty()) {
+                                if (current.hobbies.orEmpty().isNotEmpty() || showOwnerTools) {
                                     Text("الهوايات", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
+                                    if (current.hobbies.orEmpty().isEmpty()) {
+                                        Text("لم تُضف هوايات بعد", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    } else FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
                                         current.hobbies.orEmpty().forEach { hobby ->
                                             Surface(
                                                 shape = RoundedCornerShape(50),
