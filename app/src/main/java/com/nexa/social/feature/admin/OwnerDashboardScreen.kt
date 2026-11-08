@@ -201,6 +201,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                         Text("اضغط لعرض تفاصيل الحساب", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                         Text("التسجيل: ${user.createdAt}")
                                         Text("الحالة: ${when(user.status) { "BANNED" -> "محظور"; "SUSPENDED" -> "مقيّد"; "ACTIVE" -> "نشط"; else -> user.status }}")
+                                        if (user.restrictionExpiresAt.isNotBlank()) Text("ينتهي التقييد: ${user.restrictionExpiresAt}", style = MaterialTheme.typography.labelSmall)
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             OutlinedButton(onClick = {
                                                 moderationTarget = user
