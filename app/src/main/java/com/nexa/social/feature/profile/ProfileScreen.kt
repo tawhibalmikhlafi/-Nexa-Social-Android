@@ -139,6 +139,7 @@ fun ProfileScreen(
     onCreateStory: () -> Unit = {},
     onCreatePost: () -> Unit = {},
     onOpenFriends: () -> Unit = {},
+    onOpenProfileDetails: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel(
         factory = ProfileViewModel.factory(targetUserId),
         key = targetUserId ?: "self"
@@ -799,6 +800,10 @@ fun ProfileScreen(
                     Spacer(Modifier.height(NexaSpacing.sm))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
                         LargeShortcutCard(title = stringResource(R.string.title_settings), icon = Icons.Filled.Settings, modifier = Modifier.weight(1f), onClick = onSettings, color = neonBlue)
+                        LargeShortcutCard(title = "تفاصيل الملف الشخصي", icon = Icons.Filled.AutoAwesome, modifier = Modifier.weight(1f), onClick = onOpenProfileDetails, color = neonPurple)
+                    }
+                    Spacer(Modifier.height(NexaSpacing.sm))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
                         LargeShortcutCard(
                             title = stringResource(R.string.post_share),
                             icon = Icons.Filled.Share,
@@ -965,18 +970,6 @@ fun ProfileScreen(
                         )
                     }
                 }
-            }
-        }
-
-        if (profileExperienceDataSource != null &&
-            (!current.isPrivateAccount || isFollowing || showOwnerTools)
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                ProfileExperiencePanel(
-                    profileId = current.id,
-                    isOwner = showOwnerTools,
-                    dataSource = profileExperienceDataSource
-                )
             }
         }
 
