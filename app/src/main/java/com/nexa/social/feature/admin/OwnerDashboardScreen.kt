@@ -2,6 +2,7 @@ package com.nexa.social.feature.admin
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +33,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Switch
@@ -74,6 +76,9 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var officialPost by remember { mutableStateOf("") }
     var settings by remember { mutableStateOf<JsonObject?>(null) }
     var confirmDelete by remember { mutableStateOf<OwnerUserRow?>(null) }
+    var selectedUser by remember { mutableStateOf<OwnerUserRow?>(null) }
+    var selectedUserDetails by remember { mutableStateOf<JsonObject?>(null) }
+    var userDetailsLoading by remember { mutableStateOf(false) }
 
     fun refresh() {
         scope.launch {
@@ -131,7 +136,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                     StatCard("البلاغات المفتوحة", stats?.get("reports_open")?.asString ?: "—", Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(12.dp))
-                TabRow(selectedTabIndex = tab) {
+                ScrollableTabRow(selectedTabIndex = tab) {
                     listOf("المستخدمون", "البلاغات", "الإعلانات", "المنشورات الرسمية", "الإعدادات", "الدعم").forEachIndexed { i, label ->
                         Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
                     }
@@ -146,9 +151,18 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         Button(onClick = { refresh() }, modifier = Modifier.fillMaxWidth()) { Text("بحث وتحديث المستخدمين") }
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(users, key = { it.id }) { user ->
-                                Card(Modifier.fillMaxWidth()) {
+                                Card(Modifier.fillMaxWidth().clickable {
+                                    selectedUser = user
+                                    selectedUserDetails = null
+                                    userDetailsLoading = true
+                                    scope.launch {
+                                        selectedUserDetails = admin?.getUserDetails(user.id)
+                                        userDetailsLoading = false
+                                    }
+                                }) {
                                     Column(Modifier.padding(12.dp)) {
-                                        Text(user.displayName.ifBlank { user.username }, style = MaterialTheme.typography.titleMedium)
+                                        Text(user.displayName.ifBlank { user.username }, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                        Text("اضغط لعرض تفاصيل الحساب", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                         Text("@${user.username} • ${user.email}")
                                         Text("التسجيل: ${user.createdAt}")
                                         Text("الحالة: ${user.status}")
@@ -204,7 +218,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         Button(onClick = {
                             scope.launch {
                                 val ok = admin?.createOfficialPost(officialPost) == true
-                                message = if (ok) "تم نشر المنشور" else "تعذر النشر؛ تحقق من صلاحية إدراج المنشورات"
+                                message = if (ok) "تم نشر المنشور الرسمي بنجاح" else "فشل النشر: ${admin?.lastError ?: "تحقق من صلاحيات حساب المالك"}"
                                 if (ok) officialPost = ""
                             }
                         }, enabled = officialPost.isNotBlank()) { Text("نشر باسم حساب المالك") }
@@ -214,7 +228,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                             }
                         }) { Icon(Icons.Default.AdminPanelSettings, contentDescription = null); Text("تفعيل شارة مؤسس Nexa") }
                     }
-                    4 -> Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    4 -> Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("إعدادات التشغيل العامة • التغييرات تحفظ مباشرة في Supabase")
                         OwnerSettingRow("وضع الصيانة", settings?.get("maintenance_mode")?.asBoolean ?: false) { enabled ->
                             scope.launch {
@@ -233,7 +247,17 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         OwnerSettingRow("تفعيل شارة التوثيق الرسمية", settings?.get("official_badge_enabled")?.asBoolean ?: true) { enabled ->
                             scope.launch {
                                 val ok = admin?.setSetting("official_badge_enabled", enabled) == true
-                                message = if (ok) "تم حفظ إعداد الشارة" else "تعذر حفظ الإعداد"
+                                message = if (ok) "تم حفظ إعداد الشارة" else "تعذر حفظ الإعداد: ${admin?.lastError.orEmpty()}"
+                                settings = admin?.getSettings()
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text("إعدادات الإعلانات", style = MaterialTheme.typography.titleLarge)
+                        Text("تحكم في موضع الإعلان ومدة بقائه وعدد مرات عرضه في الجلسة.")
+                        OwnerAdsSettingsPanel(settings = settings) { enabled, placement, duration, frequency ->
+                            scope.launch {
+                                val ok = admin?.setAdsSettings(enabled, placement, duration, frequency) == true
+                                message = if (ok) "تم حفظ إعدادات الإعلانات في Supabase" else "تعذر حفظ إعدادات الإعلانات: ${admin?.lastError.orEmpty()}"
                                 settings = admin?.getSettings()
                             }
                         }
@@ -263,6 +287,32 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 message?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp)) }
             }
         }
+    }
+
+    selectedUser?.let { user ->
+        val profile = selectedUserDetails?.getAsJsonObject("profile")
+        AlertDialog(
+            onDismissRequest = { selectedUser = null; selectedUserDetails = null },
+            title = { Text("تفاصيل المستخدم") },
+            text = {
+                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (userDetailsLoading) CircularProgressIndicator()
+                    Text("الاسم: ${profile?.get("display_name")?.takeUnless { it.isJsonNull }?.asString ?: user.displayName}")
+                    Text("اسم المستخدم: @${profile?.get("username")?.takeUnless { it.isJsonNull }?.asString ?: user.username}")
+                    Text("البريد: ${selectedUserDetails?.get("email")?.takeUnless { it.isJsonNull }?.asString ?: user.email}")
+                    Text("معرّف الحساب: ${user.id}")
+                    Text("تاريخ التسجيل: ${selectedUserDetails?.get("created_at")?.takeUnless { it.isJsonNull }?.asString ?: user.createdAt}")
+                    Text("آخر تسجيل دخول: ${selectedUserDetails?.get("last_sign_in_at")?.takeUnless { it.isJsonNull }?.asString ?: "غير متوفر"}")
+                    Text("الحالة: ${profile?.get("account_status")?.takeUnless { it.isJsonNull }?.asString ?: user.status}")
+                    Text("التوثيق: ${if (user.verified) "موثق" else "غير موثق"}")
+                    Text("المنشورات: ${selectedUserDetails?.get("posts_count")?.asString ?: "—"}")
+                    Text("المتابعون: ${selectedUserDetails?.get("followers_count")?.asString ?: "—"}")
+                    Text("يتابع: ${selectedUserDetails?.get("following_count")?.asString ?: "—"}")
+                    profile?.get("bio")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("النبذة: $it") }
+                }
+            },
+            confirmButton = { TextButton(onClick = { selectedUser = null; selectedUserDetails = null }) { Text("إغلاق") } }
+        )
     }
 
     confirmDelete?.let { user ->
@@ -301,6 +351,61 @@ private fun OwnerSettingRow(title: String, checked: Boolean, onChange: (Boolean)
         Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
             Switch(checked = checked, onCheckedChange = onChange)
+        }
+    }
+}
+
+
+@Composable
+private fun OwnerAdsSettingsPanel(
+    settings: JsonObject?,
+    onSave: (Boolean, String, Int, Int) -> Unit
+) {
+    var enabled by remember { mutableStateOf(settings?.get("ads_enabled")?.asBoolean ?: false) }
+    var placement by remember { mutableStateOf(settings?.get("ads_placement")?.asString ?: "FEED_INLINE") }
+    var duration by remember { mutableStateOf((settings?.get("ads_duration_seconds")?.asInt ?: 15).toString()) }
+    var frequency by remember { mutableStateOf((settings?.get("ads_frequency_per_session")?.asInt ?: 2).toString()) }
+
+    LaunchedEffect(settings) {
+        enabled = settings?.get("ads_enabled")?.asBoolean ?: false
+        placement = settings?.get("ads_placement")?.asString ?: "FEED_INLINE"
+        duration = (settings?.get("ads_duration_seconds")?.asInt ?: 15).toString()
+        frequency = (settings?.get("ads_frequency_per_session")?.asInt ?: 2).toString()
+    }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            OwnerSettingRow("السماح بعرض الإعلانات", enabled) { enabled = it }
+            Text("مكان ظهور الإعلان", style = MaterialTheme.typography.titleMedium)
+            listOf(
+                "FEED_TOP" to "أعلى الصفحة الرئيسية",
+                "FEED_INLINE" to "داخل المنشورات",
+                "STORIES_BETWEEN" to "بين القصص",
+                "PROFILE_FEED" to "داخل الملف الشخصي"
+            ).forEach { (value, label) ->
+                FilterChip(selected = placement == value, onClick = { placement = value }, label = { Text(label) })
+            }
+            OutlinedTextField(
+                value = duration,
+                onValueChange = { if (it.length <= 3 && it.all(Char::isDigit)) duration = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("مدة ظهور الإعلان بالثواني (5–120)") },
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = frequency,
+                onValueChange = { if (it.length <= 2 && it.all(Char::isDigit)) frequency = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("مرات الظهور لكل جلسة (1–10)") },
+                singleLine = true
+            )
+            val durationValue = duration.toIntOrNull()
+            val frequencyValue = frequency.toIntOrNull()
+            Button(
+                onClick = { onSave(enabled, placement, durationValue!!, frequencyValue!!) },
+                enabled = durationValue in 5..120 && frequencyValue in 1..10,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("حفظ إعدادات الإعلانات") }
         }
     }
 }
