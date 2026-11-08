@@ -324,6 +324,11 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                                     moderationAction = "RESTRICT"
                                                     moderationReason = "إجراء بسبب البلاغ ${report.id}"
                                                 }) { Text("تقييد صاحب المحتوى") }
+                                                OutlinedButton(onClick = {
+                                                    moderationTarget = OwnerUserRow(report.targetAuthorId, "", report.targetAuthorUsername, report.targetAuthorName, "", "ACTIVE", false)
+                                                    moderationAction = "BAN"
+                                                    moderationReason = "حظر بسبب البلاغ ${report.id}"
+                                                }) { Text("حظر صاحب المحتوى") }
                                             }
                                         }
                                         if (report.status.uppercase() !in setOf("REVIEWED", "RESOLVED", "DISMISSED")) {
