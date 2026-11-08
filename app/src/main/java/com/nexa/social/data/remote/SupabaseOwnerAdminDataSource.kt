@@ -29,7 +29,14 @@ data class OwnerReportRow(
     val reason: String,
     val note: String,
     val status: String,
-    val createdAt: String
+    val createdAt: String,
+    val reporterId: String = "",
+    val reporterName: String = "",
+    val reporterUsername: String = "",
+    val reporterEmail: String = "",
+    val targetAuthorName: String = "",
+    val targetAuthorUsername: String = "",
+    val targetPreview: String = ""
 )
 
 class SupabaseOwnerAdminDataSource(
@@ -186,32 +193,43 @@ class SupabaseOwnerAdminDataSource(
         return true
     }
 
-    suspend fun listReports(): List<OwnerReportRow> {
-        val token = accessToken() ?: return emptyList()
-        val response = http.execute(
-            http.authenticatedRequest(
-                "$base/content_reports?select=id,target_type,target_id,reason,note,status,created_at&order=created_at.desc&limit=100",
-                token
-            ).get().build()
-        ).getOrNull()?.takeIf { it.successful } ?: return emptyList()
+    suspend fun listReports(type: String = "ALL"): List<OwnerReportRow> {
+        val body = JsonObject().apply {
+            addProperty("p_type", type)
+            addProperty("p_limit", 200)
+        }
+        val raw = rpc("nexa_owner_list_reports", body) ?: return emptyList()
         return runCatching {
-            JsonParser.parseString(response.body).asJsonArray.map { e ->
-                val o=e.asJsonObject
-                OwnerReportRow(o.string("id").orEmpty(),o.string("target_type").orEmpty(),
-                    o.string("target_id").orEmpty(),o.string("reason").orEmpty(),
-                    o.string("note").orEmpty(),o.string("status").orEmpty(),o.string("created_at").orEmpty())
+            JsonParser.parseString(raw).asJsonArray.map { e ->
+                val o = e.asJsonObject
+                OwnerReportRow(
+                    id = o.string("id").orEmpty(),
+                    targetType = o.string("target_type").orEmpty(),
+                    targetId = o.string("target_id").orEmpty(),
+                    reason = o.string("reason").orEmpty(),
+                    note = o.string("note").orEmpty(),
+                    status = o.string("status").orEmpty(),
+                    createdAt = o.string("created_at").orEmpty(),
+                    reporterId = o.string("reporter_id").orEmpty(),
+                    reporterName = o.string("reporter_name").orEmpty(),
+                    reporterUsername = o.string("reporter_username").orEmpty(),
+                    reporterEmail = o.string("reporter_email").orEmpty(),
+                    targetAuthorName = o.string("target_author_name").orEmpty(),
+                    targetAuthorUsername = o.string("target_author_username").orEmpty(),
+                    targetPreview = o.string("target_preview").orEmpty()
+                )
             }
-        }.getOrDefault(emptyList())
+        }.onFailure { lastError = "تعذر تحليل قائمة البلاغات: ${it.message}" }.getOrDefault(emptyList())
     }
 
-    suspend fun updateReport(reportId: String, status: String): Boolean {
-        val token = accessToken() ?: return false
-        val body=JsonObject().apply { addProperty("status",status) }
-        val response=http.execute(
-            http.authenticatedRequest("$base/content_reports?id=eq.${enc(reportId)}",token)
-                .header("Prefer","return=minimal").patch(http.jsonBody(body)).build()
-        ).getOrNull() ?: return false
-        return response.successful
+    suspend fun updateReport(reportId: String, status: String, note: String = ""): Boolean {
+        val body = JsonObject().apply {
+            addProperty("p_report_id", reportId)
+            addProperty("p_status", status)
+            addProperty("p_note", note)
+        }
+        val raw = rpc("nexa_owner_update_report", body) ?: return false
+        return runCatching { JsonParser.parseString(raw).asBoolean }.getOrDefault(false)
     }
 
     suspend fun listSupport(): List<OwnerSupportRow> {
