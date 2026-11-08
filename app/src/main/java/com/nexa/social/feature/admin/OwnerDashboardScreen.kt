@@ -403,7 +403,7 @@ private fun OwnerAdsSettingsPanel(
             val frequencyValue = frequency.toIntOrNull()
             Button(
                 onClick = { onSave(enabled, placement, durationValue!!, frequencyValue!!) },
-                enabled = durationValue in 5..120 && frequencyValue in 1..10,
+                enabled = durationValue != null && durationValue in 5..120 && frequencyValue != null && frequencyValue in 1..10,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("حفظ إعدادات الإعلانات") }
         }
