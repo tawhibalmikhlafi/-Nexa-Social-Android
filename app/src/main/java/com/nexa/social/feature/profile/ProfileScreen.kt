@@ -379,11 +379,11 @@ fun ProfileScreen(
             ) {
                 if (onBack != null) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(17.dp))
                     }
                 } else {
                     IconButton(onClick = onSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.title_settings), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.title_settings), modifier = Modifier.size(17.dp))
                     }
                 }
 
@@ -392,7 +392,7 @@ fun ProfileScreen(
                 }
 
                 IconButton(onClick = copyProfileLink) {
-                    Icon(Icons.Filled.Link, contentDescription = stringResource(R.string.profile_copy_link), modifier = Modifier.size(20.dp))
+                    Icon(Icons.Filled.Link, contentDescription = stringResource(R.string.profile_copy_link), modifier = Modifier.size(17.dp))
                 }
             }
         }
