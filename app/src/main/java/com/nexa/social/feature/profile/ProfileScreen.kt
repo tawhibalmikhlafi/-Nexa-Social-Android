@@ -3,6 +3,7 @@ package com.nexa.social.feature.profile
 import androidx.compose.foundation.background
 import android.app.DownloadManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
@@ -24,6 +25,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -52,6 +55,9 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -61,6 +67,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
@@ -102,12 +111,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.nexa.social.R
 import com.nexa.social.core.common.TimeUtils
+import com.nexa.social.core.common.Resource
 import com.nexa.social.core.navigation.DeepLinkRouter
 import com.nexa.social.core.ui.LocalSnackbarHostState
 import com.nexa.social.feature.presence.PresenceViewModel
 import com.nexa.social.core.ui.rememberRemoteMode
 import com.nexa.social.core.ui.rememberAppContainer
 import com.nexa.social.domain.model.Post
+import com.nexa.social.domain.model.UserSummary
 import com.nexa.social.ui.components.LocalDataBanner
 import com.nexa.social.ui.components.NexaCover
 import com.nexa.social.ui.components.NexaEmptyState
@@ -177,11 +188,15 @@ fun ProfileScreen(
     val remoteMode = rememberRemoteMode()
     val profileExperienceDataSource = rememberAppContainer().profileExperienceDataSource
     val ownerAdminDataSource = rememberAppContainer().ownerAdminDataSource
+    val safetyRepository = rememberAppContainer().safetyRepository
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var fullImageUri by remember { mutableStateOf<String?>(null) }
     var fullImageTitle by remember { mutableStateOf("") }
     var showProfileMenu by rememberSaveable { mutableStateOf(false) }
+    var showProfileActions by rememberSaveable { mutableStateOf(false) }
+    var showBlockConfirmation by rememberSaveable { mutableStateOf(false) }
+    var blockBusy by remember { mutableStateOf(false) }
 
     val snackbarHost = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
@@ -192,6 +207,9 @@ fun ProfileScreen(
     val messageErrorMessage = stringResource(R.string.profile_message_failed)
     val profileLinkCopied = stringResource(R.string.profile_link_copied)
     val usernameCopiedMessage = stringResource(R.string.profile_username_copied)
+    val blockSuccessMessage = stringResource(R.string.profile_block_success)
+    val blockFailedMessage = stringResource(R.string.profile_block_failed)
+    val profileShareTitle = stringResource(R.string.profile_share_title)
     val clipboard = LocalClipboardManager.current
 
     LaunchedEffect(followError) {
@@ -299,6 +317,43 @@ fun ProfileScreen(
         scope.launch { snackbarHost?.showSnackbar(usernameCopiedMessage) }
     }
 
+    val launchProfileShare: (Boolean) -> Unit = { invite ->
+        val profileLink = DeepLinkRouter.userLink(current.id)
+        val displayName = current.displayName.ifBlank { current.username }
+        val message = if (invite) {
+            context.getString(R.string.profile_invite_text, displayName, profileLink)
+        } else {
+            context.getString(R.string.profile_share_text, displayName, profileLink)
+        }
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, message)
+            putExtra(Intent.EXTRA_SUBJECT, profileShareTitle)
+        }
+        runCatching {
+            context.startActivity(Intent.createChooser(sendIntent, profileShareTitle))
+        }.onFailure {
+            scope.launch { snackbarHost?.showSnackbar(blockFailedMessage) }
+        }
+    }
+
+    val blockProfile: () -> Unit = {
+        if (!blockBusy && !showOwnerTools && !isOwnProfile) {
+            scope.launch {
+                blockBusy = true
+                val result = runCatching { safetyRepository.block(UserSummary.from(current)) }.getOrNull()
+                blockBusy = false
+                showBlockConfirmation = false
+                if (result is Resource.Success) {
+                    snackbarHost?.showSnackbar(blockSuccessMessage)
+                    onBack?.invoke()
+                } else {
+                    snackbarHost?.showSnackbar(blockFailedMessage)
+                }
+            }
+        }
+    }
+
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
     val avatarGradient = remember(current.id) {
@@ -332,7 +387,7 @@ fun ProfileScreen(
                         tonalElevation = 12.dp
                     ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Row(
@@ -379,6 +434,24 @@ fun ProfileScreen(
                 }
             }
         }
+    }
+
+    if (showBlockConfirmation) {
+        AlertDialog(
+            onDismissRequest = { if (!blockBusy) showBlockConfirmation = false },
+            title = { Text(stringResource(R.string.profile_block_confirm_title)) },
+            text = { Text(stringResource(R.string.profile_block_confirm_message, current.displayName.ifBlank { current.username })) },
+            confirmButton = {
+                TextButton(onClick = blockProfile, enabled = !blockBusy) {
+                    Text(if (blockBusy) stringResource(R.string.action_loading) else stringResource(R.string.profile_block))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBlockConfirmation = false }, enabled = !blockBusy) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 
     // Full-screen viewer shared by profile avatar and cover image.
@@ -488,8 +561,54 @@ fun ProfileScreen(
                     Text(text = stringResource(R.string.nav_profile), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 }
 
-                IconButton(onClick = copyProfileLink) {
-                    Icon(Icons.Filled.Link, contentDescription = stringResource(R.string.profile_copy_link), modifier = Modifier.size(17.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = copyProfileLink) {
+                        Icon(Icons.Filled.Link, contentDescription = stringResource(R.string.profile_copy_link), modifier = Modifier.size(17.dp))
+                    }
+                    if (!showOwnerTools && !isOwnProfile) {
+                        Box {
+                            IconButton(onClick = { showProfileActions = true }) {
+                                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.profile_more_actions), modifier = Modifier.size(20.dp))
+                            }
+                            DropdownMenu(
+                                expanded = showProfileActions,
+                                onDismissRequest = { showProfileActions = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.profile_block)) },
+                                    leadingIcon = { Icon(Icons.Filled.Block, contentDescription = null) },
+                                    onClick = {
+                                        showProfileActions = false
+                                        showBlockConfirmation = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.profile_copy_link)) },
+                                    leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+                                    onClick = {
+                                        showProfileActions = false
+                                        copyProfileLink()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.profile_share)) },
+                                    leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
+                                    onClick = {
+                                        showProfileActions = false
+                                        launchProfileShare(false)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.profile_invite_friends)) },
+                                    leadingIcon = { Icon(Icons.Filled.PersonAdd, contentDescription = null) },
+                                    onClick = {
+                                        showProfileActions = false
+                                        launchProfileShare(true)
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
