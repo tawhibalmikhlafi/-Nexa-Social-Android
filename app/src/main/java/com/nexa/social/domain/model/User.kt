@@ -80,6 +80,7 @@ enum class AccountStatus {
     ACTIVE,
     PENDING_VERIFICATION,
     SUSPENDED,
+    DEACTIVATED,
     DELETED
 }
 
