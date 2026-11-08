@@ -152,7 +152,22 @@ class SupabaseOwnerAdminDataSource(
             addProperty("p_key",key)
             add("p_value",com.google.gson.JsonPrimitive(enabled))
         }
-        return rpc("nexa_owner_set_setting",body) != null
+        val saved = rpc("nexa_owner_set_setting",body) != null
+        if (saved && key == "official_badge_enabled") {
+            val token = accessToken() ?: return false
+            val uid = currentUid() ?: return false
+            val profileBody = JsonObject().apply {
+                addProperty("is_verified", enabled)
+                addProperty("verified_label", if (enabled) "مؤسس Nexa" else null as String?)
+            }
+            val response = http.execute(
+                http.authenticatedRequest("$base/profiles?id=eq.${enc(uid)}", token)
+                    .header("Prefer", "return=minimal")
+                    .patch(http.jsonBody(profileBody)).build()
+            ).getOrNull() ?: return false
+            return response.successful
+        }
+        return saved
     }
 
     suspend fun createAnnouncement(title: String, bodyText: String): Boolean {
