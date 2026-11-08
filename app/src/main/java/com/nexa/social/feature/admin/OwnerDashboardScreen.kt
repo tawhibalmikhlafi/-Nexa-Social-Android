@@ -295,7 +295,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                             }
                         }
                     }
-                    else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    5 -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(support, key = { it.id }) { ticket ->
                             Card(Modifier.fillMaxWidth()) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -314,6 +314,28 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                     }, enabled = supportReply.isNotBlank()) { Text("إرسال الرد وإغلاق الطلب") }
                                 }
                             }
+                        }
+                    }
+                    6 -> Column(Modifier.fillMaxSize()) {
+                        Text("إدارة وحذف المحتوى من جميع المستخدمين", style = MaterialTheme.typography.titleMedium)
+                        Text("الحذف نهائي مع حفظ سجل تدقيق للمالك والسبب.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(contentRows, key = { it.type + it.id }) { item ->
+                                Card(Modifier.fillMaxWidth()) {
+                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text(item.type, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                        Text(item.body.ifBlank { "بدون نص" }, style = MaterialTheme.typography.bodyMedium)
+                                        Text("بواسطة " + item.authorName + " • " + item.createdAt, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        OutlinedButton(onClick = { contentDeleteTarget = item; contentDeleteReason = "" }) {
+                                            Icon(Icons.Default.Delete, contentDescription = null)
+                                            Text("حذف نهائي")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        OutlinedButton(onClick = { scope.launch { contentRows = admin?.listContent().orEmpty() } }, modifier = Modifier.fillMaxWidth()) {
+                            Text("تحديث المحتوى")
                         }
                     }
                 }
@@ -362,6 +384,39 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 }
             },
             confirmButton = { TextButton(onClick = { selectedUser = null; selectedUserDetails = null }) { Text("إغلاق") } }
+        )
+    }
+
+    contentDeleteTarget?.let { item ->
+        AlertDialog(
+            onDismissRequest = { contentDeleteTarget = null },
+            title = { Text("تأكيد حذف المحتوى نهائياً") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("سيتم حذف المحتوى وملفاته المرتبطة عند توفر صلاحية التخزين. لا يمكن التراجع عن هذا الإجراء.")
+                    OutlinedTextField(
+                        value = contentDeleteReason,
+                        onValueChange = { contentDeleteReason = it.take(1000) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("سبب الحذف (مطلوب)") },
+                        minLines = 2
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = contentDeleteReason.isNotBlank(), onClick = {
+                    val target = item
+                    val reason = contentDeleteReason
+                    contentDeleteTarget = null
+                    scope.launch {
+                        val ok = admin?.deleteContent(target.type, target.id, reason) == true
+                        message = if (ok) admin?.lastError ?: "تم حذف المحتوى وحفظ سجل التدقيق" else "تعذر حذف المحتوى: " + admin?.lastError.orEmpty()
+                        contentRows = admin?.listContent().orEmpty()
+                        stats = admin?.dashboardStats()
+                    }
+                }) { Text("حذف نهائي") }
+            },
+            dismissButton = { TextButton(onClick = { contentDeleteTarget = null }) { Text("إلغاء") } }
         )
     }
 
