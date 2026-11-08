@@ -741,7 +741,7 @@ private fun OwnerAdsManagementPanel(
         OwnerSettingRow("تفعيل الحملة",enabled){enabled=it}
         Button(
             onClick={onSave(editingId,title,body,mediaUrl,mediaType,clickUrl,placement,audience,startsAt,endsAt,duration.toInt(),frequency.toInt(),enabled)},
-            enabled=title.isNotBlank()&&body.isNotBlank()&&startsAt.isNotBlank()&&endsAt.isNotBlank()&&duration.toIntOrNull() in 5..120&&frequency.toIntOrNull() in 1..10&&(mediaType=="NONE"||mediaUrl.startsWith("http")),
+            enabled=title.isNotBlank()&&body.isNotBlank()&&startsAt.isNotBlank()&&endsAt.isNotBlank()&&(duration.toIntOrNull() ?: 0) in 5..120&&(frequency.toIntOrNull() ?: 0) in 1..10&&(mediaType=="NONE"||mediaUrl.startsWith("http")),
             modifier=Modifier.fillMaxWidth()
         ) { Text(if(editingId==null)"إنشاء الحملة" else "حفظ التعديلات") }
         OutlinedButton(onClick={editingId=null;title="";body="";mediaUrl="";mediaType="NONE";clickUrl="";placement="FEED_INLINE";audience="ALL";startsAt="";endsAt="";duration="15";frequency="2";enabled=false},modifier=Modifier.fillMaxWidth()) { Text("حملة جديدة") }
