@@ -716,7 +716,8 @@ fun NexaRoot() {
                     PrivacyScreen(
                         onBack = { navController.popBackStack() },
                         onBlockedAccounts = { navController.navigate(NexaDestinations.SAFETY) },
-                        onAccountDeleted = { navController.enterWelcome() }
+                        onAccountDeleted = { navController.enterWelcome() },
+                        onAccountDeactivated = { navController.enterWelcome() }
                     )
                 }
 
