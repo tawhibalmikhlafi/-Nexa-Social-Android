@@ -171,7 +171,8 @@ class SupabaseOwnerAdminDataSource(
         val body=JsonObject().apply {
             addProperty("p_ticket_id",ticketId); addProperty("p_reply",reply); addProperty("p_status",status)
         }
-        return rpc("nexa_owner_reply_support",body) != null
+        val result = rpc("nexa_owner_reply_support", body) ?: return false
+        return runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
     }
 
     suspend fun getSettings(): JsonObject? = rpc("nexa_owner_get_settings")?.let {
@@ -183,7 +184,8 @@ class SupabaseOwnerAdminDataSource(
             addProperty("p_key",key)
             add("p_value",com.google.gson.JsonPrimitive(enabled))
         }
-        val saved = rpc("nexa_owner_set_setting",body) != null
+        val settingResult = rpc("nexa_owner_set_setting", body) ?: return false
+        val saved = runCatching { JsonParser.parseString(settingResult).asBoolean }.getOrDefault(false)
         if (saved && key == "official_badge_enabled") {
             val token = accessToken() ?: return false
             val uid = currentUid() ?: return false
@@ -203,24 +205,7 @@ class SupabaseOwnerAdminDataSource(
 
     suspend fun createAnnouncement(title: String, bodyText: String): Boolean {
         val body=JsonObject().apply { addProperty("p_title",title); addProperty("p_body",bodyText) }
-        return rpc("nexa_owner_create_announcement",body) != null
-    }
-
-    suspend fun setTextSetting(key: String, value: String): Boolean {
-        val body = JsonObject().apply {
-            addProperty("p_key", key)
-            add("p_value", com.google.gson.JsonPrimitive(value))
-        }
-        val result = rpc("nexa_owner_set_setting", body) ?: return false
-        return runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
-    }
-
-    suspend fun setNumberSetting(key: String, value: Int): Boolean {
-        val body = JsonObject().apply {
-            addProperty("p_key", key)
-            add("p_value", com.google.gson.JsonPrimitive(value))
-        }
-        val result = rpc("nexa_owner_set_setting", body) ?: return false
+        val result = rpc("nexa_owner_create_announcement", body) ?: return false
         return runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
     }
 
