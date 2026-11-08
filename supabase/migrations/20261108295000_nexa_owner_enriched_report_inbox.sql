@@ -18,7 +18,7 @@ as $$
 declare result jsonb;
 begin
   if not public.nexa_is_owner() then raise exception 'OWNER_REQUIRED' using errcode='42501'; end if;
-  if upper(coalesce(p_type,'ALL')) not in ('ALL','POST','COMMENT','CLIP','USER','COMMUNITY') then
+  if upper(coalesce(p_type,'ALL')) not in ('ALL','POST','COMMENT','CLIP','USER','COMMUNITY','GROUP_POST') then
     raise exception 'INVALID_REPORT_TYPE';
   end if;
   select coalesce(jsonb_agg(to_jsonb(x) order by x.created_at desc),'[]'::jsonb)
@@ -35,19 +35,24 @@ begin
       coalesce(r.target_preview,
         case lower(r.target_type)
           when 'post' then (select left(coalesce(p.text,''),500) from public.posts p where p.id=r.target_id)
+          when 'group_post' then (select left(coalesce(p.text,''),500) from public.posts p where p.id=r.target_id)
           when 'comment' then (select left(coalesce(c.text,''),500) from public.comments c where c.id=r.target_id)
           when 'clip' then (select left(coalesce(cl.caption,''),500) from public.clips cl where cl.id=r.target_id)
           when 'user' then (select coalesce(nullif(pr.display_name,''),pr.username,'') from public.profiles pr where pr.id=r.target_id)
           when 'community' then r.target_preview
           else r.target_preview
         end,'') as target_preview,
-      r.target_id as target_user_id
+      case when lower(r.target_type)='user' then r.target_id
+           when lower(r.target_type) in ('post','group_post') then (select p.author_id from public.posts p where p.id=r.target_id)
+           when lower(r.target_type)='comment' then (select c.author_id from public.comments c where c.id=r.target_id)
+           when lower(r.target_type)='clip' then (select cl.author_id from public.clips cl where cl.id=r.target_id)
+           else null end as target_author_id
     from public.content_reports r
     left join auth.users ru on ru.id=r.reporter_id
     left join public.profiles reporter on reporter.id=r.reporter_id
     left join public.profiles target_profile on target_profile.id =
       case when lower(r.target_type)='user' then r.target_id
-           when lower(r.target_type)='post' then (select p.author_id from public.posts p where p.id=r.target_id)
+           when lower(r.target_type) in ('post','group_post') then (select p.author_id from public.posts p where p.id=r.target_id)
            when lower(r.target_type)='comment' then (select c.author_id from public.comments c where c.id=r.target_id)
            when lower(r.target_type)='clip' then (select cl.author_id from public.clips cl where cl.id=r.target_id)
            else null end
