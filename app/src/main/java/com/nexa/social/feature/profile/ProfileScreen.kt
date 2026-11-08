@@ -333,7 +333,7 @@ fun ProfileScreen(
         runCatching {
             context.startActivity(Intent.createChooser(sendIntent, profileShareTitle))
         }.onFailure {
-            scope.launch { snackbarHost?.showSnackbar(blockFailedMessage) }
+            scope.launch { snackbarHost?.showSnackbar(shareFailedMessage) }
         }
     }
 
@@ -565,15 +565,15 @@ fun ProfileScreen(
                     IconButton(onClick = copyProfileLink) {
                         Icon(Icons.Filled.Link, contentDescription = stringResource(R.string.profile_copy_link), modifier = Modifier.size(17.dp))
                     }
-                    if (!showOwnerTools && !isOwnProfile) {
-                        Box {
-                            IconButton(onClick = { showProfileActions = true }) {
-                                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.profile_more_actions), modifier = Modifier.size(20.dp))
-                            }
-                            DropdownMenu(
-                                expanded = showProfileActions,
-                                onDismissRequest = { showProfileActions = false }
-                            ) {
+                    Box {
+                        IconButton(onClick = { showProfileActions = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.profile_more_actions), modifier = Modifier.size(20.dp))
+                        }
+                        DropdownMenu(
+                            expanded = showProfileActions,
+                            onDismissRequest = { showProfileActions = false }
+                        ) {
+                            if (!showOwnerTools && !isOwnProfile) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.profile_block)) },
                                     leadingIcon = { Icon(Icons.Filled.Block, contentDescription = null) },
@@ -582,31 +582,31 @@ fun ProfileScreen(
                                         showBlockConfirmation = true
                                     }
                                 )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.profile_copy_link)) },
-                                    leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
-                                    onClick = {
-                                        showProfileActions = false
-                                        copyProfileLink()
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.profile_share)) },
-                                    leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
-                                    onClick = {
-                                        showProfileActions = false
-                                        launchProfileShare(false)
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.profile_invite_friends)) },
-                                    leadingIcon = { Icon(Icons.Filled.PersonAdd, contentDescription = null) },
-                                    onClick = {
-                                        showProfileActions = false
-                                        launchProfileShare(true)
-                                    }
-                                )
                             }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.profile_copy_link)) },
+                                leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+                                onClick = {
+                                    showProfileActions = false
+                                    copyProfileLink()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.profile_share)) },
+                                leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
+                                onClick = {
+                                    showProfileActions = false
+                                    launchProfileShare(false)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.profile_invite_friends)) },
+                                leadingIcon = { Icon(Icons.Filled.PersonAdd, contentDescription = null) },
+                                onClick = {
+                                    showProfileActions = false
+                                    launchProfileShare(true)
+                                }
+                            )
                         }
                     }
                 }
