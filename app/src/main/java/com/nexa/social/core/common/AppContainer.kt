@@ -519,6 +519,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
             object : AccountRepository {
                 override suspend fun exportData() =
                     Resource.Failure(FailureReason.NOT_CONFIGURED)
+                override suspend fun deactivateAccount() =
+                    Resource.Failure(FailureReason.NOT_CONFIGURED)
                 override suspend fun deleteAccount() =
                     Resource.Failure(FailureReason.NOT_CONFIGURED)
             }
