@@ -266,7 +266,7 @@
     <string name="profile_block">حظر</string>
     <string name="profile_block_busy">جارٍ الحظر…</string>
     <string name="profile_block_confirm_title">حظر هذا الحساب؟</string>
-    <string name="profile_block_confirm_message">لن تتمكن من رؤية محتوى هذا الحساب أو التفاعل معه بعد حظره: %1$s</string>
+    <string name="profile_block_confirm_message">سيُضاف حساب %1$s إلى قائمة المحظورين لديك. يمكنك إدارة الحسابات المحظورة من إعدادات الأمان.</string>
     <string name="profile_block_success">تم حظر الحساب بنجاح.</string>
     <string name="profile_block_failed">تعذر حظر الحساب. تحقق من الاتصال وحاول مجدداً.</string>
     <string name="profile_share">مشاركة الملف الشخصي</string>
