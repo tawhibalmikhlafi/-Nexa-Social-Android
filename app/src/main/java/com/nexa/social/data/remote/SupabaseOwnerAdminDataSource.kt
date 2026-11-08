@@ -15,7 +15,12 @@ data class OwnerUserRow(
     val displayName: String,
     val createdAt: String,
     val status: String,
-    val verified: Boolean
+    val verified: Boolean,
+    val avatarUrl: String = "",
+    val lastSignInAt: String = "",
+    val postsCount: Long = 0,
+    val followersCount: Long = 0,
+    val followingCount: Long = 0
 )
 
 data class OwnerSupportRow(val id: String, val userId: String, val subject: String, val message: String, val status: String, val reply: String, val createdAt: String)
@@ -90,7 +95,7 @@ class SupabaseOwnerAdminDataSource(
             addProperty("p_limit", 100)
             addProperty("p_offset", 0)
         }
-        val raw = rpc("nexa_owner_list_users", body) ?: return emptyList()
+        val raw = rpc("nexa_owner_list_users_full", body) ?: return emptyList()
         return runCatching {
             JsonParser.parseString(raw).asJsonArray.map { e ->
                 val o = e.asJsonObject
@@ -98,7 +103,10 @@ class SupabaseOwnerAdminDataSource(
                     o.string("user_id").orEmpty(), o.string("email").orEmpty(),
                     o.string("username").orEmpty(), o.string("display_name").orEmpty(),
                     o.string("created_at").orEmpty(), o.string("account_status").orEmpty(),
-                    o.get("is_verified")?.asBoolean ?: false
+                    o.get("is_verified")?.asBoolean ?: false,
+                    o.string("avatar_url").orEmpty(), o.string("last_sign_in_at").orEmpty(),
+                    o.get("posts_count")?.asLong ?: 0L, o.get("followers_count")?.asLong ?: 0L,
+                    o.get("following_count")?.asLong ?: 0L
                 )
             }
         }.getOrDefault(emptyList())
