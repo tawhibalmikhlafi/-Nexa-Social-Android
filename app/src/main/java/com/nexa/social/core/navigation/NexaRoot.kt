@@ -43,6 +43,7 @@ import com.nexa.social.core.navigation.DeepLinkRouter
 import com.nexa.social.core.navigation.DeepLinkTarget
 import com.nexa.social.core.ui.LocalSnackbarHostState
 import com.nexa.social.domain.model.NotificationTargetKind
+import com.nexa.social.feature.admin.OwnerDashboardScreen
 import com.nexa.social.feature.achievements.AchievementsScreen
 import com.nexa.social.feature.ai.AiAssistantScreen
 import com.nexa.social.feature.appearance.AppearanceScreen
@@ -372,8 +373,13 @@ fun NexaRoot() {
                         onCreateStory = { navController.navigate(NexaDestinations.CREATE_STORY) },
                         onCreatePost = { navController.navigateTab(NexaDestinations.CREATE) },
                         onOpenFriends = { navController.navigate(NexaDestinations.FRIENDS) },
-                        onOpenProfileDetails = { navController.navigate(NexaDestinations.PROFILE_DETAILS) }
+                        onOpenProfileDetails = { navController.navigate(NexaDestinations.PROFILE_DETAILS) },
+                        onOpenOwnerDashboard = { navController.navigate(NexaDestinations.OWNER_DASHBOARD) }
                     )
+                }
+
+                composable(NexaDestinations.OWNER_DASHBOARD) {
+                    OwnerDashboardScreen(onBack = { navController.popBackStack() })
                 }
 
                 composable(NexaDestinations.PROFILE_DETAILS) {
