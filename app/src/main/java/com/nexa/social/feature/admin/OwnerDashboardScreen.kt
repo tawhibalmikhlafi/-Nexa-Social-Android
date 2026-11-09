@@ -27,6 +27,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
@@ -75,6 +77,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     val admin = rememberAppContainer().ownerAdminDataSource
     val scope = rememberCoroutineScope()
     var allowed by remember { mutableStateOf<Boolean?>(null) }
+    var ownerUserId by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableIntStateOf(0) }
@@ -117,6 +120,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
             }
             allowed = source.isOwner()
             if (allowed == true) {
+                ownerUserId = source.currentUserId()
                 stats = source.dashboardStats()
                 users = source.listUsers(search)
                 reports = source.listReports()
@@ -178,54 +182,39 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         Button(onClick = { refresh() }, modifier = Modifier.fillMaxWidth()) { Text("بحث وتحديث المستخدمين") }
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(users, key = { it.id }) { user ->
-                                Card(Modifier.fillMaxWidth().clickable {
-                                    selectedUser = user
-                                    selectedUserDetails = null
-                                    moderationHistory = emptyList()
-                                    userDetailsLoading = true
-                                    scope.launch {
-                                        selectedUserDetails = admin?.getUserDetails(user.id)
-                                        moderationHistory = admin?.moderationHistory(user.id).orEmpty()
-                                        userDetailsLoading = false
+                                UserAdminCard(
+                                    user = user,
+                                    isOwnerAccount = user.id == ownerUserId,
+                                    onCardClick = {
+                                        selectedUser = user
+                                        selectedUserDetails = null
+                                        moderationHistory = emptyList()
+                                        userDetailsLoading = true
+                                        scope.launch {
+                                            selectedUserDetails = admin?.getUserDetails(user.id)
+                                            moderationHistory = admin?.moderationHistory(user.id).orEmpty()
+                                            userDetailsLoading = false
+                                        }
+                                    },
+                                    onRestrictClick = {
+                                        if (user.id != ownerUserId) {
+                                            moderationTarget = user
+                                            moderationAction = if (user.status == "SUSPENDED") "RESTORE" else "RESTRICT"
+                                            moderationReason = ""
+                                        }
+                                    },
+                                    onBlockClick = {
+                                        if (user.id != ownerUserId) {
+                                            moderationTarget = user
+                                            moderationAction = if (user.status == "BANNED") "RESTORE" else "BAN"
+                                            moderationReason = ""
+                                        }
+                                    },
+                                    onDeleteClick = {
+                                        if (user.id != ownerUserId) confirmDelete = user
                                     }
-                                }) {
-                                    Column(Modifier.padding(12.dp)) {
-                                        val visibleName = user.displayName.trim().ifBlank {
-                                            user.username.trim().ifBlank { user.email.substringBefore("@").ifBlank { "مستخدم Nexa" } }
-                                        }
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                            AsyncImage(model = user.avatarUrl.takeIf { it.isNotBlank() }, contentDescription = "صورة الحساب", modifier = Modifier.size(48.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                                            Column {
-                                                Text(visibleName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                                                Text(listOf(user.username.takeIf { it.isNotBlank() }?.let { "@$it" }, user.email.takeIf { it.isNotBlank() }).filterNotNull().joinToString(" • ").ifBlank { "حساب Nexa" }, style = MaterialTheme.typography.bodySmall)
-                                            }
-                                        }
-                                        Text("المنشورات: ${user.postsCount} • المتابعون: ${user.followersCount} • يتابع: ${user.followingCount}", style = MaterialTheme.typography.bodySmall)
-                                        Text("آخر دخول: ${user.lastSignInAt.ifBlank { "غير متوفر" }}", style = MaterialTheme.typography.labelSmall)
-                                        Text("اضغط لعرض تفاصيل الحساب", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                                        Text("التسجيل: ${user.createdAt}")
-                                        Text("الحالة: ${when(user.status) { "BANNED" -> "محظور"; "SUSPENDED" -> "مقيّد"; "ACTIVE" -> "نشط"; else -> user.status }}")
-                                        if (user.restrictionExpiresAt.isNotBlank()) Text("ينتهي التقييد: ${user.restrictionExpiresAt}", style = MaterialTheme.typography.labelSmall)
-                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            OutlinedButton(onClick = {
-                                                moderationTarget = user
-                                                moderationAction = if (user.status == "SUSPENDED") "RESTORE" else "RESTRICT"
-                                                moderationReason = ""
-                                            }) { Text(if (user.status == "SUSPENDED") "إلغاء التقييد" else "تقييد") }
-                                            OutlinedButton(onClick = {
-                                                moderationTarget = user
-                                                moderationAction = if (user.status == "BANNED") "RESTORE" else "BAN"
-                                                moderationReason = ""
-                                            }) { Text(if (user.status == "BANNED") "فك الحظر" else "حظر") }
-                                            OutlinedButton(onClick = { confirmDelete = user }) {
-                                                Icon(Icons.Default.Delete, contentDescription = null)
-                                                Text("حذف نهائي")
-                                            }
-                                        }
-                                    }
-                                }
+                                )
                             }
-                        }
                     }
                     1 -> Column(Modifier.fillMaxSize()) {
                         Text("مركز مراجعة البلاغات", style = MaterialTheme.typography.titleLarge)
@@ -684,6 +673,94 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
         )
     }
 }
+
+
+@Composable
+private fun UserAdminCard(
+    user: OwnerUserRow,
+    isOwnerAccount: Boolean,
+    onCardClick: () -> Unit,
+    onRestrictClick: () -> Unit,
+    onBlockClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    val visibleName = user.displayName.trim().ifBlank {
+        user.username.trim().ifBlank { user.email.substringBefore("@").ifBlank { "مستخدم Nexa" } }
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onCardClick),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                AsyncImage(
+                    model = user.avatarUrl.takeIf { it.isNotBlank() },
+                    contentDescription = "صورة الحساب",
+                    modifier = Modifier.size(52.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(visibleName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        listOf(user.username.takeIf { it.isNotBlank() }?.let { "@$it" }, user.email.takeIf { it.isNotBlank() })
+                            .filterNotNull().joinToString(" • ").ifBlank { "حساب Nexa" },
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        when (user.status) {
+                            "BANNED" -> "محظور"
+                            "SUSPENDED" -> "مقيّد"
+                            "ACTIVE" -> "نشط"
+                            else -> user.status
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = when (user.status) {
+                            "BANNED", "SUSPENDED" -> MaterialTheme.colorScheme.error
+                            else -> MaterialTheme.colorScheme.primary
+                        }
+                    )
+                }
+                IconButton(onClick = onCardClick) {
+                    Icon(Icons.Default.AdminPanelSettings, contentDescription = "تفاصيل الحساب")
+                }
+            }
+            Text(
+                "المنشورات: ${user.postsCount} • المتابعون: ${user.followersCount} • يتابع: ${user.followingCount}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text("التسجيل: ${user.createdAt}", style = MaterialTheme.typography.bodySmall)
+            Text("آخر دخول: ${user.lastSignInAt.ifBlank { "غير متوفر" }}", style = MaterialTheme.typography.labelSmall)
+            if (user.restrictionExpiresAt.isNotBlank()) {
+                Text("ينتهي التقييد: ${user.restrictionExpiresAt}", style = MaterialTheme.typography.labelSmall)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (isOwnerAccount) {
+                    Text("حساب المالك محمي من إجراءات الإدارة", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                } else {
+                    IconButton(onClick = onRestrictClick) {
+                        Icon(Icons.Default.Lock, contentDescription = if (user.status == "SUSPENDED") "إلغاء التقييد" else "تقييد الحساب")
+                    }
+                    IconButton(onClick = onBlockClick) {
+                        Icon(Icons.Default.Block, contentDescription = if (user.status == "BANNED") "فك الحظر" else "حظر الحساب")
+                    }
+                    IconButton(onClick = onDeleteClick) {
+                        Icon(Icons.Default.Delete, contentDescription = "حذف الحساب نهائياً", tint = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+            Text("اضغط البطاقة لعرض تفاصيل الحساب", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
 
 @Composable
 private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
