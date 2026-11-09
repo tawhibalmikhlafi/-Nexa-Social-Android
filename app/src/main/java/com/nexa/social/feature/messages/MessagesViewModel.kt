@@ -80,15 +80,10 @@ class MessagesViewModel(
 
     fun deleteConversationsForMe(ids: Set<String>, onComplete: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            val all = conversations.value
-            var success = true
-            ids.forEach { id ->
-                val conversation = all.firstOrNull { it.id == id }
-                conversation?.messages.orEmpty().forEach { message ->
-                    val result = runCatching { messageRepository.deleteMessageForMe(id, message.id) }.getOrNull()
-                    if (result !is Resource.Success) success = false
-                }
+            val results = ids.map { id ->
+                runCatching { messageRepository.deleteConversationForMe(id) }.getOrNull() is Resource.Success
             }
+            val success = results.isNotEmpty() && results.all { it }
             if (success) {
                 val hidden = preferenceStorage.hiddenConversationIds.first()
                 preferenceStorage.setHiddenConversationIds(hidden + ids)
