@@ -1103,6 +1103,9 @@ private fun UserAdminCard(
                             else -> MaterialTheme.colorScheme.primary
                         }
                     )
+                    if (user.verified) {
+                        Text("✓ موثق من Nexa", style = MaterialTheme.typography.labelSmall, color = Color(0xFF8B68F5))
+                    }
                 }
                 IconButton(onClick = onCardClick) {
                     Icon(Icons.Default.AdminPanelSettings, contentDescription = "تفاصيل الحساب")
