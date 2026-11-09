@@ -39,6 +39,7 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -124,6 +125,9 @@ fun MessagesScreen(
     val noteSaving by viewModel.noteSaving.collectAsStateWithLifecycle()
     val noteError by viewModel.noteError.collectAsStateWithLifecycle()
     var showNotesEditor by rememberSaveable { mutableStateOf(false) }
+    var selectionMode by rememberSaveable { mutableStateOf(false) }
+    var selectedConversationIds by rememberSaveable { mutableStateOf(setOf<String>()) }
+    var bulkActionMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var noteDraft by rememberSaveable { mutableStateOf("") }
     var noteVisibility by rememberSaveable { mutableStateOf("FOLLOWING") }
     var noteDuration by rememberSaveable { mutableStateOf(24) }
@@ -295,6 +299,39 @@ fun MessagesScreen(
                         onSearchClick = onSearch
                     )
                 }
+
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextButton(onClick = {
+                            selectionMode = !selectionMode
+                            selectedConversationIds = emptySet()
+                            bulkActionMessage = null
+                        }) { Text(if (selectionMode) "إلغاء التحديد" else "تحديد الدردشات") }
+                        if (selectionMode && selectedConversationIds.isNotEmpty()) {
+                            Text("${selectedConversationIds.size} محددة", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Spacer(Modifier.weight(1f))
+                            TextButton(onClick = {
+                                viewModel.archiveConversations(selectedConversationIds) { ok ->
+                                    bulkActionMessage = if (ok) "تمت أرشفة الدردشات المحددة" else "تعذرت أرشفة بعض الدردشات"
+                                    if (ok) { selectionMode = false; selectedConversationIds = emptySet() }
+                                }
+                            }) { Text("أرشفة") }
+                            TextButton(onClick = {
+                                viewModel.deleteConversationsForMe(selectedConversationIds) { ok ->
+                                    bulkActionMessage = if (ok) "حُذفت الدردشات من قائمتك" else "تعذر حذف بعض الدردشات"
+                                    if (ok) { selectionMode = false; selectedConversationIds = emptySet() }
+                                }
+                            }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+                        }
+                    }
+                    if (bulkActionMessage != null) {
+                        Text(bulkActionMessage.orEmpty(), modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    }
+                }
                 item {
                     NotesSection(
                         notes = notes,
@@ -330,7 +367,13 @@ fun MessagesScreen(
                         ChatListItem(
                             conversation = conversation,
                             presenceViewModel = presenceViewModel,
-                            onClick = { onOpenConversation(conversation.id) }
+                            selectionMode = selectionMode,
+                            selected = conversation.id in selectedConversationIds,
+                            onClick = {
+                                if (selectionMode) {
+                                    selectedConversationIds = if (conversation.id in selectedConversationIds) selectedConversationIds - conversation.id else selectedConversationIds + conversation.id
+                                } else onOpenConversation(conversation.id)
+                            }
                         )
                     }
                 }
@@ -495,7 +538,9 @@ fun NotificationBanner(
 fun ChatListItem(
     conversation: Conversation,
     presenceViewModel: PresenceViewModel,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    selectionMode: Boolean = false,
+    selected: Boolean = false
 ) {
     val participant = conversation.participant
     Row(
@@ -544,6 +589,9 @@ fun ChatListItem(
             }
         }
         
+        if (selectionMode) {
+            Checkbox(checked = selected, onCheckedChange = { onClick() })
+        }
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = TimeUtils.relativeFromNow(conversation.lastTimestamp),
