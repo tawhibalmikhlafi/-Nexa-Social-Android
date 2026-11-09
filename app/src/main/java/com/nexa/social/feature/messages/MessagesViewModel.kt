@@ -78,12 +78,27 @@ class MessagesViewModel(
         }
     }
 
-    fun deleteConversationsForMe(ids: Set<String>, onComplete: (Boolean) -> Unit = {}) {
+    fun deleteConversations(ids: Set<String>, forEveryone: Boolean, onComplete: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            val results = ids.map { id ->
-                runCatching { messageRepository.deleteConversationForMe(id) }.getOrNull() is Resource.Success
+            val snapshot = conversations.value
+            var success = ids.isNotEmpty()
+            for (id in ids) {
+                val conversation = snapshot.firstOrNull { it.id == id }
+                if (conversation == null) {
+                    success = false
+                    continue
+                }
+                for (message in conversation.messages) {
+                    val result = runCatching {
+                        if (forEveryone && message.isMine) {
+                            messageRepository.deleteMessageForEveryone(id, message.id)
+                        } else {
+                            messageRepository.deleteMessageForMe(id, message.id)
+                        }
+                    }.getOrNull()
+                    if (result !is Resource.Success) success = false
+                }
             }
-            val success = results.isNotEmpty() && results.all { it }
             if (success) {
                 val hidden = preferenceStorage.hiddenConversationIds.first()
                 preferenceStorage.setHiddenConversationIds(hidden + ids)
