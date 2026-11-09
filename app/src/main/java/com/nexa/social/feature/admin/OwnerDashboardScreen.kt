@@ -443,10 +443,12 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                     message = "فشل حفظ إعدادات الإعلانات: ${admin?.lastError ?: "لم تؤكد قاعدة البيانات العملية"}"
                                 } else {
                                     val persisted = admin?.getSettings()
-                                    val verified = persisted?.get("ads_enabled")?.takeUnless { it.isJsonNull }?.asBoolean == enabled &&
-                                        persisted.get("ads_placement")?.takeUnless { it.isJsonNull }?.asString == placement &&
-                                        persisted.get("ads_duration_seconds")?.takeUnless { it.isJsonNull }?.asInt == duration &&
-                                        persisted.get("ads_frequency_per_session")?.takeUnless { it.isJsonNull }?.asInt == frequency
+                                    val verified = persisted?.let { saved ->
+                                        saved.get("ads_enabled")?.takeUnless { it.isJsonNull }?.asBoolean == enabled &&
+                                            saved.get("ads_placement")?.takeUnless { it.isJsonNull }?.asString == placement &&
+                                            saved.get("ads_duration_seconds")?.takeUnless { it.isJsonNull }?.asInt == duration &&
+                                            saved.get("ads_frequency_per_session")?.takeUnless { it.isJsonNull }?.asInt == frequency
+                                    } == true
                                     if (verified) {
                                         settings = persisted
                                         message = "تم الحفظ بنجاح، وتم التحقق من الإعدادات المحفوظة في Supabase"
