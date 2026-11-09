@@ -684,7 +684,8 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                 }
                             }
                         }
-                    }                }
+                    }
+                }
                 if (tab == 7) {
                     OwnerAdsManagementPanel(
                         ads = ads,
