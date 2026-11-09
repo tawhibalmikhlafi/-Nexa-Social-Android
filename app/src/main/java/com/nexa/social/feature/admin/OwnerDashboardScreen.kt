@@ -1204,7 +1204,15 @@ private fun UserAdminCard(
                         }
                     )
                     if (user.verified) {
-                        Text("✓ موثق من Nexa", style = MaterialTheme.typography.labelSmall, color = Color(0xFF8B68F5))
+                        Surface(
+                            modifier = Modifier.size(19.dp),
+                            color = Color(0xFF1877F2),
+                            shape = CircleShape
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text("✓", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                        }
                     }
                 }
                 IconButton(onClick = onCardClick) {
