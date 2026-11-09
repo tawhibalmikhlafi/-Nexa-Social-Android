@@ -1035,6 +1035,7 @@ private fun UserAdminCard(
     onBlockClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
+    val clipboard = LocalClipboardManager.current
     val visibleName = user.displayName.trim().ifBlank {
         user.username.trim().ifBlank { user.email.substringBefore("@").ifBlank { "مستخدم Nexa" } }
     }
@@ -1086,7 +1087,7 @@ private fun UserAdminCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("البريد: ${user.email.ifBlank { "غير متوفر" }}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
                 if (user.email.isNotBlank()) {
-                    IconButton(onClick = { LocalClipboardManager.current.setText(AnnotatedString(user.email)) }, modifier = Modifier.size(34.dp)) {
+                    IconButton(onClick = { clipboard.setText(AnnotatedString(user.email)) }, modifier = Modifier.size(34.dp)) {
                         Icon(Icons.Default.ContentCopy, contentDescription = "نسخ البريد", tint = Color(0xFF9B72FF), modifier = Modifier.size(17.dp))
                     }
                 }
