@@ -6,6 +6,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import com.nexa.social.core.common.Resource
 import com.nexa.social.data.media.MediaBucket
+import com.nexa.social.ui.components.NexaVerifiedBadge
 import java.util.UUID
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -804,16 +805,14 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                     modifier = Modifier.size(88.dp).clip(CircleShape),
                                     contentScale = ContentScale.Crop
                                 )
-                                Text(displayName.ifBlank { "مستخدم Nexa" }, style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                    Text(displayName.ifBlank { "مستخدم Nexa" }, style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                                    if (user.verified) NexaVerifiedBadge(size = 20.dp)
+                                }
                                 Text("@${username.ifBlank { "بدون اسم مستخدم" }}", color = Color(0xFFC9BDFB))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(
                                         when(accountStatus) { "BANNED" -> "محظور"; "SUSPENDED" -> "مقيّد"; "ACTIVE" -> "نشط"; else -> accountStatus },
-                                        color = Color.White,
-                                        modifier = Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF493A76)).padding(horizontal = 12.dp, vertical = 6.dp)
-                                    )
-                                    Text(
-                                        if (user.verified) "✓ موثق من Nexa" else "غير موثق",
                                         color = Color.White,
                                         modifier = Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF493A76)).padding(horizontal = 12.dp, vertical = 6.dp)
                                     )
@@ -1204,15 +1203,7 @@ private fun UserAdminCard(
                         }
                     )
                     if (user.verified) {
-                        Surface(
-                            modifier = Modifier.size(19.dp),
-                            color = Color(0xFF1877F2),
-                            shape = CircleShape
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text("✓", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-                            }
-                        }
+                        NexaVerifiedBadge(size = 19.dp)
                     }
                 }
                 IconButton(onClick = onCardClick) {
