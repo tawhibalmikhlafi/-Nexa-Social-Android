@@ -69,9 +69,13 @@ class SupabaseMessageDataSource(
                 val userA = row.string("user_a") ?: return@forEach
                 val userB = row.string("user_b") ?: return@forEach
                 val otherUid = if (userA == uid) userB else userA
-                val participantRow = row.getAsJsonObject(
-                    if (userA == uid) "participant_b" else "participant_a"
-                )
+                // PostgREST embeds can be JSON null when the related profile is
+                // missing or hidden by RLS. JsonObject.getAsJsonObject(key) casts
+                // JsonNull and crashes the conversation collector on the main flow.
+                val participantKey = if (userA == uid) "participant_b" else "participant_a"
+                val participantRow = row.get(participantKey)
+                    ?.takeIf { it.isJsonObject && !it.isJsonNull }
+                    ?.asJsonObject
                 val participant = participantRow?.let { profile ->
                     val username = profile.string("username") ?: "user"
                     UserSummary(
