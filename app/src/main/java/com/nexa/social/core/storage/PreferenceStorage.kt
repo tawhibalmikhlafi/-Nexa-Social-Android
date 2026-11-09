@@ -65,6 +65,7 @@ class PreferenceStorage(private val context: Context) {
         val pinnedConversationIds = stringSetPreferencesKey("pinned_conversation_ids")
         val mutedConversationIds = stringSetPreferencesKey("muted_conversation_ids")
         val archivedConversationIds = stringSetPreferencesKey("archived_conversation_ids")
+        val hiddenConversationIds = stringSetPreferencesKey("hidden_conversation_ids")
         val rememberMe = booleanPreferencesKey("remember_me")
         val language = stringPreferencesKey("language")
         val notificationsEnabled = booleanPreferencesKey("notifications_enabled")
@@ -155,6 +156,9 @@ class PreferenceStorage(private val context: Context) {
 
     val archivedConversationIds: Flow<Set<String>> =
         preferences.map { it[Keys.archivedConversationIds] ?: emptySet() }
+
+    val hiddenConversationIds: Flow<Set<String>> =
+        preferences.map { it[Keys.hiddenConversationIds] ?: emptySet() }
 
     val rememberMe: Flow<Boolean> = preferences.map { it[Keys.rememberMe] ?: true }
 
@@ -313,6 +317,10 @@ class PreferenceStorage(private val context: Context) {
 
     suspend fun setArchivedConversationIds(ids: Set<String>) {
         context.nexaDataStore.edit { it[Keys.archivedConversationIds] = ids }
+    }
+
+    suspend fun setHiddenConversationIds(ids: Set<String>) {
+        context.nexaDataStore.edit { it[Keys.hiddenConversationIds] = ids }
     }
 
     suspend fun setFeedType(type: FeedType) {
