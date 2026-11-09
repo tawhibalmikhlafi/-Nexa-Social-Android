@@ -71,9 +71,9 @@ class MessagesViewModel(
 
     fun setSearch(value: String) { _search.value = value }
 
-    fun archiveConversations(ids: Set<String>, onComplete: (Boolean) -> Unit = {}) {
+    fun archiveConversations(ids: Set<String>, archived: Boolean = true, onComplete: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            val results = ids.map { id -> runCatching { messageRepository.setArchived(id, true) }.isSuccess }
+            val results = ids.map { id -> runCatching { messageRepository.setArchived(id, archived) }.isSuccess }
             onComplete(results.isNotEmpty() && results.all { it })
         }
     }
