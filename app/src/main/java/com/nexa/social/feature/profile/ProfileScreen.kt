@@ -236,8 +236,7 @@ fun ProfileScreen(
     var ownerBadgeVerified by remember(current?.id) { mutableStateOf(false) }
     LaunchedEffect(current?.id, ownerAdminDataSource) {
         ownerBadgeVerified = current?.let { profile ->
-            profile.id == "b81639ff-c669-416e-8a58-452710658bd2" &&
-                ownerAdminDataSource?.isFounderVerified(profile.id) == true
+            ownerAdminDataSource?.isUserVerified(profile.id) == true
         } ?: false
     }
     val showOwnerTools = viewModel.isSelf || isOwnProfile
@@ -802,9 +801,9 @@ fun ProfileScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                if (current.id == "b81639ff-c669-416e-8a58-452710658bd2") {
+                                if (ownerBadgeVerified) {
                                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(50)) {
-                                        Text("✓ مؤسس Nexa", modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                        Text("✓ موثق من Nexa", modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                                     }
                                 }
                             }
