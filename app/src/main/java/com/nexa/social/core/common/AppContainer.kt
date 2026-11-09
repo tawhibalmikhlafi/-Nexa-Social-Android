@@ -118,6 +118,7 @@ interface AppContainer {
     val spaceRepository: SpaceRepository
     val clipRepository: ClipRepository
     val messageRepository: MessageRepository
+    val mediaStorage: MediaStorage?
     val ownerAdminDataSource: SupabaseOwnerAdminDataSource?
     val profileExperienceDataSource: SupabaseProfileExperienceDataSource?
     val notesDataSource: SupabaseNotesDataSource?
@@ -185,7 +186,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
     private val supabaseConfig = SupabaseConfig.fromBuild()
     private val supabaseHttp = if (supabaseConfig.configured) SupabaseHttp(supabaseConfig) else null
     private val supabaseTokens = supabaseHttp?.let { SupabaseTokenStore(appContext) }
-    private val mediaStorage: MediaStorage? =
+    override val mediaStorage: MediaStorage? =
         if (supabaseHttp != null && supabaseTokens != null) {
             SupabaseStorageDataSource(
                 context = appContext,
