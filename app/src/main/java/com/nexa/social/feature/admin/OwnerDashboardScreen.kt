@@ -53,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -151,9 +152,21 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) { refresh() }
 
     Scaffold(
+        containerColor = Color(0xFF090B16),
         topBar = {
             TopAppBar(
-                title = { Text("إدارة Nexa • لوحة المالك") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF111426),
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color(0xFFD8CCFF),
+                    actionIconContentColor = Color(0xFFD8CCFF)
+                ),
+                title = {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("NEXA CONTROL", style = MaterialTheme.typography.labelSmall, color = Color(0xFFB7A3FF))
+                        Text("لوحة المالك", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
@@ -163,7 +176,10 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
             )
         }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+        Column(
+            Modifier.fillMaxSize().padding(padding).background(Color(0xFF090B16)).padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             if (loading && allowed == null) {
                 CircularProgressIndicator()
             } else if (allowed != true) {
@@ -171,19 +187,36 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 Text("غير مصرح بالدخول", style = MaterialTheme.typography.titleLarge)
                 Text(message ?: "هذه المساحة مخصصة لمالك Nexa فقط. تحقق من تسجيل الدخول بحساب المالك.")
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatCard("المستخدمون", stats?.get("users_total")?.asString ?: "—", Modifier.weight(1f))
-                    StatCard("تسجيلات اليوم", stats?.get("users_today")?.asString ?: "—", Modifier.weight(1f))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF171B30))
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text("مركز إدارة Nexa", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                                Text("نظرة عامة على المنصة", color = Color(0xFF9BA3BF), style = MaterialTheme.typography.labelSmall)
+                            }
+                            Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = Color(0xFF9B72FF), modifier = Modifier.size(28.dp))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatCard("المستخدمون", stats?.get("users_total")?.asString ?: "—", Modifier.weight(1f))
+                            StatCard("تسجيلات اليوم", stats?.get("users_today")?.asString ?: "—", Modifier.weight(1f))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatCard("المنشورات", stats?.get("posts_total")?.asString ?: "—", Modifier.weight(1f))
+                            StatCard("البلاغات المفتوحة", stats?.get("reports_open")?.asString ?: "—", Modifier.weight(1f))
+                        }
+                    }
                 }
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatCard("المنشورات", stats?.get("posts_total")?.asString ?: "—", Modifier.weight(1f))
-                    StatCard("البلاغات المفتوحة", stats?.get("reports_open")?.asString ?: "—", Modifier.weight(1f))
-                }
-                Spacer(Modifier.height(12.dp))
-                ScrollableTabRow(selectedTabIndex = tab) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     listOf("المستخدمون", "البلاغات", "الإعلانات الرسمية", "المنشورات الرسمية", "إعدادات المنصة", "الدعم الفني", "إدارة المحتوى", "الحملات الإعلانية", "الصلاحيات والأمان", "سجل العمليات").forEachIndexed { i, label ->
-                        Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
+                        FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(label, maxLines = 1) }, shape = RoundedCornerShape(14.dp))
                     }
                 }
                 when (tab) {
@@ -593,7 +626,15 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         OutlinedButton(onClick = { scope.launch { auditRows = admin?.listAudit().orEmpty() } }, modifier = Modifier.fillMaxWidth()) { Text("تحديث السجل") }
                     }
                 }
-                message?.let { status -> Text(status, color = if (status.startsWith("تم الحفظ")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
+                message?.let { status ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF191D32))
+                    ) {
+                        Text(status, color = if (status.startsWith("تم")) Color(0xFF8FE0B0) else Color(0xFFFF9C9C), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
         }
     }
@@ -962,16 +1003,16 @@ private fun AdminUserMetric(label: String, value: String, modifier: Modifier = M
 }
 
 @Composable
-private fun AdminUserInfoRow(label: String, value: String, copyable: Boolean = false) {
+private fun AdminUserInfoRow(label: String, value: String, copyable: Boolean = true) {
     val clipboard = LocalClipboardManager.current
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value, style = MaterialTheme.typography.bodyMedium)
         }
-        if (copyable) {
+        if (copyable && value.isNotBlank() && value != "غير متوفر") {
             IconButton(onClick = { clipboard.setText(AnnotatedString(value)) }) {
-                Icon(Icons.Default.ContentCopy, contentDescription = "نسخ")
+                Icon(Icons.Default.ContentCopy, contentDescription = "نسخ $label", tint = Color(0xFF9B72FF))
             }
         }
     }
@@ -1042,10 +1083,18 @@ private fun UserAdminCard(
                 "المنشورات: ${user.postsCount} • المتابعون: ${user.followersCount} • يتابع: ${user.followingCount}",
                 style = MaterialTheme.typography.bodySmall
             )
-            Text("التسجيل: ${user.createdAt}", style = MaterialTheme.typography.bodySmall)
-            Text("آخر دخول: ${user.lastSignInAt.ifBlank { "غير متوفر" }}", style = MaterialTheme.typography.labelSmall)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("البريد: ${user.email.ifBlank { "غير متوفر" }}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                if (user.email.isNotBlank()) {
+                    IconButton(onClick = { LocalClipboardManager.current.setText(AnnotatedString(user.email)) }, modifier = Modifier.size(34.dp)) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = "نسخ البريد", tint = Color(0xFF9B72FF), modifier = Modifier.size(17.dp))
+                    }
+                }
+            }
+            Text("التسجيل: ${formatAdminDate(user.createdAt)}", style = MaterialTheme.typography.bodySmall)
+            Text("آخر دخول: ${formatAdminDate(user.lastSignInAt).ifBlank { "غير متوفر" }}", style = MaterialTheme.typography.labelSmall)
             if (user.restrictionExpiresAt.isNotBlank()) {
-                Text("ينتهي التقييد: ${user.restrictionExpiresAt}", style = MaterialTheme.typography.labelSmall)
+                Text("ينتهي التقييد: ${formatAdminDate(user.restrictionExpiresAt)}", style = MaterialTheme.typography.labelSmall)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1115,25 +1164,29 @@ private fun OwnerAdsSettingsPanel(
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             OwnerSettingRow("السماح بعرض الإعلانات", enabled) { enabled = it }
             Text("مكان ظهور الإعلان", style = MaterialTheme.typography.titleMedium)
-            listOf(
-                "FEED_TOP" to "أعلى الصفحة الرئيسية",
-                "FEED_INLINE" to "داخل المنشورات",
-                "STORIES_BETWEEN" to "بين القصص",
-                "PROFILE_FEED" to "داخل الملف الشخصي"
-            ).forEach { (value, label) ->
-                FilterChip(selected = placement == value, onClick = { placement = value }, label = { Text(label) })
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(
+                    listOf("FEED_TOP" to "أعلى الرئيسية", "FEED_INLINE" to "داخل المنشورات"),
+                    listOf("STORIES_BETWEEN" to "بين القصص", "PROFILE_FEED" to "الملف الشخصي")
+                ).forEach { rowItems ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        rowItems.forEach { (value, label) ->
+                            FilterChip(selected = placement == value, onClick = { placement = value }, label = { Text(label, maxLines = 1) }, modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
             }
             OutlinedTextField(
                 value = duration,
                 onValueChange = { if (it.length <= 3 && it.all(Char::isDigit)) duration = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("مدة ظهور الإعلان بالثواني (5–120)") },
+                modifier = Modifier.fillMaxWidth().height(58.dp),
+                label = { Text("مدة الإعلان بالثواني (5–120)") },
                 singleLine = true
             )
             OutlinedTextField(
                 value = frequency,
                 onValueChange = { if (it.length <= 2 && it.all(Char::isDigit)) frequency = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(58.dp),
                 label = { Text("مرات الظهور لكل جلسة (1–10)") },
                 singleLine = true
             )
