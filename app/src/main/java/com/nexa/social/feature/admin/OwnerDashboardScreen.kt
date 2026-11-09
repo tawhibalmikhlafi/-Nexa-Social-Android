@@ -197,7 +197,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                         }
                                     },
                                     onRestrictClick = {
-                                        if (ownerUserId.isNullOrBlank() || user.id != ownerUserId) {
+                                        if (!ownerUserId.isNullOrBlank() && user.id != ownerUserId) {
                                             moderationTarget = user
                                             moderationAction = if (user.status == "SUSPENDED") "RESTORE" else "RESTRICT"
                                             moderationReason = ""
@@ -211,7 +211,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                         }
                                     },
                                     onDeleteClick = {
-                                        if (ownerUserId.isNullOrBlank() || user.id != ownerUserId) confirmDelete = user
+                                        if (!ownerUserId.isNullOrBlank() && user.id != ownerUserId) confirmDelete = user
                                     }
                                 )
                             }
