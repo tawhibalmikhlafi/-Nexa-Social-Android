@@ -92,7 +92,7 @@ fun PostCard(
     }
 
     NexaCard(modifier = modifier, padding = 0) {
-        Column(modifier = Modifier.padding(NexaSpacing.lg)) {
+        Column(modifier = Modifier.padding(NexaSpacing.md)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -104,7 +104,7 @@ fun PostCard(
                 NexaAvatar(
                     displayName = authorName,
                     avatarUri = post.author.avatarUri,
-                    size = 46.dp
+                    size = 43.dp
                 )
                 Spacer(Modifier.width(NexaSpacing.md))
                 Column(modifier = Modifier.weight(1f)) {
