@@ -1,5 +1,6 @@
 package com.nexa.social.feature.admin
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -55,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.google.gson.JsonObject
 import com.nexa.social.core.ui.rememberAppContainer
@@ -789,20 +792,15 @@ private fun OwnerAdsManagementPanel(
         if(mediaType!="NONE") OutlinedTextField(mediaUrl,{mediaUrl=it},Modifier.fillMaxWidth(),label={Text("رابط الوسائط")},singleLine=true)
         OutlinedTextField(clickUrl,{clickUrl=it},Modifier.fillMaxWidth(),label={Text("رابط الفتح عند الضغط")},singleLine=true)
         if(title.isNotBlank() || body.isNotBlank() || mediaUrl.isNotBlank()) {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    Text("معاينة الإعلان قبل الحفظ",style=MaterialTheme.typography.titleMedium)
-                    Text(title.ifBlank { "عنوان الإعلان" },style=MaterialTheme.typography.titleLarge)
-                    Text(body.ifBlank { "سيظهر نص الإعلان هنا" })
-                    if(mediaType=="IMAGE" && mediaUrl.startsWith("http")) {
-                        AsyncImage(model=mediaUrl,contentDescription="معاينة صورة الإعلان",modifier=Modifier.fillMaxWidth().height(180.dp),contentScale=ContentScale.Crop)
-                    } else if(mediaType=="VIDEO" && mediaUrl.startsWith("http")) {
-                        Text("معاينة فيديو: تم تحديد رابط الفيديو، وسيظهر داخل موضع الإعلان عند عرضه للمستخدمين.",style=MaterialTheme.typography.bodySmall)
-                    }
-                    Text("الموضع: $placement • الجمهور: $audience",style=MaterialTheme.typography.labelSmall)
-                    if(clickUrl.isNotBlank()) Text("رابط الضغط: $clickUrl",style=MaterialTheme.typography.labelSmall)
-                }
-            }
+            OwnerAdPreview(
+                title = title,
+                body = body,
+                mediaUrl = mediaUrl,
+                mediaType = mediaType,
+                clickUrl = clickUrl,
+                placement = placement,
+                audience = audience
+            )
         }
         Text("مكان الظهور")
         listOf("FEED_TOP" to "أعلى الرئيسية","FEED_INLINE" to "بين المنشورات","STORIES_BETWEEN" to "بين القصص","PROFILE_FEED" to "الملف الشخصي").forEach { (v,l) ->
@@ -842,5 +840,99 @@ private fun OwnerAdsManagementPanel(
             }
         }
         OutlinedButton(onClick=onRefresh,modifier=Modifier.fillMaxWidth()) { Text("تحديث الحملات") }
+    }
+}
+
+
+@Composable
+private fun OwnerAdPreview(
+    title: String,
+    body: String,
+    mediaUrl: String,
+    mediaType: String,
+    clickUrl: String,
+    placement: String,
+    audience: String
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF171329))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFF7654D9)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.Campaign, contentDescription = null, tint = Color.White)
+                }
+                Column(
+                    modifier = Modifier.weight(1f).padding(start = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text("NEXA BUSINESS", color = Color.White, style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    Text("محتوى ترويجي", color = Color(0xFFC9BCEB), style = MaterialTheme.typography.labelSmall)
+                }
+                Text(
+                    "إعلان ممول",
+                    color = Color(0xFFE7DCFF),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Color(0xFF49366F))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+            if (mediaType == "IMAGE" && mediaUrl.startsWith("http")) {
+                AsyncImage(
+                    model = mediaUrl,
+                    contentDescription = "صورة الإعلان",
+                    modifier = Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else if (mediaType == "VIDEO" && mediaUrl.startsWith("http")) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(190.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color(0xFF30264B)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Filled.Campaign, contentDescription = null, tint = Color(0xFFE0D3FF), modifier = Modifier.size(34.dp))
+                        Text("رابط فيديو الإعلان محدد", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                        Text("معاينة التشغيل غير متاحة هنا", color = Color(0xFFC9BCEB), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(150.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color(0xFF30264B)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.Campaign, contentDescription = null, tint = Color(0xFFD9C9FF), modifier = Modifier.size(42.dp))
+                }
+            }
+            Text(title.ifBlank { "عنوان الإعلان" }, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+            Text(body.ifBlank { "سيظهر وصف الإعلان هنا" }, color = Color(0xFFE1D9EF), style = MaterialTheme.typography.bodyMedium)
+            Box(
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF7654D9)).padding(vertical = 13.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(if (clickUrl.isBlank()) "اكتشف المزيد" else "اعرف المزيد", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("موضع: $placement", color = Color(0xFFC9BCEB), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+                Text("الجمهور: $audience", color = Color(0xFFC9BCEB), style = MaterialTheme.typography.labelSmall)
+            }
+        }
     }
 }
