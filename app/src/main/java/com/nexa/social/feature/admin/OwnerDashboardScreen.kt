@@ -38,6 +38,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -101,6 +102,9 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var auditRows by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
     var contentDeleteTarget by remember { mutableStateOf<OwnerContentRow?>(null) }
     var contentDeleteReason by remember { mutableStateOf("") }
+    var selectedContentKeys by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var contentBulkDeleteConfirm by remember { mutableStateOf(false) }
+    var contentBulkDeleteReason by remember { mutableStateOf("") }
     var supportReply by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
     var announcementTitle by remember { mutableStateOf("") }
@@ -494,24 +498,63 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                     }
                     6 -> Column(Modifier.fillMaxSize()) {
                         Text("إدارة وحذف المحتوى من جميع المستخدمين", style = MaterialTheme.typography.titleMedium)
-                        Text("الحذف نهائي مع حفظ سجل تدقيق للمالك والسبب.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("الحذف نهائي من قاعدة البيانات مع حفظ سجل تدقيق. يمكن تحديد عناصر منفردة أو تحديد جميع العناصر المعروضة (حتى 200).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val allContentKeys = contentRows.map { "${it.type}:${it.id}" }.toSet()
+                        val allContentSelected = allContentKeys.isNotEmpty() && selectedContentKeys.containsAll(allContentKeys)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = allContentSelected,
+                                    onCheckedChange = { checked ->
+                                        selectedContentKeys = if (checked) allContentKeys else emptySet()
+                                    }
+                                )
+                                Text(if (allContentSelected) "إلغاء تحديد الكل" else "تحديد الكل")
+                            }
+                            Text("${selectedContentKeys.intersect(allContentKeys).size} / ${contentRows.size} محدد", style = MaterialTheme.typography.labelMedium)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = { contentBulkDeleteReason = ""; contentBulkDeleteConfirm = true },
+                                enabled = selectedContentKeys.any { it in allContentKeys },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null)
+                                Text("حذف المحدد")
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    scope.launch {
+                                        contentRows = admin?.listContent().orEmpty()
+                                        selectedContentKeys = emptySet()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) { Text("تحديث المحتوى") }
+                        }
                         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(contentRows, key = { it.type + it.id }) { item ->
+                                val contentKey = "${item.type}:${item.id}"
                                 Card(Modifier.fillMaxWidth()) {
                                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Text(item.type, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = contentKey in selectedContentKeys,
+                                                onCheckedChange = { checked ->
+                                                    selectedContentKeys = if (checked) selectedContentKeys + contentKey else selectedContentKeys - contentKey
+                                                }
+                                            )
+                                            Text(item.type, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                        }
                                         Text(item.body.ifBlank { "بدون نص" }, style = MaterialTheme.typography.bodyMedium)
                                         Text("بواسطة " + item.authorName + " • " + item.createdAt, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         OutlinedButton(onClick = { contentDeleteTarget = item; contentDeleteReason = "" }) {
                                             Icon(Icons.Default.Delete, contentDescription = null)
-                                            Text("حذف نهائي")
+                                            Text("حذف هذا المحتوى")
                                         }
                                     }
                                 }
                             }
-                        }
-                        OutlinedButton(onClick = { scope.launch { contentRows = admin?.listContent().orEmpty() } }, modifier = Modifier.fillMaxWidth()) {
-                            Text("تحديث المحتوى")
                         }
                     }
                 }
@@ -790,6 +833,48 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                 }) { Text("حذف نهائي") }
             },
             dismissButton = { TextButton(onClick = { contentDeleteTarget = null }) { Text("إلغاء") } }
+        )
+    }
+
+    if (contentBulkDeleteConfirm) {
+        val selectedItems = contentRows.filter { "${it.type}:${it.id}" in selectedContentKeys }
+        AlertDialog(
+            onDismissRequest = { contentBulkDeleteConfirm = false },
+            title = { Text("تأكيد الحذف الجماعي") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("سيتم حذف ${selectedItems.size} عنصراً نهائياً من جداول Supabase، مع حفظ سجل لكل عنصر. لا يمكن التراجع عن الحذف.")
+                    OutlinedTextField(
+                        value = contentBulkDeleteReason,
+                        onValueChange = { contentBulkDeleteReason = it.take(1000) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("سبب الحذف (مطلوب)") },
+                        minLines = 2
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = selectedItems.isNotEmpty() && contentBulkDeleteReason.isNotBlank(),
+                    onClick = {
+                        val targets = selectedItems.toList()
+                        val reason = contentBulkDeleteReason
+                        contentBulkDeleteConfirm = false
+                        scope.launch {
+                            message = "جارٍ حذف ${targets.size} عنصراً من قاعدة البيانات..."
+                            val ok = admin?.deleteContentBatch(targets, reason) == true
+                            message = if (ok) {
+                                val warning = admin?.lastError
+                                if (warning.isNullOrBlank()) "تم حذف ${targets.size} عنصراً نهائياً من قاعدة البيانات وتنظيف وسائطها" else warning
+                            } else "فشل الحذف الجماعي: ${admin?.lastError.orEmpty()}"
+                            contentRows = admin?.listContent().orEmpty()
+                            selectedContentKeys = emptySet()
+                            stats = admin?.dashboardStats()
+                        }
+                    }
+                ) { Text("حذف نهائي للجميع") }
+            },
+            dismissButton = { TextButton(onClick = { contentBulkDeleteConfirm = false }) { Text("إلغاء") } }
         )
     }
 
