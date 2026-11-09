@@ -311,7 +311,7 @@ class MessageRepositoryImpl(
             return if (deleted) Resource.Success(Unit) else Resource.Failure(FailureReason.NETWORK)
         }
         val existed = _conversations.value.any { it.id == conversationId }
-        if (!existed) return Resource.Failure(FailureReason.NOT_FOUND)
+        if (!existed) return Resource.Failure(FailureReason.GENERIC)
         _conversations.value = _conversations.value.filterNot { it.id == conversationId }
         persist()
         return Resource.Success(Unit)
