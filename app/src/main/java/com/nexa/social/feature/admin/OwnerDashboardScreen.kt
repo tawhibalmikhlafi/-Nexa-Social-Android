@@ -62,6 +62,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material3.Surface
+import androidx.compose.material3.HorizontalDivider
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import com.google.gson.JsonObject
 import com.nexa.social.core.ui.rememberAppContainer
 import com.nexa.social.data.remote.OwnerReportRow
@@ -547,45 +554,198 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
 
     selectedUser?.let { user ->
         val profile = selectedUserDetails?.getAsJsonObject("profile")
-        AlertDialog(
+        val displayName = profile?.get("display_name")?.takeUnless { it.isJsonNull }?.asString
+            ?: user.displayName.ifBlank { user.username.ifBlank { user.email.substringBefore("@") } }
+        val username = profile?.get("username")?.takeUnless { it.isJsonNull }?.asString ?: user.username
+        val email = selectedUserDetails?.get("email")?.takeUnless { it.isJsonNull }?.asString ?: user.email
+        val createdAt = selectedUserDetails?.get("created_at")?.takeUnless { it.isJsonNull }?.asString ?: user.createdAt
+        val lastSignIn = selectedUserDetails?.get("last_sign_in_at")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+        val accountStatus = profile?.get("account_status")?.takeUnless { it.isJsonNull }?.asString ?: user.status
+        val postsCount = selectedUserDetails?.get("posts_count")?.takeUnless { it.isJsonNull }?.asString ?: user.postsCount.toString()
+        val followersCount = selectedUserDetails?.get("followers_count")?.takeUnless { it.isJsonNull }?.asString ?: user.followersCount.toString()
+        val followingCount = selectedUserDetails?.get("following_count")?.takeUnless { it.isJsonNull }?.asString ?: user.followingCount.toString()
+        Dialog(
             onDismissRequest = { selectedUser = null; selectedUserDetails = null },
-            title = { Text("تفاصيل المستخدم") },
-            text = {
-                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (userDetailsLoading) CircularProgressIndicator()
-                    Text("الاسم: ${profile?.get("display_name")?.takeUnless { it.isJsonNull }?.asString ?: user.displayName}")
-                    Text("اسم المستخدم: @${profile?.get("username")?.takeUnless { it.isJsonNull }?.asString ?: user.username}")
-                    Text("البريد: ${selectedUserDetails?.get("email")?.takeUnless { it.isJsonNull }?.asString ?: user.email}")
-                    Text("معرّف الحساب: ${user.id}")
-                    Text("تاريخ التسجيل: ${selectedUserDetails?.get("created_at")?.takeUnless { it.isJsonNull }?.asString ?: user.createdAt}")
-                    Text("آخر تسجيل دخول: ${selectedUserDetails?.get("last_sign_in_at")?.takeUnless { it.isJsonNull }?.asString ?: "غير متوفر"}")
-                    Text("الحالة: ${when(profile?.get("account_status")?.takeUnless { it.isJsonNull }?.asString ?: user.status) { "BANNED" -> "محظور"; "SUSPENDED" -> "مقيّد"; "ACTIVE" -> "نشط"; else -> user.status }}")
-                    Text("التوثيق: ${if (user.verified) "موثق" else "غير موثق"}")
-                    Text("المنشورات: ${selectedUserDetails?.get("posts_count")?.asString ?: "—"}")
-                    Text("المتابعون: ${selectedUserDetails?.get("followers_count")?.asString ?: "—"}")
-                    Text("يتابع: ${selectedUserDetails?.get("following_count")?.asString ?: "—"}")
-                    if (moderationHistory.isNotEmpty()) {
-                        Text("سجل إجراءات الإدارة", style = MaterialTheme.typography.titleMedium)
-                        moderationHistory.forEach { entry ->
-                            Text("${entry.get("action")?.asString ?: ""} • ${entry.get("reason")?.asString ?: ""} • ${entry.get("created_at")?.asString ?: ""}")
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text("ملف المستخدم") },
+                            navigationIcon = {
+                                IconButton(onClick = { selectedUser = null; selectedUserDetails = null }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
+                                }
+                            },
+                            actions = {
+                                IconButton(onClick = {
+                                    userDetailsLoading = true
+                                    scope.launch {
+                                        selectedUserDetails = admin?.getUserDetails(user.id)
+                                        moderationHistory = admin?.moderationHistory(user.id).orEmpty()
+                                        userDetailsLoading = false
+                                    }
+                                }) { Icon(Icons.Default.Refresh, contentDescription = "تحديث التفاصيل") }
+                            }
+                        )
+                    }
+                ) { detailPadding ->
+                    Column(
+                        Modifier.fillMaxSize().padding(detailPadding).verticalScroll(rememberScrollState()).padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1838))
+                        ) {
+                            Column(
+                                Modifier.fillMaxWidth().padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                AsyncImage(
+                                    model = profile?.get("avatar_url")?.takeUnless { it.isJsonNull }?.asString
+                                        ?.takeIf { it.isNotBlank() } ?: user.avatarUrl.takeIf { it.isNotBlank() },
+                                    contentDescription = "الصورة الشخصية",
+                                    modifier = Modifier.size(88.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Text(displayName.ifBlank { "مستخدم Nexa" }, style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                                Text("@${username.ifBlank { "بدون اسم مستخدم" }}", color = Color(0xFFC9BDFB))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    androidx.compose.material3.AssistChip(
+                                        onClick = {},
+                                        label = { Text(when(accountStatus) { "BANNED" -> "محظور"; "SUSPENDED" -> "مقيّد"; "ACTIVE" -> "نشط"; else -> accountStatus }) }
+                                    )
+                                    androidx.compose.material3.AssistChip(
+                                        onClick = {},
+                                        label = { Text(if (user.verified) "موثق" else "غير موثق") }
+                                    )
+                                }
+                            }
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AdminUserMetric("المنشورات", postsCount, Modifier.weight(1f))
+                            AdminUserMetric("المتابعون", followersCount, Modifier.weight(1f))
+                            AdminUserMetric("يتابع", followingCount, Modifier.weight(1f))
+                        }
+
+                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("معلومات الحساب", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                AdminUserInfoRow("البريد الإلكتروني", email.ifBlank { "غير متوفر" })
+                                HorizontalDivider()
+                                AdminUserInfoRow("اسم المستخدم", username.ifBlank { "غير متوفر" })
+                                HorizontalDivider()
+                                AdminUserInfoRow("معرّف الحساب", user.id, copyable = true)
+                                HorizontalDivider()
+                                AdminUserInfoRow("تاريخ التسجيل", formatAdminDate(createdAt))
+                                HorizontalDivider()
+                                AdminUserInfoRow("آخر تسجيل دخول", formatAdminDate(lastSignIn).ifBlank { "غير متوفر" })
+                                if (user.restrictionExpiresAt.isNotBlank()) {
+                                    HorizontalDivider()
+                                    AdminUserInfoRow("انتهاء التقييد", formatAdminDate(user.restrictionExpiresAt))
+                                }
+                            }
+                        }
+
+                        val bio = profile?.get("bio")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                        val city = profile?.get("city")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                        val origin = profile?.get("place_of_origin")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                        val residence = profile?.get("current_residence")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                        val birthDate = profile?.get("birth_date")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                        val website = profile?.get("website")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                        val skills = profile?.get("skills")?.takeIf { it.isJsonArray }?.asJsonArray?.joinToString("، ") { it.asString }.orEmpty()
+                        val hobbies = profile?.get("hobbies")?.takeIf { it.isJsonArray }?.asJsonArray?.joinToString("، ") { it.asString }.orEmpty()
+                        if (listOf(bio, city, origin, residence, birthDate, website, skills, hobbies).any { it.isNotBlank() }) {
+                            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("المعلومات الشخصية", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                    if (bio.isNotBlank()) AdminUserInfoRow("النبذة", bio)
+                                    if (city.isNotBlank()) AdminUserInfoRow("المدينة", city)
+                                    if (origin.isNotBlank()) AdminUserInfoRow("مكان المنشأ", origin)
+                                    if (residence.isNotBlank()) AdminUserInfoRow("مكان الإقامة", residence)
+                                    if (birthDate.isNotBlank()) AdminUserInfoRow("تاريخ الميلاد", formatAdminDate(birthDate))
+                                    if (website.isNotBlank()) AdminUserInfoRow("الموقع", website)
+                                    if (skills.isNotBlank()) AdminUserInfoRow("المهارات", skills)
+                                    if (hobbies.isNotBlank()) AdminUserInfoRow("الهوايات", hobbies)
+                                }
+                            }
+                        }
+
+                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("إدارة الحساب", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                Text("كل إجراء يُرسل إلى خدمة الإدارة المحمية في Supabase، ويُطلب تأكيده قبل التنفيذ.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Button(
+                                    onClick = {
+                                        moderationTarget = user
+                                        moderationAction = if (accountStatus == "SUSPENDED") "RESTORE" else "RESTRICT"
+                                        moderationReason = ""
+                                        selectedUser = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text(if (accountStatus == "SUSPENDED") "إلغاء التقييد" else "تقييد الحساب") }
+                                OutlinedButton(
+                                    onClick = {
+                                        moderationTarget = user
+                                        moderationAction = if (accountStatus == "BANNED") "RESTORE" else "BAN"
+                                        moderationReason = ""
+                                        selectedUser = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text(if (accountStatus == "BANNED") "إلغاء الحظر" else "حظر الحساب") }
+                                OutlinedButton(
+                                    onClick = {
+                                        if (!ownerUserId.isNullOrBlank() && user.id != ownerUserId) {
+                                            confirmDelete = user
+                                            selectedUser = null
+                                        } else {
+                                            message = "لا يمكن حذف حساب المالك أو تنفيذ الإجراء دون التحقق من هويته."
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !ownerUserId.isNullOrBlank() && user.id != ownerUserId
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = null)
+                                    Text("حذف الحساب نهائياً")
+                                }
+                            }
+                        }
+
+                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("سجل إجراءات الإدارة", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                if (userDetailsLoading) {
+                                    CircularProgressIndicator()
+                                } else if (moderationHistory.isEmpty()) {
+                                    Text("لا توجد إجراءات إدارية مسجلة لهذا الحساب.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                } else {
+                                    moderationHistory.forEach { entry ->
+                                        val action = entry.get("action")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                                        val reason = entry.get("reason")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                                        val at = entry.get("created_at")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                                        Text(action.ifBlank { "إجراء إداري" }, style = MaterialTheme.typography.titleSmall)
+                                        if (reason.isNotBlank()) Text("السبب: $reason", style = MaterialTheme.typography.bodySmall)
+                                        Text(formatAdminDate(at), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        if (entry != moderationHistory.last()) HorizontalDivider()
+                                    }
+                                }
+                            }
+                        }
+                        if (userDetailsLoading) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { CircularProgressIndicator() }
                         }
                     }
-                    profile?.get("bio")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("النبذة: $it") }
-                    profile?.get("city")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("المدينة: $it") }
-                    profile?.get("place_of_origin")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("مكان المنشأ: $it") }
-                    profile?.get("current_residence")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("مكان الإقامة: $it") }
-                    profile?.get("birth_date")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("تاريخ الميلاد: $it") }
-                    profile?.get("website")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }?.let { Text("الموقع: $it") }
-                    profile?.get("skills")?.takeIf { it.isJsonArray }?.asJsonArray?.takeIf { it.size() > 0 }?.let { values ->
-                        Text("المهارات: " + values.joinToString("، ") { it.asString })
-                    }
-                    profile?.get("hobbies")?.takeIf { it.isJsonArray }?.asJsonArray?.takeIf { it.size() > 0 }?.let { values ->
-                        Text("الهوايات: " + values.joinToString("، ") { it.asString })
-                    }
                 }
-            },
-            confirmButton = { TextButton(onClick = { selectedUser = null; selectedUserDetails = null }) { Text("إغلاق") } }
-        )
+            }
+        }
     }
 
     contentDeleteTarget?.let { item ->
@@ -690,6 +850,40 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
             dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("إلغاء") } }
         )
     }
+}
+
+
+
+@Composable
+private fun AdminUserMetric(label: String, value: String, modifier: Modifier = Modifier) {
+    Card(modifier = modifier, shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(value, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun AdminUserInfoRow(label: String, value: String, copyable: Boolean = false) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodyMedium)
+        }
+        if (copyable) {
+            IconButton(onClick = { /* copied through Android clipboard action is intentionally not simulated */ }) {
+                Icon(Icons.Default.AdminPanelSettings, contentDescription = "معرّف الحساب")
+            }
+        }
+    }
+}
+
+private fun formatAdminDate(value: String): String {
+    if (value.isBlank()) return ""
+    return runCatching {
+        OffsetDateTime.parse(value).format(DateTimeFormatter.ofPattern("dd MMM yyyy • HH:mm", Locale("ar")))
+    }.getOrElse { value }
 }
 
 
