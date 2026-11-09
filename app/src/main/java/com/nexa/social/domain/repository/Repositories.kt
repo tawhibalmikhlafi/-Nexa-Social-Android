@@ -333,6 +333,9 @@ interface MessageRepository {
     suspend fun deleteMessageForMe(conversationId: String, messageId: String): Resource<Unit> =
         Resource.Failure(FailureReason.NOT_CONFIGURED)
 
+    suspend fun deleteConversationForMe(conversationId: String): Resource<Unit> =
+        Resource.Failure(FailureReason.NOT_CONFIGURED)
+
     suspend fun deleteMessageForEveryone(
         conversationId: String,
         messageId: String,
