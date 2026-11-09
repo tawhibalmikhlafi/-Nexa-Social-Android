@@ -323,8 +323,9 @@ private fun CompactIconButton(
             .size(42.dp)
             .clip(RoundedCornerShape(15.dp))
             .background(
-                if (emphasized) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f)
+                if (emphasized) androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(Color(0xFF7546F6), Color(0xFFB45CFF), Color(0xFF4D6BFF))
+                ) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f)
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -448,7 +449,7 @@ private fun StoryTray(
 private fun CreateStoryBubble(onClick: () -> Unit) {
     Column(
         modifier = Modifier
-            .width(78.dp)
+            .width(76.dp)
             .clip(RoundedCornerShape(NexaRadius.chip))
             .clickable(onClick = onClick)
             .padding(vertical = NexaSpacing.xs),
@@ -456,7 +457,7 @@ private fun CreateStoryBubble(onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(72.dp)
+                .size(68.dp)
                 .clip(CircleShape)
                 .background(
                     androidx.compose.ui.graphics.Brush.sweepGradient(
@@ -592,7 +593,7 @@ private fun CreatePostCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
+                        .size(44.dp)
                         .clip(CircleShape)
                         .background(
                             androidx.compose.ui.graphics.Brush.linearGradient(
@@ -623,7 +624,7 @@ private fun CreatePostCard(
                                 MaterialTheme.colorScheme.outline.copy(alpha = 0.18f),
                                 RoundedCornerShape(24.dp)
                             )
-                            .padding(horizontal = NexaSpacing.lg, vertical = 13.dp),
+                            .padding(horizontal = NexaSpacing.lg, vertical = 11.dp),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
