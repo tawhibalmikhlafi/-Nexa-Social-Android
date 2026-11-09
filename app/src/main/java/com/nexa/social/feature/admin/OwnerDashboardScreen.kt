@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AlertDialog
@@ -62,6 +63,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.Surface
@@ -618,13 +621,15 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                 Text(displayName.ifBlank { "مستخدم Nexa" }, style = MaterialTheme.typography.headlineSmall, color = Color.White)
                                 Text("@${username.ifBlank { "بدون اسم مستخدم" }}", color = Color(0xFFC9BDFB))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    androidx.compose.material3.AssistChip(
-                                        onClick = {},
-                                        label = { Text(when(accountStatus) { "BANNED" -> "محظور"; "SUSPENDED" -> "مقيّد"; "ACTIVE" -> "نشط"; else -> accountStatus }) }
+                                    Text(
+                                        when(accountStatus) { "BANNED" -> "محظور"; "SUSPENDED" -> "مقيّد"; "ACTIVE" -> "نشط"; else -> accountStatus },
+                                        color = Color.White,
+                                        modifier = Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF493A76)).padding(horizontal = 12.dp, vertical = 6.dp)
                                     )
-                                    androidx.compose.material3.AssistChip(
-                                        onClick = {},
-                                        label = { Text(if (user.verified) "موثق" else "غير موثق") }
+                                    Text(
+                                        if (user.verified) "موثق" else "غير موثق",
+                                        color = Color.White,
+                                        modifier = Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF493A76)).padding(horizontal = 12.dp, vertical = 6.dp)
                                     )
                                 }
                             }
@@ -866,6 +871,7 @@ private fun AdminUserMetric(label: String, value: String, modifier: Modifier = M
 
 @Composable
 private fun AdminUserInfoRow(label: String, value: String, copyable: Boolean = false) {
+    val clipboard = LocalClipboardManager.current
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
