@@ -121,6 +121,7 @@ import com.nexa.social.domain.model.Post
 import com.nexa.social.domain.model.UserSummary
 import com.nexa.social.ui.components.LocalDataBanner
 import com.nexa.social.ui.components.NexaCover
+import com.nexa.social.ui.components.NexaVerifiedBadge
 import com.nexa.social.ui.components.NexaEmptyState
 import com.nexa.social.ui.components.NexaPrimaryButton
 import com.nexa.social.ui.components.NexaSecondaryButton
@@ -802,15 +803,7 @@ fun ProfileScreen(
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 if (ownerBadgeVerified) {
-                                    Surface(
-                                        modifier = Modifier.size(19.dp),
-                                        color = Color(0xFF1877F2),
-                                        shape = CircleShape
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Text("✓", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-                                        }
-                                    }
+                                    NexaVerifiedBadge(size = 19.dp)
                                 }
                             }
                             profileStatusLabel?.let { statusLabel ->
