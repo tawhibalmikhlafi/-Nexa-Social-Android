@@ -802,8 +802,14 @@ fun ProfileScreen(
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 if (ownerBadgeVerified) {
-                                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(50)) {
-                                        Text("✓ موثق من Nexa", modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                    Surface(
+                                        modifier = Modifier.size(19.dp),
+                                        color = Color(0xFF1877F2),
+                                        shape = CircleShape
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text("✓", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                                        }
                                     }
                                 }
                             }
