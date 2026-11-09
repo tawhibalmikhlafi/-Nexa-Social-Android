@@ -564,6 +564,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
         val createdAt = selectedUserDetails?.get("created_at")?.takeUnless { it.isJsonNull }?.asString ?: user.createdAt
         val lastSignIn = selectedUserDetails?.get("last_sign_in_at")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
         val accountStatus = profile?.get("account_status")?.takeUnless { it.isJsonNull }?.asString ?: user.status
+        val canManageSelectedUser = !ownerUserId.isNullOrBlank() && user.id != ownerUserId
         val postsCount = selectedUserDetails?.get("posts_count")?.takeUnless { it.isJsonNull }?.asString ?: user.postsCount.toString()
         val followersCount = selectedUserDetails?.get("followers_count")?.takeUnless { it.isJsonNull }?.asString ?: user.followersCount.toString()
         val followingCount = selectedUserDetails?.get("following_count")?.takeUnless { it.isJsonNull }?.asString ?: user.followingCount.toString()
@@ -690,21 +691,27 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                 Text("كل إجراء يُرسل إلى خدمة الإدارة المحمية في Supabase، ويُطلب تأكيده قبل التنفيذ.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Button(
                                     onClick = {
-                                        moderationTarget = user
-                                        moderationAction = if (accountStatus == "SUSPENDED") "RESTORE" else "RESTRICT"
-                                        moderationReason = ""
-                                        selectedUser = null
+                                        if (canManageSelectedUser) {
+                                            moderationTarget = user
+                                            moderationAction = if (accountStatus == "SUSPENDED") "RESTORE" else "RESTRICT"
+                                            moderationReason = ""
+                                            selectedUser = null
+                                        }
                                     },
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = canManageSelectedUser
                                 ) { Text(if (accountStatus == "SUSPENDED") "إلغاء التقييد" else "تقييد الحساب") }
                                 OutlinedButton(
                                     onClick = {
-                                        moderationTarget = user
-                                        moderationAction = if (accountStatus == "BANNED") "RESTORE" else "BAN"
-                                        moderationReason = ""
-                                        selectedUser = null
+                                        if (canManageSelectedUser) {
+                                            moderationTarget = user
+                                            moderationAction = if (accountStatus == "BANNED") "RESTORE" else "BAN"
+                                            moderationReason = ""
+                                            selectedUser = null
+                                        }
                                     },
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = canManageSelectedUser
                                 ) { Text(if (accountStatus == "BANNED") "إلغاء الحظر" else "حظر الحساب") }
                                 OutlinedButton(
                                     onClick = {
@@ -716,7 +723,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
-                                    enabled = !ownerUserId.isNullOrBlank() && user.id != ownerUserId
+                                    enabled = canManageSelectedUser
                                 ) {
                                     Icon(Icons.Default.Delete, contentDescription = null)
                                     Text("حذف الحساب نهائياً")
