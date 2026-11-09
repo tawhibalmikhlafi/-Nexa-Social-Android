@@ -246,31 +246,24 @@ class SupabaseMessageDataSource(
     }
 
     suspend fun deleteConversationForMe(conversationId: String, uid: String): Boolean {
-        val pageSize = 500
-        while (true) {
-            val rows = fetchRows(
-                "messages?select=id&conversation_id=eq.${encode(conversationId)}&order=created_at.asc&limit=$pageSize"
-            ) ?: return false
-            if (rows.isEmpty()) return true
-            val payload = JsonArray()
-            rows.forEach { row ->
-                val messageId = row.string("id") ?: return@forEach
-                payload.add(JsonObject().apply {
-                    addProperty("message_id", messageId)
-                    addProperty("user_id", uid)
-                })
+        val rows = fetchRows(
+            "messages?select=id&conversation_id=eq.${encode(conversationId)}&order=created_at.asc&limit=1000"
+        ) ?: return false
+        val token = accessToken() ?: return false
+        for (row in rows) {
+            val messageId = row.string("id") ?: continue
+            val payload = JsonObject().apply {
+                addProperty("message_id", messageId)
+                addProperty("user_id", uid)
             }
-            if (payload.size() > 0) {
-                val token = accessToken() ?: return false
-                val response = execute(
-                    http.authenticatedRequest("$restUrl/message_deletions?on_conflict=message_id,user_id", token)
-                        .header("Prefer", "resolution=ignore-duplicates,return=minimal")
-                        .post(http.jsonBody(payload)).build()
-                )
-                if (response?.successful != true) return false
-            }
-            if (rows.size < pageSize) return true
+            val response = execute(
+                http.authenticatedRequest("$restUrl/message_deletions?on_conflict=message_id,user_id", token)
+                    .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+                    .post(http.jsonBody(payload)).build()
+            )
+            if (response?.successful != true) return false
         }
+        return true
     }
 
     suspend fun deleteForMe(messageId: String, uid: String): Boolean {
