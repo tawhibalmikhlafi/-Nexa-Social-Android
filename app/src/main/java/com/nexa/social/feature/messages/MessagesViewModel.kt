@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nexa.social.core.ui.nexaApplication
+import com.nexa.social.core.storage.PreferenceStorage
+import com.nexa.social.core.common.Resource
+import kotlinx.coroutines.flow.first
 import com.nexa.social.data.remote.UserNote
 import com.nexa.social.data.remote.SupabaseNotesDataSource
 import com.nexa.social.domain.model.Conversation
@@ -24,16 +27,18 @@ import kotlinx.coroutines.launch
 class MessagesViewModel(
     messageRepository: MessageRepository,
     notificationRepository: NotificationRepository,
-    private val notesDataSource: SupabaseNotesDataSource?
+    private val notesDataSource: SupabaseNotesDataSource?,
+    private val preferenceStorage: PreferenceStorage
 ) : ViewModel() {
 
     private val _search = MutableStateFlow("")
     val search: StateFlow<String> = _search.asStateFlow()
 
     val conversations: StateFlow<List<Conversation>> =
-        combine(messageRepository.observeConversations(), _search) { list, query ->
-            if (query.isBlank()) list
-            else list.filter {
+        combine(messageRepository.observeConversations(), _search, preferenceStorage.hiddenConversationIds) { list, query, hidden ->
+            val visible = list.filterNot { it.id in hidden }
+            if (query.isBlank()) visible
+            else visible.filter {
                 it.participant.displayName.contains(query, ignoreCase = true) ||
                     it.participant.username.contains(query, ignoreCase = true)
             }
@@ -65,6 +70,32 @@ class MessagesViewModel(
     }
 
     fun setSearch(value: String) { _search.value = value }
+
+    fun archiveConversations(ids: Set<String>, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val results = ids.map { id -> runCatching { messageRepository.setArchived(id, true) }.isSuccess }
+            onComplete(results.isNotEmpty() && results.all { it })
+        }
+    }
+
+    fun deleteConversationsForMe(ids: Set<String>, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val all = messageRepository.observeConversations().first()
+            var success = true
+            ids.forEach { id ->
+                val conversation = all.firstOrNull { it.id == id }
+                conversation?.messages.orEmpty().forEach { message ->
+                    val result = runCatching { messageRepository.deleteMessageForMe(id, message.id) }.getOrNull()
+                    if (result !is Resource.Success) success = false
+                }
+            }
+            if (success) {
+                val hidden = preferenceStorage.hiddenConversationIds.first()
+                preferenceStorage.setHiddenConversationIds(hidden + ids)
+            }
+            onComplete(success)
+        }
+    }
 
     fun refreshNotes() {
         val source = notesDataSource ?: return
@@ -122,7 +153,8 @@ class MessagesViewModel(
                 MessagesViewModel(
                     app.container.messageRepository,
                     app.container.notificationRepository,
-                    app.container.notesDataSource
+                    app.container.notesDataSource,
+                    app.container.preferenceStorage
                 )
             }
         }
