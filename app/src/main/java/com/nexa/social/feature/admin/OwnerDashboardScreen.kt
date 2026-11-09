@@ -204,7 +204,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                         }
                                     },
                                     onBlockClick = {
-                                        if (user.id != ownerUserId) {
+                                        if (!ownerUserId.isNullOrBlank() && user.id != ownerUserId) {
                                             moderationTarget = user
                                             moderationAction = if (user.status == "BANNED") "RESTORE" else "BAN"
                                             moderationReason = ""
@@ -215,6 +215,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                     }
                                 )
                             }
+                        }
                     }
                     1 -> Column(Modifier.fillMaxSize()) {
                         Text("مركز مراجعة البلاغات", style = MaterialTheme.typography.titleLarge)
