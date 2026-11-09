@@ -80,7 +80,7 @@ class MessagesViewModel(
 
     fun deleteConversationsForMe(ids: Set<String>, onComplete: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            val all = messageRepository.observeConversations().first()
+            val all = conversations.value
             var success = true
             ids.forEach { id ->
                 val conversation = all.firstOrNull { it.id == id }
