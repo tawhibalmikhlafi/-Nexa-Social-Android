@@ -1,6 +1,7 @@
 package com.nexa.social.data.remote
 
 import com.google.gson.JsonObject
+import com.google.gson.JsonArray
 import com.google.gson.JsonParser
 import com.nexa.social.core.common.Ids
 import com.nexa.social.core.common.RefreshBus
@@ -242,6 +243,36 @@ class SupabaseMessageDataSource(
                 .delete().build()
         )
         return response?.successful == true
+    }
+
+    suspend fun deleteConversationForMe(conversationId: String, uid: String): Boolean {
+        val pageSize = 500
+        var offset = 0
+        while (true) {
+            val rows = fetchRows(
+                "messages?select=id&conversation_id=eq.${encode(conversationId)}&order=created_at.asc&limit=$pageSize&offset=$offset"
+            ) ?: return false
+            if (rows.isEmpty()) return true
+            val payload = JsonArray()
+            rows.forEach { row ->
+                val messageId = row.string("id") ?: return@forEach
+                payload.add(JsonObject().apply {
+                    addProperty("message_id", messageId)
+                    addProperty("user_id", uid)
+                })
+            }
+            if (payload.size() > 0) {
+                val token = accessToken() ?: return false
+                val response = execute(
+                    http.authenticatedRequest("$restUrl/message_deletions?on_conflict=message_id,user_id", token)
+                        .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+                        .post(http.jsonBody(payload)).build()
+                )
+                if (response?.successful != true) return false
+            }
+            if (rows.size < pageSize) return true
+            offset += rows.size
+        }
     }
 
     suspend fun deleteForMe(messageId: String, uid: String): Boolean {
