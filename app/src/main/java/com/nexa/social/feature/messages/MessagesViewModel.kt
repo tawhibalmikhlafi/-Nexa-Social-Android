@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MessagesViewModel(
-    messageRepository: MessageRepository,
+    private val messageRepository: MessageRepository,
     notificationRepository: NotificationRepository,
     private val notesDataSource: SupabaseNotesDataSource?,
     private val preferenceStorage: PreferenceStorage
@@ -96,7 +96,7 @@ class MessagesViewModel(
                             messageRepository.deleteMessageForMe(id, message.id)
                         }
                     }.getOrNull()
-                    if (result !is Resource.Success) success = false
+                    if (result !is Resource.Success<*>) success = false
                 }
             }
             if (success) {
