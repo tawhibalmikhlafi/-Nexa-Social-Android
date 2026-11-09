@@ -1,5 +1,12 @@
 package com.nexa.social.feature.admin
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import com.nexa.social.core.common.Resource
+import com.nexa.social.data.media.MediaBucket
+import java.util.UUID
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -612,7 +619,12 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                     }
                 }
                 if (tab == 7) {
-                    OwnerAdsManagementPanel(ads, { scope.launch { ads = admin?.listAds().orEmpty() } }) { id,title,body,mediaUrl,mediaType,clickUrl,placement,audience,startsAt,endsAt,duration,frequency,enabled ->
+                    OwnerAdsManagementPanel(
+                        ads = ads,
+                        ownerUserId = ownerUserId.orEmpty(),
+                        mediaStorage = rememberAppContainer().mediaStorage,
+                        onRefresh = { scope.launch { ads = admin?.listAds().orEmpty() } }
+                    ) { id,title,body,mediaUrl,mediaType,clickUrl,placement,audience,startsAt,endsAt,duration,frequency,enabled ->
                         scope.launch {
                             val ok = admin?.saveAd(id,title,body,mediaUrl,mediaType,clickUrl,placement,audience,startsAt,endsAt,duration,frequency,enabled) == true
                             message = if (ok) "تم حفظ الحملة الإعلانية" else "فشل الحفظ: " + admin?.lastError.orEmpty()
@@ -1285,6 +1297,8 @@ private fun OwnerAdsSettingsPanel(
 @Composable
 private fun OwnerAdsManagementPanel(
     ads: List<OwnerAdRow>,
+    ownerUserId: String,
+    mediaStorage: com.nexa.social.data.media.MediaStorage?,
     onRefresh: () -> Unit,
     onSave: (String?,String,String,String,String,String,String,String,String,String,Int,Int,Boolean) -> Unit
 ) {
@@ -1301,17 +1315,81 @@ private fun OwnerAdsManagementPanel(
     var duration by remember { mutableStateOf("15") }
     var frequency by remember { mutableStateOf("2") }
     var enabled by remember { mutableStateOf(false) }
+    var mediaUploading by remember { mutableStateOf(false) }
+    var mediaUploadMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                mediaUploading = true
+                mediaUploadMessage = "جارٍ رفع الوسائط إلى Supabase Storage..."
+                val extension = when (mediaType) {
+                    "IMAGE" -> "jpg"
+                    "VIDEO" -> "mp4"
+                    else -> "bin"
+                }
+                val objectPath = "$ownerUserId/ads/${UUID.randomUUID()}.$extension"
+                val result = when (mediaType) {
+                    "IMAGE" -> mediaStorage?.uploadImage(uri.toString(), MediaBucket.POSTS, objectPath)
+                    "VIDEO" -> mediaStorage?.uploadVideoToBucket(uri.toString(), MediaBucket.CLIPS, objectPath, 100L * 1024L * 1024L)
+                    else -> null
+                }
+                when (result) {
+                    is Resource.Success -> {
+                        mediaUrl = result.data
+                        mediaUploadMessage = "تم رفع الملف بنجاح ✓"
+                    }
+                    is Resource.Failure -> {
+                        mediaUploadMessage = when (result.reason) {
+                            com.nexa.social.core.common.FailureReason.FILE_TOO_LARGE -> "حجم الملف أكبر من الحد المسموح"
+                            com.nexa.social.core.common.FailureReason.UNSUPPORTED_FILE -> "نوع الملف غير مدعوم"
+                            com.nexa.social.core.common.FailureReason.NOT_AUTHENTICATED -> "انتهت جلسة الدخول، سجّل الدخول مجدداً"
+                            else -> "فشل رفع الملف: ${result.reason}"
+                        }
+                    }
+                    else -> mediaUploadMessage = "خدمة رفع الملفات غير متاحة حالياً"
+                }
+                mediaUploading = false
+            }
+        }
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(if (editingId == null) "إنشاء حملة إعلانية" else "تعديل الحملة الإعلانية", style = MaterialTheme.typography.titleLarge)
         OutlinedTextField(title,{title=it},Modifier.fillMaxWidth(),label={Text("عنوان الإعلان")},singleLine=true)
         OutlinedTextField(body,{body=it},Modifier.fillMaxWidth(),label={Text("نص الإعلان")},minLines=3)
-        Text("أدخل رابطاً عاماً مباشراً للصورة أو الفيديو. رفع الملفات من الجهاز غير متاح في هذه الشاشة حالياً.",style=MaterialTheme.typography.bodySmall)
+        Text("اختر صورة أو فيديو من معرض جهازك، وسيتم رفعه إلى Supabase Storage وربط رابطه بالحملة.",style=MaterialTheme.typography.bodySmall)
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             listOf("NONE" to "بدون","IMAGE" to "صورة","VIDEO" to "فيديو").forEach { (v,l) ->
                 FilterChip(selected=mediaType==v,onClick={mediaType=v},label={Text(l)})
             }
         }
-        if(mediaType!="NONE") OutlinedTextField(mediaUrl,{mediaUrl=it},Modifier.fillMaxWidth(),label={Text("رابط الوسائط")},singleLine=true)
+        if (mediaType != "NONE") {
+            OutlinedButton(
+                onClick = {
+                    val visualType = if (mediaType == "IMAGE") ActivityResultContracts.PickVisualMedia.ImageOnly
+                    else ActivityResultContracts.PickVisualMedia.VideoOnly
+                    picker.launch(PickVisualMediaRequest(visualType))
+                },
+                enabled = !mediaUploading && ownerUserId.isNotBlank() && mediaStorage != null,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (mediaUploading) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                else Icon(Icons.Default.Campaign, contentDescription = null)
+                Spacer(Modifier.size(8.dp))
+                Text(when {
+                    mediaUploading -> "جارٍ رفع الوسائط..."
+                    mediaUrl.isNotBlank() -> "اختيار ملف آخر من المعرض"
+                    mediaType == "IMAGE" -> "اختيار صورة من المعرض"
+                    else -> "اختيار فيديو من المعرض"
+                })
+            }
+            mediaUploadMessage?.let { Text(it, color = if (it.startsWith("تم")) Color(0xFF8FE0B0) else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall) }
+            if (mediaUrl.isNotBlank()) {
+                Text("تم ربط ملف الوسائط بالحملة", color = Color(0xFF8FE0B0), style = MaterialTheme.typography.labelSmall)
+                OutlinedButton(onClick = { mediaUrl = ""; mediaUploadMessage = null }) { Text("إزالة الوسائط المختارة") }
+            }
+        }
+        if(mediaType!="NONE" && mediaUrl.startsWith("http")) OutlinedTextField(mediaUrl,{mediaUrl=it},Modifier.fillMaxWidth(),label={Text("رابط الوسائط (تلقائي)")},singleLine=true, readOnly=true)
         OutlinedTextField(clickUrl,{clickUrl=it},Modifier.fillMaxWidth(),label={Text("رابط الفتح عند الضغط")},singleLine=true)
         if(title.isNotBlank() || body.isNotBlank() || mediaUrl.isNotBlank()) {
             OwnerAdPreview(
@@ -1339,7 +1417,7 @@ private fun OwnerAdsManagementPanel(
         OwnerSettingRow("تفعيل الحملة",enabled){enabled=it}
         Button(
             onClick={onSave(editingId,title,body,mediaUrl,mediaType,clickUrl,placement,audience,startsAt,endsAt,duration.toInt(),frequency.toInt(),enabled)},
-            enabled=title.isNotBlank()&&body.isNotBlank()&&startsAt.isNotBlank()&&endsAt.isNotBlank()&&(duration.toIntOrNull() ?: 0) in 5..120&&(frequency.toIntOrNull() ?: 0) in 1..10&&(mediaType=="NONE"||mediaUrl.startsWith("http")),
+            enabled=!mediaUploading&&title.isNotBlank()&&body.isNotBlank()&&startsAt.isNotBlank()&&endsAt.isNotBlank()&&(duration.toIntOrNull() ?: 0) in 5..120&&(frequency.toIntOrNull() ?: 0) in 1..10&&(mediaType=="NONE"||mediaUrl.startsWith("http")),
             modifier=Modifier.fillMaxWidth()
         ) { Text(if(editingId==null)"إنشاء الحملة" else "حفظ التعديلات") }
         OutlinedButton(onClick={editingId=null;title="";body="";mediaUrl="";mediaType="NONE";clickUrl="";placement="FEED_INLINE";audience="ALL";startsAt="";endsAt="";duration="15";frequency="2";enabled=false},modifier=Modifier.fillMaxWidth()) { Text("حملة جديدة") }
