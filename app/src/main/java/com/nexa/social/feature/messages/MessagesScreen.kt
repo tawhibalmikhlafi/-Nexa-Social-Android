@@ -134,6 +134,7 @@ fun MessagesScreen(
     var noteDuration by rememberSaveable { mutableStateOf(24) }
     var selectedNote by remember { mutableStateOf<UserNote?>(null) }
     var noteReply by rememberSaveable { mutableStateOf("") }
+    val displayedConversations = conversations.filter { it.archivedLocally == showArchived }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         if (showMessageSettings) {
