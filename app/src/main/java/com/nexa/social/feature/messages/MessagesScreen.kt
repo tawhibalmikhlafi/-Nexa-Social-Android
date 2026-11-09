@@ -126,6 +126,7 @@ fun MessagesScreen(
     val noteError by viewModel.noteError.collectAsStateWithLifecycle()
     var showNotesEditor by rememberSaveable { mutableStateOf(false) }
     var selectionMode by rememberSaveable { mutableStateOf(false) }
+    var showArchived by rememberSaveable { mutableStateOf(false) }
     var selectedConversationIds by rememberSaveable { mutableStateOf(setOf<String>()) }
     var bulkActionMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var noteDraft by rememberSaveable { mutableStateOf("") }
@@ -311,15 +312,21 @@ fun MessagesScreen(
                             selectedConversationIds = emptySet()
                             bulkActionMessage = null
                         }) { Text(if (selectionMode) "إلغاء التحديد" else "تحديد الدردشات") }
+                        TextButton(onClick = {
+                            showArchived = !showArchived
+                            selectionMode = false
+                            selectedConversationIds = emptySet()
+                            bulkActionMessage = null
+                        }) { Text(if (showArchived) "العودة للمحادثات" else "المؤرشفة") }
                         if (selectionMode && selectedConversationIds.isNotEmpty()) {
                             Text("${selectedConversationIds.size} محددة", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                             Spacer(Modifier.weight(1f))
                             TextButton(onClick = {
-                                viewModel.archiveConversations(selectedConversationIds) { ok ->
+                                viewModel.archiveConversations(selectedConversationIds, archived = !showArchived) { ok ->
                                     bulkActionMessage = if (ok) "تمت أرشفة الدردشات المحددة" else "تعذرت أرشفة بعض الدردشات"
                                     if (ok) { selectionMode = false; selectedConversationIds = emptySet() }
                                 }
-                            }) { Text("أرشفة") }
+                            }) { Text(if (showArchived) "إلغاء الأرشفة" else "أرشفة") }
                             TextButton(onClick = {
                                 viewModel.deleteConversationsForMe(selectedConversationIds) { ok ->
                                     bulkActionMessage = if (ok) "حُذفت الدردشات من قائمتك" else "تعذر حذف بعض الدردشات"
@@ -347,7 +354,7 @@ fun MessagesScreen(
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
-                if (conversations.isEmpty()) {
+                if (displayedConversations.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -356,14 +363,14 @@ fun MessagesScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "لا توجد رسائل حالياً",
+                                text = if (showArchived) "لا توجد دردشات مؤرشفة" else "لا توجد رسائل حالياً",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 14.sp
                             )
                         }
                     }
                 } else {
-                    items(conversations, key = { it.id }) { conversation ->
+                    items(displayedConversations, key = { it.id }) { conversation ->
                         ChatListItem(
                             conversation = conversation,
                             presenceViewModel = presenceViewModel,
