@@ -897,7 +897,7 @@ fun ProfileScreen(
                         !current.currentResidence.isNullOrBlank() ||
                         !current.birthDate.isNullOrBlank() ||
                         current.skills.orEmpty().isNotEmpty() || current.hobbies.orEmpty().isNotEmpty()
-                    if ((hasPersonalDetails || showOwnerTools) &&
+                    if (hasPersonalDetails &&
                         (!current.isPrivateAccount || isFollowing || showOwnerTools)
                     ) {
                         Spacer(Modifier.height(NexaSpacing.sm))
@@ -913,29 +913,25 @@ fun ProfileScreen(
                                 verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
                             ) {
                                 Text("معلومات شخصية", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                if (!current.placeOfOrigin.isNullOrBlank() || showOwnerTools) {
-                                    ProfileDetailRow("مكان المنشأ", current.placeOfOrigin?.takeIf { it.isNotBlank() } ?: "لم يُضف بعد", Icons.Filled.Place)
+                                current.placeOfOrigin?.takeIf { it.isNotBlank() }?.let { value ->
+                                    ProfileDetailRow("مكان المنشأ", value, Icons.Filled.Place)
                                 }
-                                if (!current.currentResidence.isNullOrBlank() || showOwnerTools) {
-                                    ProfileDetailRow("مكان الإقامة", current.currentResidence?.takeIf { it.isNotBlank() } ?: "لم يُضف بعد", Icons.Filled.Home)
+                                current.currentResidence?.takeIf { it.isNotBlank() }?.let { value ->
+                                    ProfileDetailRow("مكان الإقامة", value, Icons.Filled.Home)
                                 }
-                                if (!current.birthDate.isNullOrBlank() || showOwnerTools) {
-                                    val birthLabel = remember(current.birthDate) {
-                                        current.birthDate?.takeIf { it.isNotBlank() }?.let { value ->
-                                            runCatching {
-                                                LocalDate.parse(value)
-                                                    .format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("ar")))
-                                            }.getOrDefault(value)
-                                        } ?: "لم يُضف بعد"
+                                current.birthDate?.takeIf { it.isNotBlank() }?.let { value ->
+                                    val birthLabel = remember(value) {
+                                        runCatching {
+                                            LocalDate.parse(value)
+                                                .format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("ar")))
+                                        }.getOrDefault(value)
                                     }
                                     ProfileDetailRow("تاريخ الميلاد", birthLabel, Icons.Filled.Cake)
                                 }
-                                if (current.skills.orEmpty().isNotEmpty() || showOwnerTools) {
+                                current.skills.orEmpty().filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }?.let { skills ->
                                     Text("المهارات", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                                    if (current.skills.orEmpty().isEmpty()) {
-                                        Text("لم تُضف مهارات بعد", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    } else FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
-                                        current.skills.orEmpty().forEach { skill ->
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
+                                        skills.forEach { skill ->
                                             Surface(
                                                 modifier = Modifier.clickable {
                                                     scope.launch {
@@ -950,14 +946,12 @@ fun ProfileScreen(
                                         }
                                     }
                                 }
-                                if (current.hobbies.orEmpty().isNotEmpty() || showOwnerTools) {
+                                current.hobbies.orEmpty().filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }?.let { hobbies ->
                                     Text("الهوايات", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                                    if (current.hobbies.orEmpty().isEmpty()) {
-                                        Text("لم تُضف هوايات بعد", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    } else FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
-                                        current.hobbies.orEmpty().forEach { hobby ->
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(NexaSpacing.xs), verticalArrangement = Arrangement.spacedBy(NexaSpacing.xs)) {
+                                        hobbies.forEach { hobby ->
                                             Surface(
-                                                shape = RoundedCornerShape(50),
+                                                shape = RoundedCornerShape(50.dp),
                                                 color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
                                             ) {
                                                 Text(hobby, modifier = Modifier.padding(horizontal = NexaSpacing.sm, vertical = NexaSpacing.xs), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
