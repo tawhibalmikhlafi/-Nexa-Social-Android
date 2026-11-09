@@ -184,7 +184,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                             items(users, key = { it.id }) { user ->
                                 UserAdminCard(
                                     user = user,
-                                    isOwnerAccount = user.id == ownerUserId,
+                                    isOwnerAccount = ownerUserId.isNullOrBlank() || user.id == ownerUserId,
                                     onCardClick = {
                                         selectedUser = user
                                         selectedUserDetails = null
@@ -197,7 +197,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                         }
                                     },
                                     onRestrictClick = {
-                                        if (user.id != ownerUserId) {
+                                        if (ownerUserId.isNullOrBlank() || user.id != ownerUserId) {
                                             moderationTarget = user
                                             moderationAction = if (user.status == "SUSPENDED") "RESTORE" else "RESTRICT"
                                             moderationReason = ""
@@ -211,7 +211,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                         }
                                     },
                                     onDeleteClick = {
-                                        if (user.id != ownerUserId) confirmDelete = user
+                                        if (ownerUserId.isNullOrBlank() || user.id != ownerUserId) confirmDelete = user
                                     }
                                 )
                             }
@@ -743,7 +743,7 @@ private fun UserAdminCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (isOwnerAccount) {
-                    Text("حساب المالك محمي من إجراءات الإدارة", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Text("إجراءات الإدارة معطلة لهذا الحساب لحمايته", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 } else {
                     IconButton(onClick = onRestrictClick) {
                         Icon(Icons.Default.Lock, contentDescription = if (user.status == "SUSPENDED") "إلغاء التقييد" else "تقييد الحساب")
