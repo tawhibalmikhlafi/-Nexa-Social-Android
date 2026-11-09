@@ -300,6 +300,23 @@ class MessageRepositoryImpl(
         return true
     }
 
+    override suspend fun deleteConversationForMe(conversationId: String): Resource<Unit> {
+        val session = prefs.session.first()
+        val remoteStore = remote
+        if (isRemote(session) && remoteStore != null) {
+            val uid = (session as SessionState.RemoteAccount).userId
+            val deleted = runCatching {
+                remoteStore.deleteConversationForMe(conversationId, uid)
+            }.getOrDefault(false)
+            return if (deleted) Resource.Success(Unit) else Resource.Failure(FailureReason.NETWORK)
+        }
+        val existed = _conversations.value.any { it.id == conversationId }
+        if (!existed) return Resource.Failure(FailureReason.NOT_FOUND)
+        _conversations.value = _conversations.value.filterNot { it.id == conversationId }
+        persist()
+        return Resource.Success(Unit)
+    }
+
     override suspend fun editMessage(messageId: String, text: String): Resource<Unit> {
         if (text.isBlank()) return Resource.Failure(FailureReason.REQUIRED)
         val session = prefs.session.first()
