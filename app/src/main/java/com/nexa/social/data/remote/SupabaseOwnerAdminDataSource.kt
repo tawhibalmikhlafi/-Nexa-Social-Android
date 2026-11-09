@@ -85,6 +85,8 @@ class SupabaseOwnerAdminDataSource(
         return response.body
     }
 
+    suspend fun currentUserId(): String? = currentUid()
+
     suspend fun isOwner(): Boolean = rpc("nexa_is_owner")?.let {
         runCatching { JsonParser.parseString(it).asBoolean }.getOrDefault(false)
     } ?: false
