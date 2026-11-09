@@ -878,8 +878,8 @@ private fun AdminUserInfoRow(label: String, value: String, copyable: Boolean = f
             Text(value, style = MaterialTheme.typography.bodyMedium)
         }
         if (copyable) {
-            IconButton(onClick = { /* copied through Android clipboard action is intentionally not simulated */ }) {
-                Icon(Icons.Default.AdminPanelSettings, contentDescription = "معرّف الحساب")
+            IconButton(onClick = { clipboard.setText(AnnotatedString(value)) }) {
+                Icon(Icons.Default.ContentCopy, contentDescription = "نسخ")
             }
         }
     }
