@@ -136,6 +136,20 @@ class SupabaseOwnerAdminDataSource(
         return runCatching { JsonParser.parseString(result).asBoolean }.getOrDefault(false)
     }
 
+    suspend fun setUserVerified(userId: String, verified: Boolean, label: String = "موثق من Nexa"): Boolean {
+        if (userId.isBlank() || !isOwner()) {
+            lastError = "هذه العملية متاحة لمالك Nexa فقط"
+            return false
+        }
+        val body = JsonObject().apply {
+            addProperty("p_user_id", userId)
+            addProperty("p_verified", verified)
+            add("p_verified_label", if (verified) com.google.gson.JsonPrimitive(label.trim().ifBlank { "موثق من Nexa" }) else com.google.gson.JsonNull.INSTANCE)
+        }
+        val raw = rpc("nexa_owner_set_user_verified", body) ?: return false
+        return runCatching { JsonParser.parseString(raw).asBoolean }.getOrDefault(false)
+    }
+
     suspend fun moderationHistory(userId: String): List<JsonObject> {
         val body = JsonObject().apply {
             addProperty("p_user_id", userId)
@@ -464,7 +478,7 @@ class SupabaseOwnerAdminDataSource(
         return runCatching { JsonParser.parseString(result).asString.isNotBlank() }.getOrDefault(false)
     }
 
-    suspend fun isFounderVerified(userId: String): Boolean {
+    suspend fun isUserVerified(userId: String): Boolean {
         val token = accessToken() ?: return false
         val response = http.execute(
             http.authenticatedRequest("$base/profiles?id=eq.${enc(userId)}&select=is_verified&limit=1", token)
