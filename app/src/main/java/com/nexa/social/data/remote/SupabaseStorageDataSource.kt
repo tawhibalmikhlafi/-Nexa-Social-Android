@@ -370,7 +370,7 @@ class SupabaseStorageDataSource(
         return if (signed.startsWith("http")) {
             Resource.Success(signed)
         } else {
-            Resource.Success(config.normalizedUrl + "/" + signed.trimStart('/'))
+            Resource.Success(config.storageUrl + "/" + signed.trimStart('/'))
         }
     }
 
