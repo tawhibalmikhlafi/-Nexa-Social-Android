@@ -92,6 +92,8 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var ownerUserId by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    var adsSaving by remember { mutableStateOf(false) }
+    var adsSaveMessage by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableIntStateOf(0) }
     var stats by remember { mutableStateOf<JsonObject?>(null) }
     var users by remember { mutableStateOf<List<OwnerUserRow>>(emptyList()) }
@@ -484,27 +486,44 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         Spacer(Modifier.height(8.dp))
                         Text("إعدادات الإعلانات", style = MaterialTheme.typography.titleLarge)
                         Text("تحكم في موضع الإعلان ومدة بقائه وعدد مرات عرضه في الجلسة.")
-                        OwnerAdsSettingsPanel(settings = settings) { enabled, placement, duration, frequency ->
-                            scope.launch {
-                                message = "جارٍ حفظ إعدادات الإعلانات..."
-                                val saved = admin?.setAdsSettings(enabled, placement, duration, frequency) == true
-                                if (!saved) {
-                                    message = "فشل حفظ إعدادات الإعلانات: ${admin?.lastError ?: "لم تؤكد قاعدة البيانات العملية"}"
-                                } else {
-                                    val persisted = admin?.getSettings()
-                                    val verified = persisted?.let { saved ->
-                                        saved.get("ads_enabled")?.takeUnless { it.isJsonNull }?.asBoolean == enabled &&
-                                            saved.get("ads_placement")?.takeUnless { it.isJsonNull }?.asString == placement &&
-                                            saved.get("ads_duration_seconds")?.takeUnless { it.isJsonNull }?.asInt == duration &&
-                                            saved.get("ads_frequency_per_session")?.takeUnless { it.isJsonNull }?.asInt == frequency
-                                    } == true
-                                    if (verified) {
-                                        settings = persisted
-                                        message = "تم الحفظ بنجاح، وتم التحقق من الإعدادات المحفوظة في Supabase"
+                        OwnerAdsSettingsPanel(
+                            settings = settings,
+                            saving = adsSaving,
+                            saveMessage = adsSaveMessage
+                        ) { enabled, placement, duration, frequency ->
+                            if (!adsSaving) scope.launch {
+                                adsSaving = true
+                                adsSaveMessage = "جارٍ حفظ إعدادات الإعلانات..."
+                                message = null
+                                try {
+                                    val saved = admin?.setAdsSettings(enabled, placement, duration, frequency) == true
+                                    if (!saved) {
+                                        val error = admin?.lastError ?: "لم تؤكد قاعدة البيانات العملية"
+                                        adsSaveMessage = "فشل حفظ إعدادات الإعلانات: $error"
+                                        message = adsSaveMessage
                                     } else {
-                                        settings = persisted ?: settings
-                                        message = "وصل تأكيد الحفظ، لكن تعذر التحقق من القيم بعد إعادة قراءتها من Supabase: ${admin?.lastError.orEmpty()}"
+                                        val persisted = admin?.getSettings()
+                                        val verified = persisted?.let { values ->
+                                            values.get("ads_enabled")?.takeUnless { it.isJsonNull }?.asBoolean == enabled &&
+                                                values.get("ads_placement")?.takeUnless { it.isJsonNull }?.asString == placement &&
+                                                values.get("ads_duration_seconds")?.takeUnless { it.isJsonNull }?.asInt == duration &&
+                                                values.get("ads_frequency_per_session")?.takeUnless { it.isJsonNull }?.asInt == frequency
+                                        } == true
+                                        if (verified) {
+                                            settings = persisted
+                                            adsSaveMessage = "تم الحفظ بنجاح ✓ وتم التحقق من Supabase"
+                                        } else {
+                                            settings = persisted ?: settings
+                                            adsSaveMessage = "تم إرسال الحفظ لكن تعذر التحقق من القيم بعد إعادة القراءة"
+                                        }
+                                        message = adsSaveMessage
                                     }
+                                } catch (error: Exception) {
+                                    val reason = error.message ?: "خطأ غير معروف"
+                                    adsSaveMessage = "تعذر الحفظ: $reason"
+                                    message = adsSaveMessage
+                                } finally {
+                                    adsSaving = false
                                 }
                             }
                         }
@@ -1178,6 +1197,8 @@ private fun OwnerSettingRow(title: String, checked: Boolean, onChange: (Boolean)
 @Composable
 private fun OwnerAdsSettingsPanel(
     settings: JsonObject?,
+    saving: Boolean,
+    saveMessage: String?,
     onSave: (Boolean, String, Int, Int) -> Unit
 ) {
     var enabled by remember { mutableStateOf(settings?.get("ads_enabled")?.asBoolean ?: false) }
@@ -1225,10 +1246,38 @@ private fun OwnerAdsSettingsPanel(
             val durationValue = duration.toIntOrNull()
             val frequencyValue = frequency.toIntOrNull()
             Button(
-                onClick = { onSave(enabled, placement, durationValue!!, frequencyValue!!) },
-                enabled = durationValue != null && durationValue in 5..120 && frequencyValue != null && frequencyValue in 1..10,
+                onClick = {
+                    val safeDuration = duration.toIntOrNull()
+                    val safeFrequency = frequency.toIntOrNull()
+                    if (safeDuration != null && safeDuration in 5..120 && safeFrequency != null && safeFrequency in 1..10) {
+                        onSave(enabled, placement, safeDuration, safeFrequency)
+                    }
+                },
+                enabled = !saving && durationValue != null && durationValue in 5..120 && frequencyValue != null && frequencyValue in 1..10,
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("حفظ إعدادات الإعلانات") }
+            ) {
+                if (saving) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(if (saving) "جارٍ الحفظ..." else "حفظ إعدادات الإعلانات")
+            }
+            saveMessage?.let { status ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (status.startsWith("تم")) Color(0xFF173426) else if (status.startsWith("جارٍ")) Color(0xFF22243A) else Color(0xFF3A2028)
+                    )
+                ) {
+                    Text(
+                        status,
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        color = if (status.startsWith("تم")) Color(0xFF91E3B1) else if (status.startsWith("جارٍ")) Color(0xFFD6C9FF) else Color(0xFFFFB0B0),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
         }
     }
 }
