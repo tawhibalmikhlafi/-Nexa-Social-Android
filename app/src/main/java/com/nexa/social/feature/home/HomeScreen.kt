@@ -325,7 +325,12 @@ private fun CompactIconButton(
             .background(
                 if (emphasized) androidx.compose.ui.graphics.Brush.linearGradient(
                     listOf(Color(0xFF7546F6), Color(0xFFB45CFF), Color(0xFF4D6BFF))
-                ) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f)
+                ) else androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f),
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f)
+                    )
+                )
             ),
         contentAlignment = Alignment.Center
     ) {
