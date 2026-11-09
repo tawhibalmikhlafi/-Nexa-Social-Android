@@ -797,7 +797,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                     enabled = !ownerUserId.isNullOrBlank() && !verificationBusy
                                 ) {
                                     if (verificationBusy) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                                    else Icon(Icons.Default.Verified, contentDescription = null)
+                                    else Icon(Icons.Default.AdminPanelSettings, contentDescription = null)
                                     Spacer(Modifier.size(8.dp))
                                     Text(if (user.verified) "إزالة شارة التوثيق" else "إضافة شارة التوثيق")
                                 }
