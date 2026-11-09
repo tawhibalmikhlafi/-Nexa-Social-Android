@@ -121,6 +121,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var selectedUser by remember { mutableStateOf<OwnerUserRow?>(null) }
     var selectedUserDetails by remember { mutableStateOf<JsonObject?>(null) }
     var userDetailsLoading by remember { mutableStateOf(false) }
+    var verificationBusy by remember { mutableStateOf(false) }
 
     fun refresh() {
         scope.launch {
@@ -712,7 +713,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                         modifier = Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF493A76)).padding(horizontal = 12.dp, vertical = 6.dp)
                                     )
                                     Text(
-                                        if (user.verified) "موثق" else "غير موثق",
+                                        if (user.verified) "✓ موثق من Nexa" else "غير موثق",
                                         color = Color.White,
                                         modifier = Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF493A76)).padding(horizontal = 12.dp, vertical = 6.dp)
                                     )
@@ -773,6 +774,33 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text("إدارة الحساب", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                                 Text("كل إجراء يُرسل إلى خدمة الإدارة المحمية في Supabase، ويُطلب تأكيده قبل التنفيذ.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                OutlinedButton(
+                                    onClick = {
+                                        if (!ownerUserId.isNullOrBlank() && !verificationBusy) {
+                                            scope.launch {
+                                                verificationBusy = true
+                                                val nextVerified = !user.verified
+                                                val saved = admin?.setUserVerified(user.id, nextVerified) == true
+                                                if (saved) {
+                                                    users = admin?.listUsers(search).orEmpty()
+                                                    selectedUser = users.firstOrNull { it.id == user.id } ?: user.copy(verified = nextVerified)
+                                                    selectedUserDetails = admin?.getUserDetails(user.id)
+                                                    message = if (nextVerified) "تم توثيق الحساب بنجاح" else "تمت إزالة شارة التوثيق"
+                                                } else {
+                                                    message = "تعذر تحديث التوثيق: ${admin?.lastError ?: "لم تؤكد قاعدة البيانات العملية"}"
+                                                }
+                                                verificationBusy = false
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !ownerUserId.isNullOrBlank() && !verificationBusy
+                                ) {
+                                    if (verificationBusy) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                    else Icon(Icons.Default.Verified, contentDescription = null)
+                                    Spacer(Modifier.size(8.dp))
+                                    Text(if (user.verified) "إزالة شارة التوثيق" else "إضافة شارة التوثيق")
+                                }
                                 Button(
                                     onClick = {
                                         if (canManageSelectedUser) {
