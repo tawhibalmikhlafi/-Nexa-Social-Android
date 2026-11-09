@@ -8,7 +8,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
@@ -39,25 +38,17 @@ fun NexaVerifiedBadge(
             )
         }
         val path = Path()
-        for (index in points.indices) {
-            val current = points[index]
-            val next = points[(index + 1) % points.size]
-            val midpoint = Offset((current.x + next.x) / 2f, (current.y + next.y) / 2f)
-            if (index == 0) {
-                val previous = points.last()
-                path.moveTo((previous.x + current.x) / 2f, (previous.y + current.y) / 2f)
-            }
-            path.quadraticTo(current.x, current.y, midpoint.x, midpoint.y)
-        }
+        path.moveTo(points.first().x, points.first().y)
+        points.drop(1).forEach { point -> path.lineTo(point.x, point.y) }
         path.close()
         drawPath(path = path, color = Color(0xFF0095F6))
 
-        val checkStroke = Stroke(width = diameter * 0.105f, cap = StrokeCap.Round)
+        val checkStrokeWidth = diameter * 0.105f
         drawLine(
             color = Color.White,
             start = Offset(center.x - diameter * 0.19f, center.y + diameter * 0.015f),
             end = Offset(center.x - diameter * 0.045f, center.y + diameter * 0.16f),
-            strokeWidth = checkStroke.width,
+            strokeWidth = checkStrokeWidth,
             cap = StrokeCap.Round
         )
         drawLine(
