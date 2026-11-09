@@ -247,10 +247,9 @@ class SupabaseMessageDataSource(
 
     suspend fun deleteConversationForMe(conversationId: String, uid: String): Boolean {
         val pageSize = 500
-        var offset = 0
         while (true) {
             val rows = fetchRows(
-                "messages?select=id&conversation_id=eq.${encode(conversationId)}&order=created_at.asc&limit=$pageSize&offset=$offset"
+                "messages?select=id&conversation_id=eq.${encode(conversationId)}&order=created_at.asc&limit=$pageSize"
             ) ?: return false
             if (rows.isEmpty()) return true
             val payload = JsonArray()
@@ -271,7 +270,6 @@ class SupabaseMessageDataSource(
                 if (response?.successful != true) return false
             }
             if (rows.size < pageSize) return true
-            offset += rows.size
         }
     }
 
