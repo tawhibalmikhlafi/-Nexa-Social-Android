@@ -598,7 +598,7 @@ fun ChatListItem(
         }
         
         if (selectionMode) {
-            Checkbox(checked = selected, onCheckedChange = { onClick() })
+            Checkbox(checked = selected, onCheckedChange = null)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
