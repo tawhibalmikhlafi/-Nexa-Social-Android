@@ -129,6 +129,7 @@ fun MessagesScreen(
     var showArchived by rememberSaveable { mutableStateOf(false) }
     var selectedConversationIds by rememberSaveable { mutableStateOf(setOf<String>()) }
     var bulkActionMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var showDeleteChoice by rememberSaveable { mutableStateOf(false) }
     var noteDraft by rememberSaveable { mutableStateOf("") }
     var noteVisibility by rememberSaveable { mutableStateOf("FOLLOWING") }
     var noteDuration by rememberSaveable { mutableStateOf(24) }
@@ -137,6 +138,40 @@ fun MessagesScreen(
     val displayedConversations = conversations.filter { it.archivedLocally == showArchived }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        if (showDeleteChoice) {
+            AlertDialog(
+                onDismissRequest = { showDeleteChoice = false },
+                title = { Text("حذف الدردشات المحددة") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("اختر طريقة الحذف:")
+                        Text("لدي فقط: تختفي المحادثات من حسابك، وتبقى لدى الطرف الآخر.")
+                        Text("لدى الجميع: تُحذف رسائلك التي أرسلتها من الطرفين، أما رسائل الطرف الآخر فتُخفى عنك فقط.")
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showDeleteChoice = false
+                        viewModel.deleteConversations(selectedConversationIds, forEveryone = true) { ok ->
+                            bulkActionMessage = if (ok) "تم تنفيذ الحذف لدى الجميع لرسائلك" else "تعذر حذف بعض الرسائل؛ تحقق من الاتصال"
+                            if (ok) { selectionMode = false; selectedConversationIds = emptySet() }
+                        }
+                    }) { Text("حذف لدى الجميع", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = {
+                            showDeleteChoice = false
+                            viewModel.deleteConversations(selectedConversationIds, forEveryone = false) { ok ->
+                                bulkActionMessage = if (ok) "حُذفت الدردشات لديك فقط" else "تعذر حذف بعض الدردشات"
+                                if (ok) { selectionMode = false; selectedConversationIds = emptySet() }
+                            }
+                        }) { Text("لدي فقط") }
+                        TextButton(onClick = { showDeleteChoice = false }) { Text("إلغاء") }
+                    }
+                }
+            )
+        }
         if (showMessageSettings) {
             AlertDialog(
                 onDismissRequest = { showMessageSettings = false },
@@ -328,12 +363,9 @@ fun MessagesScreen(
                                     if (ok) { selectionMode = false; selectedConversationIds = emptySet() }
                                 }
                             }) { Text(if (showArchived) "إلغاء الأرشفة" else "أرشفة") }
-                            TextButton(onClick = {
-                                viewModel.deleteConversationsForMe(selectedConversationIds) { ok ->
-                                    bulkActionMessage = if (ok) "حُذفت الدردشات من قائمتك" else "تعذر حذف بعض الدردشات"
-                                    if (ok) { selectionMode = false; selectedConversationIds = emptySet() }
-                                }
-                            }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+                            TextButton(onClick = { showDeleteChoice = true }) {
+                                Text("حذف", color = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                     if (bulkActionMessage != null) {
