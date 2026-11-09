@@ -437,9 +437,24 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         Text("تحكم في موضع الإعلان ومدة بقائه وعدد مرات عرضه في الجلسة.")
                         OwnerAdsSettingsPanel(settings = settings) { enabled, placement, duration, frequency ->
                             scope.launch {
-                                val ok = admin?.setAdsSettings(enabled, placement, duration, frequency) == true
-                                message = if (ok) "تم حفظ إعدادات الإعلانات في Supabase" else "تعذر حفظ إعدادات الإعلانات: ${admin?.lastError.orEmpty()}"
-                                settings = admin?.getSettings()
+                                message = "جارٍ حفظ إعدادات الإعلانات..."
+                                val saved = admin?.setAdsSettings(enabled, placement, duration, frequency) == true
+                                if (!saved) {
+                                    message = "فشل حفظ إعدادات الإعلانات: ${admin?.lastError ?: "لم تؤكد قاعدة البيانات العملية"}"
+                                } else {
+                                    val persisted = admin?.getSettings()
+                                    val verified = persisted?.get("ads_enabled")?.takeUnless { it.isJsonNull }?.asBoolean == enabled &&
+                                        persisted.get("ads_placement")?.takeUnless { it.isJsonNull }?.asString == placement &&
+                                        persisted.get("ads_duration_seconds")?.takeUnless { it.isJsonNull }?.asInt == duration &&
+                                        persisted.get("ads_frequency_per_session")?.takeUnless { it.isJsonNull }?.asInt == frequency
+                                    if (verified) {
+                                        settings = persisted
+                                        message = "تم الحفظ بنجاح، وتم التحقق من الإعدادات المحفوظة في Supabase"
+                                    } else {
+                                        settings = persisted ?: settings
+                                        message = "وصل تأكيد الحفظ، لكن تعذر التحقق من القيم بعد إعادة قراءتها من Supabase: ${admin?.lastError.orEmpty()}"
+                                    }
+                                }
                             }
                         }
                     }
@@ -522,7 +537,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         OutlinedButton(onClick = { scope.launch { auditRows = admin?.listAudit().orEmpty() } }, modifier = Modifier.fillMaxWidth()) { Text("تحديث السجل") }
                     }
                 }
-                message?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp)) }
+                message?.let { status -> Text(status, color = if (status.startsWith("تم الحفظ")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
             }
         }
     }
