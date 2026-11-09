@@ -3,6 +3,7 @@ package com.nexa.social.feature.messages
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -130,6 +131,8 @@ fun MessagesScreen(
     var selectedConversationIds by rememberSaveable { mutableStateOf(setOf<String>()) }
     var bulkActionMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var showDeleteChoice by rememberSaveable { mutableStateOf(false) }
+    var showConversationActions by rememberSaveable { mutableStateOf(false) }
+    var actionConversationId by rememberSaveable { mutableStateOf<String?>(null) }
     var noteDraft by rememberSaveable { mutableStateOf("") }
     var noteVisibility by rememberSaveable { mutableStateOf("FOLLOWING") }
     var noteDuration by rememberSaveable { mutableStateOf(24) }
@@ -138,6 +141,37 @@ fun MessagesScreen(
     val displayedConversations = conversations.filter { it.archivedLocally == showArchived }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        if (showConversationActions && actionConversationId != null) {
+            AlertDialog(
+                onDismissRequest = { showConversationActions = false; actionConversationId = null },
+                title = { Text("إدارة المحادثة") },
+                text = { Text("اختر الإجراء الذي تريد تنفيذه على هذه المحادثة.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val id = actionConversationId!!
+                        showConversationActions = false
+                        viewModel.archiveConversations(setOf(id), archived = !showArchived) { ok ->
+                            bulkActionMessage = if (ok) {
+                                if (showArchived) "تم إلغاء أرشفة المحادثة" else "تمت أرشفة المحادثة"
+                            } else "تعذرت أرشفة المحادثة"
+                        }
+                        actionConversationId = null
+                    }) { Text(if (showArchived) "إلغاء الأرشفة" else "أرشفة") }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = {
+                            selectedConversationIds = setOf(actionConversationId!!)
+                            selectionMode = true
+                            showConversationActions = false
+                            actionConversationId = null
+                            showDeleteChoice = true
+                        }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+                        TextButton(onClick = { showConversationActions = false; actionConversationId = null }) { Text("إلغاء") }
+                    }
+                }
+            )
+        }
         if (showDeleteChoice) {
             AlertDialog(
                 onDismissRequest = { showDeleteChoice = false },
@@ -413,6 +447,14 @@ fun MessagesScreen(
                                 if (selectionMode) {
                                     selectedConversationIds = if (conversation.id in selectedConversationIds) selectedConversationIds - conversation.id else selectedConversationIds + conversation.id
                                 } else onOpenConversation(conversation.id)
+                            },
+                            onLongClick = {
+                                if (!selectionMode) {
+                                    actionConversationId = conversation.id
+                                    showConversationActions = true
+                                } else {
+                                    selectedConversationIds = selectedConversationIds + conversation.id
+                                }
                             }
                         )
                     }
@@ -580,13 +622,14 @@ fun ChatListItem(
     presenceViewModel: PresenceViewModel,
     onClick: () -> Unit,
     selectionMode: Boolean = false,
-    selected: Boolean = false
+    selected: Boolean = false,
+    onLongClick: () -> Unit = {}
 ) {
     val participant = conversation.participant
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
