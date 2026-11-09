@@ -26,7 +26,14 @@ data class OwnerUserRow(
 
 data class OwnerSupportRow(val id: String, val userId: String, val subject: String, val message: String, val status: String, val reply: String, val createdAt: String)
 
-data class OwnerContentRow(val id: String, val type: String, val body: String, val authorName: String, val createdAt: String)
+data class OwnerContentRow(
+    val id: String,
+    val type: String,
+    val body: String,
+    val authorName: String,
+    val createdAt: String,
+    val groupName: String = ""
+)
 
 data class OwnerAdRow(
     val id: String, val title: String, val body: String, val mediaUrl: String,
@@ -201,7 +208,8 @@ class SupabaseOwnerAdminDataSource(
                     o.string("content_type").orEmpty(),
                     o.string("body").orEmpty(),
                     o.string("author_name").orEmpty(),
-                    o.string("created_at").orEmpty()
+                    o.string("created_at").orEmpty(),
+                    o.string("group_name").orEmpty()
                 )
             }
         }.getOrDefault(emptyList())
