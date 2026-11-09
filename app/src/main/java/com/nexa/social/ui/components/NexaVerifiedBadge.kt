@@ -55,7 +55,7 @@ fun NexaVerifiedBadge(
             color = Color.White,
             start = Offset(center.x - diameter * 0.045f, center.y + diameter * 0.16f),
             end = Offset(center.x + diameter * 0.235f, center.y - diameter * 0.17f),
-            strokeWidth = checkStroke.width,
+            strokeWidth = checkStrokeWidth,
             cap = StrokeCap.Round
         )
     }
