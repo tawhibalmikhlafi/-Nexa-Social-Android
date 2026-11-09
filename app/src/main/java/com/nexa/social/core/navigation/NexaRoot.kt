@@ -155,13 +155,13 @@ fun NexaRoot() {
                             .fillMaxWidth()
                             .background(
                                 Brush.verticalGradient(
-                                    listOf(Color(0xFF1A1030), Color(0xFF080511))
+                                    listOf(Color(0xFF21113F), Color(0xFF100D22), Color(0xFF080A15))
                                 ),
                                 RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
                             )
                             .border(
                                 width = 1.dp,
-                                color = Color(0xFF8B35E8).copy(alpha = 0.75f),
+                                color = Color(0xFF9B62FF).copy(alpha = 0.48f),
                                 shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
                             )
                     ) {
@@ -189,7 +189,7 @@ fun NexaRoot() {
                                                 Icon(
                                                     imageVector = item.icon,
                                                     contentDescription = stringResource(item.labelRes),
-                                                    modifier = Modifier.size(25.dp)
+                                                    modifier = Modifier.size(24.dp)
                                                 )
                                             }
                                         } else {
@@ -204,7 +204,7 @@ fun NexaRoot() {
                                     colors = NavigationBarItemDefaults.colors(
                                         selectedIconColor = Color.White,
                                         selectedTextColor = Color(0xFFE4C8FF),
-                                        indicatorColor = Color(0xFF6420A8),
+                                        indicatorColor = Color(0xFF7546F6).copy(alpha = 0.88f),
                                         unselectedIconColor = Color(0xFFB9A6D8),
                                         unselectedTextColor = Color(0xFFB9A6D8)
                                     )
