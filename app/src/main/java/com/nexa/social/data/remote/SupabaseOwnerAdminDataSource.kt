@@ -193,6 +193,70 @@ class SupabaseOwnerAdminDataSource(
         }.getOrDefault(emptyList())
     }
 
+    suspend fun deleteContentBatch(items: List<OwnerContentRow>, reason: String): Boolean {
+        if (items.isEmpty()) {
+            lastError = "لم يتم تحديد أي محتوى للحذف"
+            return false
+        }
+        if (items.size > 200) {
+            lastError = "يمكن حذف 200 عنصر كحد أقصى في العملية الواحدة"
+            return false
+        }
+        val payload = com.google.gson.JsonArray().apply {
+            items.distinctBy { "${it.type}:${it.id}" }.forEach { item ->
+                add(JsonObject().apply {
+                    addProperty("id", item.id)
+                    addProperty("type", item.type)
+                })
+            }
+        }
+        val body = JsonObject().apply {
+            add("p_items", payload)
+            addProperty("p_reason", reason.trim().ifBlank { "حذف جماعي من لوحة مالك Nexa" })
+        }
+        val raw = rpc("nexa_owner_delete_content_batch", body) ?: return false
+        val result = runCatching { JsonParser.parseString(raw).asJsonObject }.getOrNull()
+        if (result?.get("success")?.asBoolean != true) {
+            lastError = "لم تؤكد قاعدة البيانات حذف المحتوى المحدد"
+            return false
+        }
+        val expected = payload.size()
+        val deleted = result.get("deleted_count")?.asInt ?: 0
+        if (deleted != expected) {
+            lastError = "تأكيد قاعدة البيانات غير مكتمل: حُذف $deleted من $expected"
+            return false
+        }
+
+        val token = accessToken() ?: run {
+            lastError = "حُذفت السجلات من قاعدة البيانات، لكن تعذر تنظيف الوسائط لعدم توفر جلسة الدخول"
+            return true
+        }
+        val media = result.getAsJsonArray("media_paths") ?: com.google.gson.JsonArray()
+        val paths = media.mapNotNull { entry ->
+            runCatching {
+                val item = entry.asJsonObject
+                val bucket = item.get("bucket")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                val storagePath = item.get("path")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                if (bucket.isBlank() || storagePath.isBlank() || storagePath == "null") null else bucket to storagePath
+            }.getOrNull()
+        }.distinct()
+        val failed = mutableListOf<String>()
+        paths.forEach { (bucket, storagePath) ->
+            val payloadDelete = JsonObject().apply {
+                add("prefixes", com.google.gson.JsonArray().apply { add(storagePath) })
+            }
+            val response = http.execute(
+                http.authenticatedRequest("${config.url.trimEnd('/')}/storage/v1/object/${enc(bucket)}", token)
+                    .method("DELETE", http.jsonBody(payloadDelete)).build()
+            ).getOrNull()
+            if (response == null || !response.successful) failed += "$bucket/$storagePath"
+        }
+        lastError = if (failed.isNotEmpty()) {
+            "حُذفت $deleted سجلات من قاعدة البيانات، لكن تعذر حذف ${failed.size} ملفاً من Storage"
+        } else null
+        return true
+    }
+
     suspend fun deleteContent(type: String, contentId: String, reason: String): Boolean {
         val body = JsonObject().apply {
             addProperty("p_type", type)
