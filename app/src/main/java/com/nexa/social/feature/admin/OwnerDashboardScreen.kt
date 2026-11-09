@@ -113,6 +113,7 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
     var contentDeleteTarget by remember { mutableStateOf<OwnerContentRow?>(null) }
     var contentDeleteReason by remember { mutableStateOf("") }
     var selectedContentKeys by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var selectedContentTab by remember { mutableIntStateOf(0) }
     var contentBulkDeleteConfirm by remember { mutableStateOf(false) }
     var contentBulkDeleteReason by remember { mutableStateOf("") }
     var supportReply by remember { mutableStateOf("") }
@@ -557,26 +558,58 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                         }
                     }
                     6 -> Column(Modifier.fillMaxSize()) {
-                        Text("إدارة وحذف المحتوى من جميع المستخدمين", style = MaterialTheme.typography.titleMedium)
-                        Text("الحذف نهائي من قاعدة البيانات مع حفظ سجل تدقيق. يمكن تحديد عناصر منفردة أو تحديد جميع العناصر المعروضة (حتى 200).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        val allContentKeys = contentRows.map { "${it.type}:${it.id}" }.toSet()
-                        val allContentSelected = allContentKeys.isNotEmpty() && selectedContentKeys.containsAll(allContentKeys)
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("إدارة وحذف المحتوى", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "افصلنا محتوى الملف الشخصي عن منشورات المجموعات، ويظهر اسم المجموعة مع كل منشور. تحديد الكل يحدد عناصر التبويب الحالي فقط.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(
+                            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf("الملف الشخصي", "المجموعات", "التعليقات").forEachIndexed { index, label ->
+                                FilterChip(
+                                    selected = selectedContentTab == index,
+                                    onClick = {
+                                        selectedContentTab = index
+                                        selectedContentKeys = emptySet()
+                                    },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                        val visibleContentRows = when (selectedContentTab) {
+                            0 -> contentRows.filter { it.type == "POST" || it.type == "CLIP" }
+                            1 -> contentRows.filter { it.type == "GROUP_POST" }
+                            else -> contentRows.filter { it.type == "COMMENT" || it.type == "CLIP_COMMENT" }
+                        }
+                        val visibleContentKeys = visibleContentRows.map { "${it.type}:${it.id}" }.toSet()
+                        val visibleSelectedKeys = selectedContentKeys.intersect(visibleContentKeys)
+                        val allContentSelected = visibleContentKeys.isNotEmpty() && visibleSelectedKeys.containsAll(visibleContentKeys)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
                                     checked = allContentSelected,
                                     onCheckedChange = { checked ->
-                                        selectedContentKeys = if (checked) allContentKeys else emptySet()
+                                        selectedContentKeys = if (checked) visibleContentKeys else emptySet()
                                     }
                                 )
                                 Text(if (allContentSelected) "إلغاء تحديد الكل" else "تحديد الكل")
                             }
-                            Text("${selectedContentKeys.intersect(allContentKeys).size} / ${contentRows.size} محدد", style = MaterialTheme.typography.labelMedium)
+                            Text(
+                                "${visibleSelectedKeys.size} / ${visibleContentRows.size} محدد",
+                                style = MaterialTheme.typography.labelMedium
+                            )
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = { contentBulkDeleteReason = ""; contentBulkDeleteConfirm = true },
-                                enabled = selectedContentKeys.any { it in allContentKeys },
+                                enabled = visibleSelectedKeys.isNotEmpty(),
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(Icons.Default.Delete, contentDescription = null)
@@ -592,32 +625,66 @@ fun OwnerDashboardScreen(onBack: () -> Unit) {
                                 modifier = Modifier.weight(1f)
                             ) { Text("تحديث المحتوى") }
                         }
-                        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(contentRows, key = { it.type + it.id }) { item ->
-                                val contentKey = "${item.type}:${item.id}"
-                                Card(Modifier.fillMaxWidth()) {
-                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                            Checkbox(
-                                                checked = contentKey in selectedContentKeys,
-                                                onCheckedChange = { checked ->
-                                                    selectedContentKeys = if (checked) selectedContentKeys + contentKey else selectedContentKeys - contentKey
-                                                }
+                        if (visibleContentRows.isEmpty()) {
+                            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                                Text(
+                                    when (selectedContentTab) {
+                                        0 -> "لا توجد منشورات أو مقاطع في الملف الشخصي"
+                                        1 -> "لا توجد منشورات مجموعات"
+                                        else -> "لا توجد تعليقات"
+                                    },
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(visibleContentRows, key = { it.type + it.id }) { item ->
+                                    val contentKey = "${item.type}:${item.id}"
+                                    Card(Modifier.fillMaxWidth()) {
+                                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                                Checkbox(
+                                                    checked = contentKey in selectedContentKeys,
+                                                    onCheckedChange = { checked ->
+                                                        selectedContentKeys = if (checked) selectedContentKeys + contentKey else selectedContentKeys - contentKey
+                                                    }
+                                                )
+                                                Text(
+                                                    when (item.type) {
+                                                        "GROUP_POST" -> "منشور مجموعة"
+                                                        "POST" -> "منشور شخصي"
+                                                        "CLIP" -> "ريل"
+                                                        "COMMENT" -> "تعليق"
+                                                        "CLIP_COMMENT" -> "تعليق على ريل"
+                                                        else -> item.type
+                                                    },
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                            if (item.type == "GROUP_POST") {
+                                                Text(
+                                                    "المجموعة: ${item.groupName.ifBlank { "مجموعة غير معروفة" }}",
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    color = Color(0xFFB9A3FF)
+                                                )
+                                            }
+                                            Text(item.body.ifBlank { "بدون نص" }, style = MaterialTheme.typography.bodyMedium)
+                                            Text(
+                                                "بواسطة ${item.authorName} • ${item.createdAt}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
-                                            Text(item.type, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                                        }
-                                        Text(item.body.ifBlank { "بدون نص" }, style = MaterialTheme.typography.bodyMedium)
-                                        Text("بواسطة " + item.authorName + " • " + item.createdAt, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        OutlinedButton(onClick = { contentDeleteTarget = item; contentDeleteReason = "" }) {
-                                            Icon(Icons.Default.Delete, contentDescription = null)
-                                            Text("حذف هذا المحتوى")
+                                            OutlinedButton(onClick = { contentDeleteTarget = item; contentDeleteReason = "" }) {
+                                                Icon(Icons.Default.Delete, contentDescription = null)
+                                                Text("حذف هذا المحتوى")
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                }
+                    }                }
                 if (tab == 7) {
                     OwnerAdsManagementPanel(
                         ads = ads,
