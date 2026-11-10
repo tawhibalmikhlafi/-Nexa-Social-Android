@@ -42,14 +42,14 @@
     <!-- Local / server notices -->
     <string name="notice_local_data_title">بيانات محلية على الجهاز</string>
     <string name="notice_local_data_body">هذا المحتوى محفوظ على جهازك فقط ولم يُنشر على أي خادم.</string>
-    <string name="notice_server_pending_title">بانتظار الربط بالخادم</string>
-    <string name="notice_server_pending_body">هذه الميزة مبنية لكنها تحتاج اتصالًا بالخادم لتعمل عبر الإنترنت.</string>
+    <string name="notice_server_pending_title">الميزة غير متاحة حالياً</string>
+    <string name="notice_server_pending_body">هذه الميزة غير متاحة عبر الإنترنت حالياً. سنعلن عند تفعيلها.</string>
     <string name="settings_remote_notice">تستخدم الحسابات Supabase Auth. تُحفظ الملفات الشخصية والمنشورات والقصص والتعليقات والمتابعات والرسائل في Supabase، وتبقى الإشعارات والمقاطع والمساحات والإنجازات على هذا الجهاز.</string>
     <string name="notice_requires_account_title">يتطلب حسابًا</string>
     <string name="notice_requires_account_body">هذا الإجراء يحتاج حسابًا حقيقيًا ويتطلب ربط الخادم.</string>
     <string name="notice_guest_mode">تتصفح الآن كزائر. تبقى بياناتك على هذا الجهاز.</string>
-    <string name="notice_local_account">حساب محلي لأغراض التطوير — غير مسجّل على أي خادم.</string>
-    <string name="notice_email_not_verified">التحقق من البريد يحتاج خادمًا ولم يكتمل بعد.</string>
+    <string name="notice_local_account">هذا الحساب محفوظ على هذا الجهاز فقط، ولا تتم مزامنته مع حسابات أخرى.</string>
+    <string name="notice_email_not_verified">يجب تأكيد بريدك الإلكتروني لإكمال إعداد الحساب.</string>
 
     <string name="label_optional">اختياري</string>
 
@@ -94,9 +94,9 @@
     <string name="remember_me">تذكرني</string>
     <string name="forgot_password">استعادة كلمة المرور</string>
     <string name="forgot_title">استعادة كلمة المرور</string>
-    <string name="forgot_subtitle">أدخل بريدك وسنرسل رابط الاستعادة عند ربط الخادم</string>
+    <string name="forgot_subtitle">أدخل بريدك الإلكتروني المرتبط بحسابك لطلب استعادة كلمة المرور.</string>
     <string name="forgot_action">إرسال الرابط</string>
-    <string name="forgot_local_notice">لم يُرسل أي بريد فعليًا: الخادم غير متصل بعد.</string>
+    <string name="forgot_local_notice">استعادة كلمة المرور غير متاحة حالياً. حاول مرة أخرى لاحقاً أو تواصل مع الدعم.</string>
     <string name="forgot_sent_local">تم تسجيل طلب الاستعادة محليًا لأغراض التطوير فقط.</string>
     <string name="reset_password_title">تعيين كلمة مرور جديدة</string>
     <string name="reset_password_subtitle">تم تأكيد بريدك الإلكتروني. اختر كلمة مرور جديدة لحسابك.</string>
@@ -109,7 +109,7 @@
     <string name="verify_action">تحقق</string>
     <string name="verify_resend">إعادة إرسال الرمز</string>
     <string name="verify_skip">تخطٍ مؤقتًا</string>
-    <string name="verify_local_notice">رمز تطوير محلي: التحقق محاكى ولا يؤكده أي خادم.</string>
+    <string name="verify_local_notice">رمز التحقق في هذه النسخة مخصص للاختبار فقط، ولا يتم إرسال رسالة بريد إلكتروني.</string>
     <string name="verify_code_label">الرمز</string>
 
     <string name="profile_setup_title">إعداد ملفك الشخصي</string>
@@ -634,12 +634,12 @@
     <!-- Supabase authentication -->
     <string name="label_email_or_username">البريد الإلكتروني أو اسم المستخدم</string>
     <string name="auth_continue_with_google">المتابعة باستخدام Google</string>
-    <string name="notice_supabase_account">تتم مصادقة هذا الحساب عبر Supabase. التحقق من البريد وحجز أسماء المستخدمين يتمّان على الخادم.</string>
+    <string name="notice_supabase_account">يتم تأمين تسجيل الدخول والتحقق من البريد وإدارة اسم المستخدم عبر خدمات Nexa.</string>
     <string name="verify_supabase_subtitle">أرسلنا رابط تحقق إلى بريدك الإلكتروني. افتحه ثم سجّل الدخول ببريدك وكلمة المرور.</string>
     <string name="verify_email_sent">تم إرسال رسالة التحقق.</string>
     <string name="verify_resend_email">إعادة إرسال رسالة التحقق</string>
     <string name="verify_sign_in">تسجيل الدخول بعد التحقق</string>
-    <string name="forgot_supabase_subtitle">أدخل البريد الإلكتروني لحسابك في Supabase وسنرسل رابط إعادة التعيين.</string>
+    <string name="forgot_supabase_subtitle">أدخل البريد الإلكتروني المرتبط بحسابك وسنرسل رابط إعادة التعيين إذا كان الحساب مؤهلاً.</string>
     <string name="forgot_sent_email">إذا كان البريد مسجّلاً فسيصلك رابط إعادة التعيين.</string>
 
     <!-- Notifications -->
@@ -660,7 +660,7 @@
     <string name="error_email_not_verified">لم يتم التحقق من بريدك الإلكتروني بعد.</string>
     <string name="error_google_sign_in">فشل تسجيل الدخول عبر Google. أعد المحاولة.</string>
     <string name="error_cancelled">تم إلغاء العملية.</string>
-    <string name="error_operation_not_allowed">طريقة تسجيل الدخول هذه غير مفعّلة في Supabase.</string>
+    <string name="error_operation_not_allowed">طريقة تسجيل الدخول هذه غير متاحة حالياً. جرّب طريقة أخرى أو تواصل مع الدعم.</string>
     <string name="error_not_authenticated">يجب تسجيل الدخول أولاً.</string>
     <string name="error_permission_denied">لا تملك صلاحية تنفيذ ذلك.</string>
     <string name="error_username_taken">اسم المستخدم هذا محجوز بالفعل.</string>
@@ -712,7 +712,7 @@
     <string name="gatherings_guest_error">سجّل الدخول لاستضافة لقاء أو تأكيد الحضور.</string>
     <string name="gatherings_empty_title">لا لقاءات بعد</string>
     <string name="gatherings_empty_body">أنشئ أول غرفة لمجتمعك، أو انتقل إلى السابقة.</string>
-    <string name="gatherings_local_note">تتم مزامنة اللقاءات وتأكيدات الحضور بأمان مع حسابك في Nexa عبر Supabase.</string>
+    <string name="gatherings_local_note">اللقاءات وتأكيدات الحضور في هذا القسم محفوظة على هذا الجهاز فقط، ولا تتم مشاركتها مع المستخدمين الآخرين حالياً.</string>
     <string name="gatherings_virtual">غرفة افتراضية</string>
     <string name="gatherings_in_person">حضوري</string>
     <string name="gatherings_unlimited">مقاعد غير محدودة</string>
@@ -990,7 +990,7 @@
     <!-- Privacy settings -->
     <string name="privacy_title">إعدادات الخصوصية</string>
     <string name="privacy_saved">تم حفظ الإعدادات بنجاح</string>
-    <string name="privacy_requires_account">يلزم حساب بعيد لحفظ إعدادات الخصوصية على الخادم.</string>
+    <string name="privacy_requires_account">سجّل الدخول لحفظ إعدادات الخصوصية ومزامنتها مع حسابك.</string>
     <string name="privacy_error_generic">حدث خطأ. يرجى المحاولة مرة أخرى.</string>
     <string name="privacy_error_network">خطأ في الشبكة. تحقق من اتصالك.</string>
     <string name="privacy_error_permission">تم رفض الإذن.</string>
@@ -1193,4 +1193,5 @@
     <string name="groups_reporter_member">تم الإبلاغ بواسطة أحد الأعضاء</string>
     <string name="notif_type_group_post_report">بلاغات منشورات المجموعات</string>
     <string name="notif_group_post_report">أبلغ أحد أعضاء المجموعة عن منشور. يرجى مراجعته.</string>
+    <string name="verify_unavailable_release">تعذر إكمال التحقق حالياً. يرجى المحاولة لاحقاً أو تسجيل الدخول بعد توفر الخدمة.</string>
 </resources>
