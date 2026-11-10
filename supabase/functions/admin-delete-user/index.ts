@@ -170,7 +170,45 @@ Deno.serve(async (req) => {
     method: "DELETE",
     headers: secretHeaders(secret),
   });
-  if (deleted.status === 404) return reply(404, { error: "user_not_found" });
+  if (deleted.status === 404) {
+    // A repeated tap/retry after a successful deletion must not be reported as
+    // a failure. Only treat it as idempotent success when an earlier completed
+    // deletion audit exists for this exact target.
+    const priorDeletion = await fetch(
+      `${url}/rest/v1/nexa_owner_audit_events?entity_id=eq.${encodeURIComponent(targetId)}&action=eq.USER_DELETED&select=id&order=created_at.desc&limit=1`,
+      { headers: secretHeaders(secret) },
+    );
+    if (!priorDeletion.ok) return reply(500, { error: "deletion_state_check_failed" });
+    const priorRows = await priorDeletion.json();
+    if (!Array.isArray(priorRows) || priorRows.length === 0) {
+      return reply(404, { error: "user_not_found" });
+    }
+
+    const retryAuditUpdate = await fetch(
+      `${url}/rest/v1/nexa_owner_audit_events?id=eq.${encodeURIComponent(auditId)}`,
+      {
+        method: "PATCH",
+        headers: secretHeaders(secret),
+        body: JSON.stringify({
+          action: "USER_DELETED",
+          details: {
+            phase: "already_completed",
+            storage_cleanup_verified: true,
+            removed_storage_objects: 0,
+            already_deleted: true,
+          },
+        }),
+      },
+    );
+    if (!retryAuditUpdate.ok) return reply(500, { error: "audit_record_update_failed" });
+    return reply(200, {
+      success: true,
+      already_deleted: true,
+      user_id: targetId,
+      removed_storage_objects: 0,
+      audit_recorded: true,
+    });
+  }
   if (!deleted.ok) return reply(500, { error: "delete_failed" });
 
   const auditUpdate = await fetch(
