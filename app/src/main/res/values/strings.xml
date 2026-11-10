@@ -42,14 +42,14 @@
     <!-- Local / server notices -->
     <string name="notice_local_data_title">Local device data</string>
     <string name="notice_local_data_body">This content is stored only on your device and is not published to any server.</string>
-    <string name="notice_server_pending_title">Waiting for server integration</string>
-    <string name="notice_server_pending_body">This feature is built but needs a backend connection to work online.</string>
+    <string name="notice_server_pending_title">Feature temporarily unavailable</string>
+    <string name="notice_server_pending_body">This feature is not available online yet. We will announce when it becomes available.</string>
     <string name="settings_remote_notice">Accounts use Supabase Auth. Profiles, posts, stories, comments, follows and messages are stored in Supabase; notifications, clips, spaces and achievements stay on this device.</string>
     <string name="notice_requires_account_title">Account required</string>
     <string name="notice_requires_account_body">This action needs a real account and requires the server to be connected.</string>
     <string name="notice_guest_mode">You are browsing as a guest. Your data stays on this device.</string>
-    <string name="notice_local_account">Local account for development — it is not registered on any server.</string>
-    <string name="notice_email_not_verified">Email verification needs a server and has not been completed.</string>
+    <string name="notice_local_account">This account is stored on this device only and is not synced with other accounts.</string>
+    <string name="notice_email_not_verified">Please verify your email address to finish setting up your account.</string>
 
     <string name="label_optional">Optional</string>
 
@@ -94,9 +94,9 @@
     <string name="remember_me">Remember me</string>
     <string name="forgot_password">Forgot password?</string>
     <string name="forgot_title">Reset password</string>
-    <string name="forgot_subtitle">Enter your email and we will send a reset link when the server is connected</string>
+    <string name="forgot_subtitle">Enter the email address linked to your account to request a password reset.</string>
     <string name="forgot_action">Send link</string>
-    <string name="forgot_local_notice">No email was actually sent: the server is not connected yet.</string>
+    <string name="forgot_local_notice">Password recovery is not available right now. Try again later or contact support.</string>
     <string name="forgot_sent_local">Reset request recorded locally for development only.</string>
     <string name="reset_password_title">Set a new password</string>
     <string name="reset_password_subtitle">Your email is confirmed. Choose a new password for your account.</string>
@@ -109,7 +109,7 @@
     <string name="verify_action">Verify</string>
     <string name="verify_resend">Resend code</string>
     <string name="verify_skip">Skip for now</string>
-    <string name="verify_local_notice">Local development code: verification is simulated and is not confirmed by any server.</string>
+    <string name="verify_local_notice">The verification code in this build is for testing only. No email is sent.</string>
     <string name="verify_code_label">Code</string>
 
     <string name="profile_setup_title">Set up your profile</string>
@@ -634,12 +634,12 @@
     <!-- Supabase authentication -->
     <string name="label_email_or_username">Email or username</string>
     <string name="auth_continue_with_google">Continue with Google</string>
-    <string name="notice_supabase_account">This account is authenticated by Supabase. Email verification and username reservations are handled by the server.</string>
+    <string name="notice_supabase_account">Sign-in, email verification and username management are handled by Nexa services.</string>
     <string name="verify_supabase_subtitle">We sent a verification link to your email address. Open it, then sign in with your email and password.</string>
     <string name="verify_email_sent">Verification email sent.</string>
     <string name="verify_resend_email">Resend verification email</string>
     <string name="verify_sign_in">Sign in after verifying</string>
-    <string name="forgot_supabase_subtitle">Enter the email address for your Supabase account and we will send a reset link.</string>
+    <string name="forgot_supabase_subtitle">Enter the email address linked to your account. If eligible, we will send a reset link.</string>
     <string name="forgot_sent_email">If that email is registered, a reset link is on its way.</string>
 
     <!-- Notifications -->
@@ -660,7 +660,7 @@
     <string name="error_email_not_verified">Your email is not verified yet.</string>
     <string name="error_google_sign_in">Google Sign-In failed. Try again.</string>
     <string name="error_cancelled">Operation cancelled.</string>
-    <string name="error_operation_not_allowed">This sign-in method is not enabled in Supabase.</string>
+    <string name="error_operation_not_allowed">This sign-in method is currently unavailable. Try another method or contact support.</string>
     <string name="error_not_authenticated">You need to sign in first.</string>
     <string name="error_permission_denied">You do not have permission to do that.</string>
     <string name="error_username_taken">This username is already taken.</string>
@@ -713,7 +713,7 @@
     <string name="gatherings_guest_error">Sign in to host a gathering or RSVP.</string>
     <string name="gatherings_empty_title">No gatherings yet</string>
     <string name="gatherings_empty_body">Create the first room for your community, or switch to Past.</string>
-    <string name="gatherings_local_note">Gatherings and attendance are synced securely with your Nexa account through Supabase.</string>
+    <string name="gatherings_local_note">Gatherings and attendance in this section are stored only on this device and are not shared with other users yet.</string>
     <string name="gatherings_virtual">Virtual room</string>
     <string name="gatherings_in_person">In person</string>
     <string name="gatherings_unlimited">Unlimited seats</string>
@@ -988,7 +988,7 @@
     <string name="post_content_hint">Post content…</string>
     <string name="post_tags_hint">Tags (comma separated)</string>
     <string name="privacy_title">Privacy Settings</string>
-    <string name="privacy_requires_account">Remote account required for server privacy settings.</string>
+    <string name="privacy_requires_account">Sign in to save and sync your privacy settings with your account.</string>
     <string name="privacy_saved">Settings saved successfully</string>
     <string name="privacy_section_account">Account Privacy</string>
     <string name="privacy_section_account_desc">Manage your account visibility and status</string>
@@ -1189,4 +1189,5 @@
     <string name="groups_reporter_member">Reported by a group member</string>
     <string name="notif_type_group_post_report">Reports on group posts</string>
     <string name="notif_group_post_report">A group member reported a post. Please review it.</string>
+    <string name="verify_unavailable_release">Verification is currently unavailable. Please try again later or sign in when the service is available.</string>
 </resources>
