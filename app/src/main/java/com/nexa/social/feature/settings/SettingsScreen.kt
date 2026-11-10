@@ -64,13 +64,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexa.social.BuildConfig
 import com.nexa.social.R
 import com.nexa.social.core.common.LocaleManager
-import com.nexa.social.core.ui.rememberRemoteMode
 import com.nexa.social.domain.model.SessionState
 import com.nexa.social.domain.model.NotificationType
 import com.nexa.social.domain.model.FeedType
 import com.nexa.social.domain.model.isAccount
-import com.nexa.social.ui.components.AccountRequiredBanner
-import com.nexa.social.ui.components.LocalDataBanner
 import com.nexa.social.ui.components.LegalDialog
 import com.nexa.social.ui.components.NexaTopBar
 import com.nexa.social.ui.theme.NexaSpacing
@@ -104,7 +101,6 @@ fun SettingsScreen(
     val feedType by viewModel.feedType.collectAsStateWithLifecycle()
     val session by viewModel.session.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val remoteMode = rememberRemoteMode()
 
     var dialog by remember { mutableStateOf<String?>(null) }
     var showLanguage by remember { mutableStateOf(false) }
@@ -378,11 +374,6 @@ fun SettingsScreen(
                     },
                     onClick = { showSignOut = true }
                 )
-            }
-            if (remoteMode) {
-                LocalDataBanner(text = stringResource(R.string.settings_remote_notice))
-            } else {
-                AccountRequiredBanner(text = stringResource(R.string.notice_server_pending_body))
             }
             Spacer(Modifier.height(NexaSpacing.xxxl))
         }
