@@ -27,6 +27,7 @@ import java.net.URLDecoder
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
 
 private const val POLL_MS = 8_000L
 
@@ -41,7 +42,7 @@ class SupabaseStoryDataSource(
     private val currentUid: () -> String?,
     private val mediaStorage: MediaStorage? = null
 ) {
-    private val signedUrlCache = mutableMapOf<String, Pair<Long, String>>()
+    private val signedUrlCache = ConcurrentHashMap<String, Pair<Long, String>>()
     private val restUrl: String get() = config.restUrl
     private val refreshSignal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
@@ -225,14 +226,20 @@ class SupabaseStoryDataSource(
         } else {
             value
         }
-        val path = runCatching { URLDecoder.decode(encodedPath, "UTF-8") }.getOrDefault(encodedPath)
+        val path = runCatching { URLDecoder.decode(encodedPath.replace("+", "%2B"), "UTF-8") }.getOrDefault(encodedPath)
         val storage = mediaStorage ?: return value
         val cacheKey = "${uid.orEmpty()}:${bucket.id}:$path"
         val now = System.currentTimeMillis()
-        signedUrlCache[cacheKey]?.takeIf { it.first > now }?.let { return it.second }
+        signedUrlCache[cacheKey]?.let { cached ->
+            if (cached.first > now) return cached.second
+            signedUrlCache.remove(cacheKey, cached)
+        }
         return when (val result = storage.signedUrl(bucket, path, 3_600L)) {
             is Resource.Success -> result.data.also {
-                signedUrlCache[cacheKey] = (now + 50L * 60L * 1000L) to it
+                signedUrlCache[cacheKey] = (System.currentTimeMillis() + 50L * 60L * 1000L) to it
+                if (signedUrlCache.size > 256) {
+                    signedUrlCache.entries.removeIf { entry -> entry.value.first <= System.currentTimeMillis() }
+                }
             }
             is Resource.Failure -> null
             Resource.Loading -> null
