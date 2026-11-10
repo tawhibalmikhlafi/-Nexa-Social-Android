@@ -103,8 +103,9 @@ class SupabaseUserDataSource(
     override suspend fun searchUsers(query: String, limit: Long): List<User> {
         val needle = query.trim().removePrefix("@").trim()
         if (needle.isBlank()) return emptyList()
-        val viaRpc = searchUsersViaRpc(needle, limit)
-        val rows = viaRpc ?: searchUsersViaRest(needle, limit).orEmpty()
+        // Do not fall back to a broad profiles query: the RPC enforces show_in_search,
+        // private-profile visibility and block rules. If it is unavailable, show no suggestions.
+        val rows = searchUsersViaRpc(needle, limit).orEmpty()
         return rows
             .mapNotNull { SupabaseUserMapper.toUser(it) }
             .distinctBy { it.id }
