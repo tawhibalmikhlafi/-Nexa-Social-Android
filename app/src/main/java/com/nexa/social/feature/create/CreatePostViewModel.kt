@@ -40,8 +40,28 @@ class CreatePostViewModel(
     val draft: StateFlow<PostDraft?> = postRepository.observeDraft()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val suggestedUsers: StateFlow<List<User>> = userRepository.observeAllUsers()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val _mentionSuggestions = MutableStateFlow<List<User>>(emptyList())
+    val mentionSuggestions: StateFlow<List<User>> = _mentionSuggestions.asStateFlow()
+
+    private var mentionSearchJob: kotlinx.coroutines.Job? = null
+
+    fun searchMentionUsers(query: String) {
+        val cleanQuery = query.trim().removePrefix("@")
+        mentionSearchJob?.cancel()
+        if (cleanQuery.isBlank()) {
+            _mentionSuggestions.value = emptyList()
+            return
+        }
+        mentionSearchJob = viewModelScope.launch {
+            val results = runCatching { userRepository.searchUsers(cleanQuery) }.getOrDefault(emptyList())
+            _mentionSuggestions.value = results.take(5)
+        }
+    }
+
+    fun clearMentionSuggestions() {
+        mentionSearchJob?.cancel()
+        _mentionSuggestions.value = emptyList()
+    }
 
     val remoteMode: StateFlow<Boolean> = authRepository.remoteMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
