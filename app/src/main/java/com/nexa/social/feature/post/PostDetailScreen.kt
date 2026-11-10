@@ -315,7 +315,8 @@ fun PostDetailScreen(
             .groupBy { it.rootId }
             .mapValues { (_, replies) -> replies.minByOrNull { it.comment.createdAt }?.comment?.id }
         limitedRoots.filter { node ->
-            node.depth == 0 ||
+            showAllComments ||
+                node.depth == 0 ||
                 node.rootId in expandedCommentThreads ||
                 firstReplyByRoot[node.rootId] == node.comment.id
         }
@@ -471,7 +472,7 @@ fun PostDetailScreen(
                             comment = node.comment,
                             depth = node.depth,
                             replyToName = node.replyToName,
-                            hiddenRepliesCount = if (node.depth == 0 && node.rootId == node.comment.id && node.rootId !in expandedCommentThreads) {
+                            hiddenRepliesCount = if (!showAllComments && node.depth == 0 && node.rootId == node.comment.id && node.rootId !in expandedCommentThreads) {
                                 (commentThread.count { it.rootId == node.rootId && it.depth > 0 } - 1).coerceAtLeast(0)
                             } else 0,
                             onShowReplies = { expandedCommentThreads = expandedCommentThreads + node.rootId },
