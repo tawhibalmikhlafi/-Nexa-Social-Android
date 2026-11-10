@@ -3,10 +3,13 @@ package com.nexa.social.data.remote
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.nexa.social.core.common.Ids
+import com.nexa.social.core.common.Resource
 import com.nexa.social.core.supabase.SupabaseConfig
 import com.nexa.social.core.supabase.SupabaseHttp
 import com.nexa.social.core.supabase.long
 import com.nexa.social.core.supabase.string
+import com.nexa.social.data.media.MediaBucket
+import com.nexa.social.data.media.MediaStorage
 import com.nexa.social.domain.model.AccountOrigin
 import com.nexa.social.domain.model.Clip
 import com.nexa.social.domain.model.ClipComment
@@ -19,6 +22,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withTimeoutOrNull
 import java.net.URLEncoder
+import java.net.URLDecoder
 import java.time.Instant
 import java.time.OffsetDateTime
 
@@ -27,8 +31,10 @@ class SupabaseClipDataSource(
     private val config: SupabaseConfig,
     private val http: SupabaseHttp,
     private val accessToken: () -> String?,
-    private val currentUid: () -> String?
+    private val currentUid: () -> String?,
+    private val mediaStorage: MediaStorage? = null
 ) {
+    private val signedUrlCache = mutableMapOf<String, Pair<Long, String>>()
     private val refreshSignal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val restUrl get() = config.restUrl
 
@@ -45,7 +51,21 @@ class SupabaseClipDataSource(
                         ?.mapNotNull { it.string("clip_id") }?.toSet().orEmpty()
                     val saves = fetchRows("clip_saves?select=clip_id&user_id=eq.${encode(uid.orEmpty())}", token)
                         ?.mapNotNull { it.string("clip_id") }?.toSet().orEmpty()
-                    emit(rows.mapNotNull { parseClip(it, likes, saves, uid) })
+                    emit(rows.mapNotNull { row ->
+                        val clip = parseClip(row, likes, saves, uid) ?: return@mapNotNull null
+                        clip.copy(
+                            videoUri = resolveStoredUrl(
+                                MediaBucket.CLIPS,
+                                row.string("video_path") ?: clip.videoUri,
+                                uid
+                            ),
+                            coverUrl = resolveStoredUrl(
+                                MediaBucket.CLIP_COVERS,
+                                row.string("cover_url") ?: clip.coverUrl,
+                                uid
+                            )
+                        )
+                    })
                 }
             }
             withTimeoutOrNull(8_000L) { refreshSignal.first() }
@@ -71,12 +91,22 @@ class SupabaseClipDataSource(
                 "clips?select=*,author:profiles!author_id(id,username,display_name,avatar_url,account_origin)&id=eq.${encode(id)}&author_id=eq.${encode(uid)}&limit=1",
                 token
             )?.firstOrNull()
-            val restored = existing?.let { parseClip(it, emptySet(), emptySet(), uid) } ?: return null
+            val restoredRow = existing ?: return null
+            val restored = parseClip(restoredRow, emptySet(), emptySet(), uid) ?: return null
+            val resolved = restored.copy(
+                videoUri = resolveStoredUrl(MediaBucket.CLIPS, restoredRow.string("video_path") ?: restored.videoUri, uid),
+                coverUrl = resolveStoredUrl(MediaBucket.CLIP_COVERS, restoredRow.string("cover_url") ?: restored.coverUrl, uid)
+            )
             notifyChanged()
-            return restored
+            return resolved
         }
         notifyChanged()
-        return Clip(id, author, videoUrl, caption.trim(), now.toEpochMilli(), 0, 0, false, false, false, coverUrl = coverUrl)
+        return Clip(
+            id, author,
+            resolveStoredUrl(MediaBucket.CLIPS, videoPath, uid) ?: videoUrl,
+            caption.trim(), now.toEpochMilli(), 0, 0, false, false, false,
+            coverUrl = resolveStoredUrl(MediaBucket.CLIP_COVERS, coverUrl, uid) ?: coverUrl
+        )
     }
 
     suspend fun recordView(clipId: String): Boolean {
@@ -195,6 +225,34 @@ class SupabaseClipDataSource(
         if (!response.successful) return null
         notifyChanged()
         return path
+    }
+
+    private suspend fun resolveStoredUrl(bucket: MediaBucket, value: String?, uid: String?): String? {
+        if (value.isNullOrBlank()) return value
+        val markers = listOf(
+            "/storage/v1/object/public/${bucket.id}/",
+            "/storage/v1/object/sign/${bucket.id}/"
+        )
+        val marker = markers.firstOrNull { value.contains(it) }
+        val encodedPath = if (marker != null) {
+            value.substringAfter(marker).substringBefore('?')
+        } else if (value.startsWith("http", ignoreCase = true)) {
+            return value
+        } else {
+            value
+        }
+        val path = runCatching { URLDecoder.decode(encodedPath, "UTF-8") }.getOrDefault(encodedPath)
+        val storage = mediaStorage ?: return value
+        val cacheKey = "${uid.orEmpty()}:${bucket.id}:$path"
+        val now = System.currentTimeMillis()
+        signedUrlCache[cacheKey]?.takeIf { it.first > now }?.let { return it.second }
+        return when (val result = storage.signedUrl(bucket, path, 3_600L)) {
+            is Resource.Success -> result.data.also {
+                signedUrlCache[cacheKey] = (now + 50L * 60L * 1000L) to it
+            }
+            is Resource.Failure -> null
+            Resource.Loading -> null
+        }
     }
 
     private suspend fun fetchRows(path: String, token: String): List<JsonObject>? {
