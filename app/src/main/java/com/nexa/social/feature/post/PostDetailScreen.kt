@@ -313,7 +313,7 @@ fun PostDetailScreen(
         val firstReplyByRoot = limitedRoots
             .filter { it.depth > 0 }
             .groupBy { it.rootId }
-            .mapValues { (_, replies) -> replies.minByOrNull { it.comment.createdAt }?.comment?.id }
+            .mapValues { (_, replies) -> replies.firstOrNull()?.comment?.id }
         limitedRoots.filter { node ->
             showAllComments ||
                 node.depth == 0 ||
