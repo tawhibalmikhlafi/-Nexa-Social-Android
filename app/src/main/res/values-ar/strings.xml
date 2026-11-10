@@ -359,12 +359,10 @@
     <string name="settings_os_notifications">إعدادات إشعارات أندرويد</string>
     <string name="settings_os_notifications_summary">إدارة إذن النظام والصوت والاهتزاز</string>
     <string name="settings_notifications_enabled">تفعيل الإشعارات المحلية</string>
-    <string name="settings_feedback">الإبلاغ عن مشكلة أو اقتراح</string>
-    <string name="settings_feedback_summary">مشاركة الملاحظات عبر التطبيق الذي تختاره</string>
-    <string name="settings_feedback_subject">ملاحظات حول نيكسا سوشيال</string>
-    <string name="settings_feedback_template">ملاحظات نيكسا سوشيال\n\nاكتب المشكلة أو الاقتراح هنا:\n\n--- معلومات التشخيص ---\nإصدار التطبيق: %1$s\nأندرويد: %2$s\nالجهاز: %3$s %4$s</string>
     <string name="settings_feedback">الدعم وإبداء الرأي</string>
     <string name="settings_feedback_summary">اكتب ملاحظتك أو أرسل رأيك مباشرة عبر واتساب</string>
+    <string name="settings_feedback_subject">ملاحظات حول نيكسا سوشيال</string>
+    <string name="settings_feedback_template">ملاحظات نيكسا سوشيال\n\nاكتب المشكلة أو الاقتراح هنا:\n\n--- معلومات التشخيص ---\nإصدار التطبيق: %1$s\nأندرويد: %2$s\nالجهاز: %3$s %4$s</string>
     <string name="settings_support_title">دعم Nexa وإبداء الرأي</string>
     <string name="settings_support_intro">يسعدنا سماع رأيك وملاحظاتك لتطوير Nexa. اختر رسالة جاهزة أو اكتب رسالتك بنفسك، وستفتح محادثة واتساب مباشرة مع الدعم.</string>
     <string name="settings_support_quick_title">رسائل جاهزة</string>
