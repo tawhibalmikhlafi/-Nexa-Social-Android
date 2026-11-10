@@ -44,7 +44,6 @@
     <string name="notice_local_data_body">هذا المحتوى محفوظ على جهازك فقط ولم يُنشر على أي خادم.</string>
     <string name="notice_server_pending_title">الميزة غير متاحة حالياً</string>
     <string name="notice_server_pending_body">هذه الميزة غير متاحة عبر الإنترنت حالياً. سنعلن عند تفعيلها.</string>
-    <string name="settings_remote_notice">تستخدم الحسابات Supabase Auth. تُحفظ الملفات الشخصية والمنشورات والقصص والتعليقات والمتابعات والرسائل في Supabase، وتبقى الإشعارات والمقاطع والمساحات والإنجازات على هذا الجهاز.</string>
     <string name="notice_requires_account_title">يتطلب حسابًا</string>
     <string name="notice_requires_account_body">هذا الإجراء يحتاج حسابًا حقيقيًا ويتطلب ربط الخادم.</string>
     <string name="notice_guest_mode">تتصفح الآن كزائر. تبقى بياناتك على هذا الجهاز.</string>
@@ -361,8 +360,6 @@
     <string name="settings_notifications_enabled">تفعيل الإشعارات المحلية</string>
     <string name="settings_feedback">الدعم وإبداء الرأي</string>
     <string name="settings_feedback_summary">اكتب ملاحظتك أو أرسل رأيك مباشرة عبر واتساب</string>
-    <string name="settings_feedback_subject">ملاحظات حول نيكسا سوشيال</string>
-    <string name="settings_feedback_template">ملاحظات نيكسا سوشيال\n\nاكتب المشكلة أو الاقتراح هنا:\n\n--- معلومات التشخيص ---\nإصدار التطبيق: %1$s\nأندرويد: %2$s\nالجهاز: %3$s %4$s</string>
     <string name="settings_support_title">دعم Nexa وإبداء الرأي</string>
     <string name="settings_support_intro">يسعدنا سماع رأيك وملاحظاتك لتطوير Nexa. اختر رسالة جاهزة أو اكتب رسالتك بنفسك، وستفتح محادثة واتساب مباشرة مع الدعم.</string>
     <string name="settings_support_quick_title">رسائل جاهزة</string>
