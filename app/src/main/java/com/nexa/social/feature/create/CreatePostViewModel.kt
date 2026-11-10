@@ -33,7 +33,7 @@ sealed interface CreatePostStatus {
 class CreatePostViewModel(
     private val createPost: CreatePostUseCase,
     private val postRepository: PostRepository,
-    userRepository: UserRepository,
+    private val userRepository: UserRepository,
     authRepository: AuthRepository
 ) : ViewModel() {
 
