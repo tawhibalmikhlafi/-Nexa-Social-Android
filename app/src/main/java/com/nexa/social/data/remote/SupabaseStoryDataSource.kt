@@ -9,6 +9,8 @@ import com.nexa.social.core.supabase.SupabaseConfig
 import com.nexa.social.core.supabase.SupabaseHttp
 import com.nexa.social.core.supabase.long
 import com.nexa.social.core.supabase.string
+import com.nexa.social.data.media.MediaBucket
+import com.nexa.social.data.media.MediaStorage
 import com.nexa.social.domain.model.AccountOrigin
 import com.nexa.social.domain.model.Story
 import com.nexa.social.domain.model.StoryAudienceMember
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withTimeoutOrNull
 import java.net.URLEncoder
+import java.net.URLDecoder
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
@@ -35,8 +38,10 @@ class SupabaseStoryDataSource(
     private val config: SupabaseConfig,
     private val http: SupabaseHttp,
     private val accessToken: () -> String?,
-    private val currentUid: () -> String?
+    private val currentUid: () -> String?,
+    private val mediaStorage: MediaStorage? = null
 ) {
+    private val signedUrlCache = mutableMapOf<String, Pair<Long, String>>()
     private val restUrl: String get() = config.restUrl
     private val refreshSignal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
@@ -53,11 +58,14 @@ class SupabaseStoryDataSource(
                     "(id,username,display_name,avatar_url,account_origin)" +
                     "&expires_at=gt.${encode(now)}&order=created_at.asc"
             )
-            emit(
-                rows.orEmpty()
-                    .mapNotNull { parseStory(it, uid) }
-                    .filterNot { it.isExpired() }
-            )
+            val visibleStories = rows.orEmpty()
+                .mapNotNull { parseStory(it, uid) }
+                .filterNot { it.isExpired() }
+            emit(visibleStories.map { story ->
+                story.copy(
+                    imageUri = resolveStoredUrl(MediaBucket.STORIES, story.imageUri, uid)
+                )
+            })
             withTimeoutOrNull(POLL_MS) { refreshSignal.first() }
         }
     }
@@ -89,7 +97,7 @@ class SupabaseStoryDataSource(
         return Story(
             id = storyId,
             author = author,
-            imageUri = imageUri,
+            imageUri = resolveStoredUrl(MediaBucket.STORIES, imageUri, uid) ?: imageUri,
             text = text?.trim()?.ifBlank { null },
             createdAt = createdAt.toEpochMilli(),
             expiresAt = createdAt.plus(24, ChronoUnit.HOURS).toEpochMilli(),
@@ -201,6 +209,34 @@ class SupabaseStoryDataSource(
             isMine = authorId == uid,
             isLocal = false
         )
+    }
+
+    private suspend fun resolveStoredUrl(bucket: MediaBucket, value: String?, uid: String?): String? {
+        if (value.isNullOrBlank()) return value
+        val markers = listOf(
+            "/storage/v1/object/public/${bucket.id}/",
+            "/storage/v1/object/sign/${bucket.id}/"
+        )
+        val marker = markers.firstOrNull { value.contains(it) }
+        val encodedPath = if (marker != null) {
+            value.substringAfter(marker).substringBefore('?')
+        } else if (value.startsWith("http", ignoreCase = true)) {
+            return value
+        } else {
+            value
+        }
+        val path = runCatching { URLDecoder.decode(encodedPath, "UTF-8") }.getOrDefault(encodedPath)
+        val storage = mediaStorage ?: return value
+        val cacheKey = "${uid.orEmpty()}:${bucket.id}:$path"
+        val now = System.currentTimeMillis()
+        signedUrlCache[cacheKey]?.takeIf { it.first > now }?.let { return it.second }
+        return when (val result = storage.signedUrl(bucket, path, 3_600L)) {
+            is Resource.Success -> result.data.also {
+                signedUrlCache[cacheKey] = (now + 50L * 60L * 1000L) to it
+            }
+            is Resource.Failure -> null
+            Resource.Loading -> null
+        }
     }
 
     private suspend fun fetchRows(path: String): List<JsonObject>? {
