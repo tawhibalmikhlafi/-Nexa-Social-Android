@@ -35,11 +35,12 @@ import com.nexa.social.ui.theme.NexaSpacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private fun parseTags(input: String): List<String> = input
-    .split(Regex("[,\\s]+"))
-    .map { it.trim().removePrefix("#") }
-    .filter { it.isNotBlank() }
-    .distinct()
+private fun extractHashtags(postText: String): List<String> =
+    Regex("#([\\p{L}\\p{N}_]+)")
+        .findAll(postText)
+        .map { it.groupValues[1] }
+        .distinctBy { it.lowercase() }
+        .toList()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +67,6 @@ fun CreatePostScreen(
     val NexaMuted = colorScheme.onSurfaceVariant
 
     var text by rememberSaveable { mutableStateOf("") }
-    var tagsText by rememberSaveable { mutableStateOf("") }
     var locationText by rememberSaveable { mutableStateOf("") }
     var imageUris by remember { mutableStateOf(emptyList<String>()) }
     var prefilled by remember { mutableStateOf(false) }
@@ -105,7 +105,6 @@ fun CreatePostScreen(
         val current = draft
         if (!prefilled && current != null) {
             text = current.text
-            tagsText = current.tags.joinToString(", ")
             imageUris = current.allImages()
             prefilled = true
         }
@@ -187,7 +186,7 @@ fun CreatePostScreen(
                         if (pinPost) advancedTags.add("مثبت")
                         if (hideLikes) advancedTags.add("إخفاء_الإعجابات")
                         if (!allowComments) advancedTags.add("تعليقات_مغلقة")
-                        val combinedTags = (parseTags(tagsText) + 
+                        val combinedTags = (extractHashtags(text) + 
                             (if (locationText.isNotBlank()) listOf("موقع:$locationText") else emptyList<String>()) +
                             advancedTags).distinct()
                         viewModel.publish(text, imageUris, combinedTags)
@@ -430,7 +429,7 @@ fun CreatePostScreen(
                 }
             }
 
-            // خيارات المنشور (الخصوصية، المتراجعون، الموقع، الوسوم)
+            // خيارات المنشور (الخصوصية والموقع)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -480,29 +479,7 @@ fun CreatePostScreen(
                         }
                 )
 
-                HorizontalDivider(color = NexaBackground, thickness = 1.dp)
 
-                // الوسوم
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(Icons.Default.Tag, contentDescription = null, tint = NexaLavender)
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("الوسوم", color = NexaText, fontSize = 14.sp)
-                            Text("إضافة وسوم لمزيد من الانتشار", color = NexaMuted, fontSize = 12.sp)
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    NexaTextField(
-                        value = tagsText,
-                        onValueChange = { tagsText = it },
-                        label = "أدخل الوسوم مفصولة بفواصل (مثال: تقنية, برمجة)",
-                        singleLine = true,
-                        imeAction = ImeAction.Done
-                    )
-                }
             }
 
             // خيارات متقدمة (تفعيل النوافذ والخيارات)
