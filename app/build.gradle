@@ -8,7 +8,7 @@ def localPropertiesFile = rootProject.file('local.properties')
 if (localPropertiesFile.exists()) {
     localPropertiesFile.withInputStream { stream -> localProperties.load(stream) }
 }
-def supabaseUrl = localProperties.getProperty('SUPABASE_URL', 'https://mqtggplwghyidmchzovj.supabase.co')
+def supabaseUrl = localProperties.getProperty('SUPABASE_URL', 'https://mqtggplwghyidmchzovc5.supabase.co')
 def supabaseAnonKey = localProperties.getProperty('SUPABASE_ANON_KEY', '')
 def escapedSupabaseUrl = supabaseUrl.replace('\\', '\\\\').replace('"', '\\"')
 def escapedSupabaseKey = supabaseAnonKey.replace('\\', '\\\\').replace('"', '\\"')
