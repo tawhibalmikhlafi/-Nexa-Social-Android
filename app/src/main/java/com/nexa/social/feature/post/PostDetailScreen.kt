@@ -1698,6 +1698,18 @@ private fun CommentRow(
                     }
                 }
             }
+            if (hiddenRepliesCount > 0) {
+                TextButton(
+                    onClick = onShowReplies,
+                    modifier = Modifier.padding(start = NexaSpacing.xs)
+                ) {
+                    Text(
+                        text = "عرض الردود السابقة ($hiddenRepliesCount)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }
