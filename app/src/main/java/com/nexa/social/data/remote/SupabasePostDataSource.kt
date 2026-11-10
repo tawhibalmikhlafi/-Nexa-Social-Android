@@ -520,8 +520,10 @@ class SupabasePostDataSource(
             append("&user_id=eq.${encode(uid)}")
             if (postId != null) append("&post_id=eq.${encode(postId)}")
         }
+        // The emoji column is part of the post-like schema. Never fall back to
+        // selecting only post_id: doing so loses the user's chosen reaction and
+        // incorrectly renders every reaction as the default heart.
         val rows = fetchRows("post_likes?select=post_id,emoji$filter")
-            ?: fetchRows("post_likes?select=post_id$filter")
             ?: return emptyMap()
         return rows
             .mapNotNull { row ->
