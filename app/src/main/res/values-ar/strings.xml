@@ -69,7 +69,7 @@
     <string name="skip_login">تخطي تسجيل الدخول مؤقتًا</string>
 
     <string name="signup_title">إنشاء حساب جديد</string>
-    <string name="signup_subtitle">انضم إلى Nexa محليًا وابدأ عالمك</string>
+    <string name="signup_subtitle">أنشئ حسابك وابدأ عالمك في Nexa</string>
     <string name="signup_action">إنشاء الحساب</string>
     <string name="signup_have_account">لديك حساب؟ تسجيل الدخول</string>
     <string name="signin_title">تسجيل الدخول</string>
@@ -151,16 +151,16 @@
     <string name="post_save">حفظ</string>
     <string name="post_saved">تم الحفظ محليًا</string>
     <string name="post_unsave">إلغاء الحفظ</string>
-    <string name="post_share_local_done">تم نسخ نص المشاركة — النشر عبر الإنترنت يحتاج الخادم</string>
-    <string name="post_comments_pending">التعليقات تحتاج اتصال الخادم</string>
+    <string name="post_share_local_done">تم نسخ نص المشاركة. النشر عبر الإنترنت غير متاح في هذا الوضع حالياً.</string>
+    <string name="post_comments_pending">التعليقات غير متاحة في هذا الوضع حالياً.</string>
     <string name="post_see_more">عرض المزيد</string>
     <string name="post_pinned">مثبّت</string>
     <string name="post_comments_count">%1$d تعليق</string>
     <string name="post_shares_count">%1$d مشاركة</string>
     <string name="post_delete_failed">تعذر حذف المنشور. حاول مرة أخرى.</string>
     <string name="home_empty_title">موجزك فارغ</string>
-    <string name="home_empty_body">أنشئ أول منشور محلي لك للبدء.</string>
-    <string name="home_local_feed_notice">الموجز معروض من بيانات تجريبية محلية</string>
+    <string name="home_empty_body">لا توجد منشورات بعد. ابدأ بمشاركة أول منشور لك.</string>
+    <string name="home_local_feed_notice">أنت في الوضع المحلي؛ المنشورات هنا محفوظة على جهازك فقط ولا تظهر للمستخدمين الآخرين.</string>
 
     <!-- Audience -->
     <string name="audience_public">عام (محلي)</string>
@@ -230,8 +230,8 @@
     <string name="messages_search_hint">ابحث في المحادثات</string>
     <string name="messages_empty_title">لا توجد محادثات</string>
     <string name="messages_empty_body">ستظهر هنا المحادثات التي تبدأها محليًا.</string>
-    <string name="messages_local_notice">المحادثات نماذج محلية ولا تُسلَّم لمستخدمين آخرين.</string>
-    <string name="messages_send_requires_account">إرسال الرسائل لمستخدمين آخرين يتطلب حسابًا والخادم.</string>
+    <string name="messages_local_notice">المحادثات في هذا الوضع محفوظة على جهازك فقط ولا تصل إلى مستخدمين آخرين.</string>
+    <string name="messages_send_requires_account">سجّل الدخول لإرسال الرسائل إلى المستخدمين الآخرين.</string>
     <string name="conversation_hint_send">اكتب رسالة…</string>
     <string name="presence_online_now">متصل الآن</string>
     <string name="conversation_local_notice">هذه المحادثة محفوظة على جهازك فقط</string>
@@ -240,7 +240,7 @@
     <string name="message_attachment_selected">تم إرفاق صورة</string>
     <string name="message_attachment_image">مرفق الرسالة</string>
     <string name="message_status_read">مقروءة</string>
-    <string name="message_status_sent">أُرسلت محليًا</string>
+    <string name="message_status_sent">محفوظ على الجهاز</string>
 
     <!-- Notifications -->
     <string name="notifications_title">الإشعارات</string>
@@ -294,7 +294,7 @@
 
     <string name="edit_profile_title">تعديل الملف الشخصي</string>
     <string name="edit_profile_bio">النبذة</string>
-    <string name="edit_profile_username_locked">لا يمكن تغيير اسم المستخدم محليًا</string>
+    <string name="edit_profile_username_locked">لا يمكن تغيير اسم المستخدم في هذا الوضع حالياً.</string>
     <string name="edit_profile_username_hint">من 3 إلى 20 حرفًا. ابدأ بحرف إنجليزي واستخدم الأحرف الإنجليزية والأرقام والشرطة السفلية فقط.</string>
     <string name="edit_profile_saved">تم تحديث الملف الشخصي</string>
     <string name="edit_profile_photo_saved">تم حفظ الصورة الشخصية</string>
@@ -379,7 +379,7 @@
     <string name="settings_terms">شروط الاستخدام</string>
     <string name="settings_terms_body">استخدم نيكسا باحترام، ولا تنشر محتوى ينتهك حقوق الآخرين أو القوانين المعمول بها. يعتمد توفر الميزات وطريقة التعامل مع البيانات على الحساب النشط وإعدادات الخدمات والميزة التي تستخدمها.</string>
     <string name="settings_sign_out">تسجيل الخروج</string>
-    <string name="settings_sign_out_confirm">هل تريد تسجيل الخروج من هذه الجلسة المحلية؟</string>
+    <string name="settings_sign_out_confirm">هل تريد تسجيل الخروج من هذا الجهاز؟</string>
     <string name="settings_sign_out_guest">الخروج من وضع الزائر</string>
     <string name="settings_version">الإصدار</string>
 
