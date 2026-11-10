@@ -44,7 +44,6 @@
     <string name="notice_local_data_body">This content is stored only on your device and is not published to any server.</string>
     <string name="notice_server_pending_title">Feature temporarily unavailable</string>
     <string name="notice_server_pending_body">This feature is not available online yet. We will announce when it becomes available.</string>
-    <string name="settings_remote_notice">Accounts use Supabase Auth. Profiles, posts, stories, comments, follows and messages are stored in Supabase; notifications, clips, spaces and achievements stay on this device.</string>
     <string name="notice_requires_account_title">Account required</string>
     <string name="notice_requires_account_body">This action needs a real account and requires the server to be connected.</string>
     <string name="notice_guest_mode">You are browsing as a guest. Your data stays on this device.</string>
@@ -361,8 +360,6 @@
     <string name="settings_notifications_enabled">Enable local notifications</string>
     <string name="settings_feedback">Support and feedback</string>
     <string name="settings_feedback_summary">Write a note or send feedback directly through WhatsApp</string>
-    <string name="settings_feedback_subject">Nexa Social feedback</string>
-    <string name="settings_feedback_template">Nexa Social feedback\n\nDescribe the problem or suggestion here:\n\n--- Diagnostics ---\nApp version: %1$s\nAndroid: %2$s\nDevice: %3$s %4$s</string>
     <string name="settings_support_title">Nexa support and feedback</string>
     <string name="settings_support_intro">We value your feedback and ideas to improve Nexa. Choose a ready-made message or write your own, then open a direct WhatsApp chat with support.</string>
     <string name="settings_support_quick_title">Quick messages</string>
