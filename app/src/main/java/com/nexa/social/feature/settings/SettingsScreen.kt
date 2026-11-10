@@ -486,7 +486,10 @@ fun SettingsScreen(
             onDismissRequest = { showSupportDialog = false },
             title = { Text(stringResource(R.string.settings_support_title)) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)
+                ) {
                     Text(
                         text = stringResource(R.string.settings_support_intro),
                         style = MaterialTheme.typography.bodyMedium
