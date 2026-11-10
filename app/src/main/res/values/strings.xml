@@ -69,7 +69,7 @@
     <string name="skip_login">Continue as guest for now</string>
 
     <string name="signup_title">Create a new account</string>
-    <string name="signup_subtitle">Join Nexa locally and start your world</string>
+    <string name="signup_subtitle">Create your account and start your Nexa journey</string>
     <string name="signup_action">Create account</string>
     <string name="signup_have_account">Already have an account?</string>
     <string name="signin_title">Sign in</string>
@@ -151,16 +151,16 @@
     <string name="post_save">Save</string>
     <string name="post_saved">Saved locally</string>
     <string name="post_unsave">Unsave</string>
-    <string name="post_share_local_done">Share text copied — posting online needs the server</string>
-    <string name="post_comments_pending">Comments need the server connection</string>
+    <string name="post_share_local_done">Share text copied. Online sharing is not available in this mode yet.</string>
+    <string name="post_comments_pending">Comments are not available in this mode yet.</string>
     <string name="post_see_more">See more</string>
     <string name="post_pinned">Pinned</string>
     <string name="post_comments_count">%1$d comments</string>
     <string name="post_shares_count">%1$d shares</string>
     <string name="post_delete_failed">Could not delete the post. Try again.</string>
     <string name="home_empty_title">Your feed is empty</string>
-    <string name="home_empty_body">Create your first local post to get started.</string>
-    <string name="home_local_feed_notice">Feed shown from local sample data</string>
+    <string name="home_empty_body">No posts yet. Be the first to share something.</string>
+    <string name="home_local_feed_notice">You are in local mode. Posts here are stored only on this device and are not visible to other users.</string>
 
     <!-- Audience -->
     <string name="audience_public">Public (local)</string>
@@ -230,8 +230,8 @@
     <string name="messages_search_hint">Search conversations</string>
     <string name="messages_empty_title">No conversations</string>
     <string name="messages_empty_body">Conversations you start locally will appear here.</string>
-    <string name="messages_local_notice">Conversations are local samples and are not delivered to other users.</string>
-    <string name="messages_send_requires_account">Sending messages to other users requires an account and the server.</string>
+    <string name="messages_local_notice">Conversations in this mode are stored only on this device and are not delivered to other users.</string>
+    <string name="messages_send_requires_account">Sign in to send messages to other users.</string>
     <string name="conversation_hint_send">Write a message…</string>
     <string name="presence_online_now">Online now</string>
     <string name="conversation_local_notice">This conversation is stored on your device only</string>
@@ -240,7 +240,7 @@
     <string name="message_attachment_selected">Image attached</string>
     <string name="message_attachment_image">Message attachment</string>
     <string name="message_status_read">Read</string>
-    <string name="message_status_sent">Sent locally</string>
+    <string name="message_status_sent">Saved on device</string>
 
     <!-- Notifications -->
     <string name="notifications_title">Notifications</string>
@@ -294,7 +294,7 @@
 
     <string name="edit_profile_title">Edit profile</string>
     <string name="edit_profile_bio">Bio</string>
-    <string name="edit_profile_username_locked">Username cannot be changed locally</string>
+    <string name="edit_profile_username_locked">Username changes are not available in this mode right now.</string>
     <string name="edit_profile_username_hint">3–20 characters. Start with a letter; use English letters, numbers, and underscores.</string>
     <string name="edit_profile_saved">Profile updated</string>
     <string name="edit_profile_photo_saved">Profile photo saved</string>
@@ -379,7 +379,7 @@
     <string name="settings_terms">Terms of use</string>
     <string name="settings_terms_body">Use Nexa respectfully. Do not publish content that violates others rights or applicable law. Feature availability and data handling depend on your account and the services you use.</string>
     <string name="settings_sign_out">Sign out</string>
-    <string name="settings_sign_out_confirm">Sign out from this local session?</string>
+    <string name="settings_sign_out_confirm">Do you want to sign out on this device?</string>
     <string name="settings_sign_out_guest">Exit guest mode</string>
     <string name="settings_version">Version</string>
 
