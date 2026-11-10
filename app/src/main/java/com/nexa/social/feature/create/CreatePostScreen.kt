@@ -578,7 +578,7 @@ fun CreatePostScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 NexaSecondaryButton(
                     text = stringResource(R.string.create_save_draft),
-                    onClick = { viewModel.saveDraft(text, imageUris, parseTags(tagsText)) },
+                    onClick = { viewModel.saveDraft(text, imageUris, extractHashtags(text)) },
                     icon = Icons.Filled.Save,
                     enabled = !isPublishing,
                     modifier = Modifier.weight(1f)
@@ -592,7 +592,7 @@ fun CreatePostScreen(
                         if (pinPost) advancedTags.add("مثبت")
                         if (hideLikes) advancedTags.add("إخفاء_الإعجابات")
                         if (!allowComments) advancedTags.add("تعليقات_مغلقة")
-                        val combinedTags = (parseTags(tagsText) + 
+                        val combinedTags = (extractHashtags(text) + 
                             (if (locationText.isNotBlank()) listOf("موقع:$locationText") else emptyList<String>()) +
                             advancedTags).distinct()
                         viewModel.publish(text, imageUris, combinedTags)
