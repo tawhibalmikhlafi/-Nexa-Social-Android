@@ -90,7 +90,7 @@ class SupabaseStorageDataSource(
                 is Resource.Success -> {
                     val publicUrl = config.normalizedUrl +
                         "/storage/v1/object/public/${bucket.id}/${encodePath(path)}"
-                    Resource.Success(publicUrl)
+                    uploadedUrl(bucket, path, publicUrl)
                 }
                 is Resource.Failure -> result
                 Resource.Loading -> Resource.Loading
@@ -105,7 +105,7 @@ class SupabaseStorageDataSource(
         if (!info.mimeType.startsWith("video/")) return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
         if (info.size <= 0L || info.size > MAX_CLIP_BYTES) return Resource.Failure(FailureReason.FILE_TOO_LARGE)
         return when (val result = upload(localUri, MediaBucket.CLIPS, path, info, {}, upsert = true)) {
-            is Resource.Success -> Resource.Success(config.normalizedUrl + "/storage/v1/object/public/${MediaBucket.CLIPS.id}/${encodePath(path)}")
+            is Resource.Success -> uploadedUrl(MediaBucket.CLIPS, path, config.normalizedUrl + "/storage/v1/object/public/${MediaBucket.CLIPS.id}/${encodePath(path)}")
             is Resource.Failure -> result
             Resource.Loading -> Resource.Loading
         }
@@ -121,7 +121,7 @@ class SupabaseStorageDataSource(
         if (!info.mimeType.startsWith("video/")) return Resource.Failure(FailureReason.UNSUPPORTED_FILE)
         if (info.size <= 0L || info.size > maxBytes) return Resource.Failure(FailureReason.FILE_TOO_LARGE)
         return when (val result = upload(localUri, bucket, path, info, {}, upsert = false)) {
-            is Resource.Success -> Resource.Success(config.normalizedUrl + "/storage/v1/object/public/${bucket.id}/${encodePath(path)}")
+            is Resource.Success -> uploadedUrl(bucket, path, config.normalizedUrl + "/storage/v1/object/public/${bucket.id}/${encodePath(path)}")
             is Resource.Failure -> result
             Resource.Loading -> Resource.Loading
         }
@@ -267,7 +267,7 @@ class SupabaseStorageDataSource(
                 }
             }
             onCheckpoint(null, 0L)
-            Resource.Success(config.normalizedUrl + "/storage/v1/object/public/" + MediaBucket.CLIPS.id + "/" + encodePath(path))
+            uploadedUrl(MediaBucket.CLIPS, path, config.normalizedUrl + "/storage/v1/object/public/" + MediaBucket.CLIPS.id + "/" + encodePath(path))
         }
     }
 
@@ -324,17 +324,21 @@ class SupabaseStorageDataSource(
         return Resource.Success(Unit)
     }
 
+    private suspend fun uploadedUrl(bucket: MediaBucket, path: String, publicUrl: String): Resource<String> {
+        if (bucket !in PRIVATE_MEDIA_BUCKETS) return Resource.Success(publicUrl)
+        return signedUrl(bucket, path)
+    }
+
     override suspend fun deleteByPublicUrl(url: String?) {
         if (url.isNullOrBlank()) return
-        val marker = "/storage/v1/object/public/"
-        val index = url.indexOf(marker)
-        if (index <= 0) return
-        val remainder = url.substring(index + marker.length)
+        val markers = listOf("/storage/v1/object/public/", "/storage/v1/object/sign/")
+        val marker = markers.firstOrNull { url.contains(it) } ?: return
+        val remainder = url.substringAfter(marker).substringBefore('?')
         val bucketId = remainder.substringBefore('/', missingDelimiterValue = "")
         val path = remainder.substringAfter('/', missingDelimiterValue = "")
         val bucket = MediaBucket.entries.firstOrNull { it.id == bucketId } ?: return
         if (path.isBlank()) return
-        deleteObject(bucket, path)
+        deleteObject(bucket, java.net.URLDecoder.decode(path, "UTF-8"))
     }
 
     override suspend fun deleteObject(bucket: MediaBucket, path: String) {
@@ -594,6 +598,11 @@ class SupabaseStorageDataSource(
         path.split('/').joinToString("/") { segment -> Uri.encode(segment) }
 
     companion object {
+        private val PRIVATE_MEDIA_BUCKETS = setOf(
+            MediaBucket.STORIES,
+            MediaBucket.CLIPS,
+            MediaBucket.CLIP_COVERS
+        )
         const val MAX_IMAGE_BYTES: Long = 10L * 1024L * 1024L
         private const val MAX_CLIP_BYTES: Long = 500L * 1024L * 1024L
         const val MAX_ATTACHMENT_BYTES: Long = 25L * 1024L * 1024L
