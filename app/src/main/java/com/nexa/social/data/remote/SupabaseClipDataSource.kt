@@ -25,6 +25,7 @@ import java.net.URLEncoder
 import java.net.URLDecoder
 import java.time.Instant
 import java.time.OffsetDateTime
+import java.util.concurrent.ConcurrentHashMap
 
 /** Supabase-backed short video feed. The device cache remains the offline read source. */
 class SupabaseClipDataSource(
@@ -34,7 +35,7 @@ class SupabaseClipDataSource(
     private val currentUid: () -> String?,
     private val mediaStorage: MediaStorage? = null
 ) {
-    private val signedUrlCache = mutableMapOf<String, Pair<Long, String>>()
+    private val signedUrlCache = ConcurrentHashMap<String, Pair<Long, String>>()
     private val refreshSignal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val restUrl get() = config.restUrl
 
@@ -241,14 +242,20 @@ class SupabaseClipDataSource(
         } else {
             value
         }
-        val path = runCatching { URLDecoder.decode(encodedPath, "UTF-8") }.getOrDefault(encodedPath)
+        val path = runCatching { URLDecoder.decode(encodedPath.replace("+", "%2B"), "UTF-8") }.getOrDefault(encodedPath)
         val storage = mediaStorage ?: return value
         val cacheKey = "${uid.orEmpty()}:${bucket.id}:$path"
         val now = System.currentTimeMillis()
-        signedUrlCache[cacheKey]?.takeIf { it.first > now }?.let { return it.second }
+        signedUrlCache[cacheKey]?.let { cached ->
+            if (cached.first > now) return cached.second
+            signedUrlCache.remove(cacheKey, cached)
+        }
         return when (val result = storage.signedUrl(bucket, path, 3_600L)) {
             is Resource.Success -> result.data.also {
-                signedUrlCache[cacheKey] = (now + 50L * 60L * 1000L) to it
+                signedUrlCache[cacheKey] = (System.currentTimeMillis() + 50L * 60L * 1000L) to it
+                if (signedUrlCache.size > 256) {
+                    signedUrlCache.entries.removeIf { entry -> entry.value.first <= System.currentTimeMillis() }
+                }
             }
             is Resource.Failure -> null
             Resource.Loading -> null
