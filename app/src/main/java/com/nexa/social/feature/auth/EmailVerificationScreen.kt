@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nexa.social.BuildConfig
 import com.nexa.social.R
 import com.nexa.social.core.ui.failureMessage
 import com.nexa.social.ui.components.AccountRequiredBanner
@@ -97,6 +98,15 @@ fun EmailVerificationScreen(
             NexaTextButton(
                 text = stringResource(R.string.verify_skip),
                 onClick = onSkip
+            )
+            return@Column
+        }
+
+        if (!BuildConfig.DEBUG) {
+            ServerPendingBanner(text = stringResource(R.string.verify_unavailable_release))
+            NexaPrimaryButton(
+                text = stringResource(R.string.verify_sign_in),
+                onClick = onSignIn
             )
             return@Column
         }
