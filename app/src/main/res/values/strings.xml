@@ -359,12 +359,10 @@
     <string name="settings_os_notifications">Android notification controls</string>
     <string name="settings_os_notifications_summary">Configure system permission, sound and vibration</string>
     <string name="settings_notifications_enabled">Enable local notifications</string>
-    <string name="settings_feedback">Report a problem or suggestion</string>
-    <string name="settings_feedback_summary">Share feedback with your preferred app</string>
-    <string name="settings_feedback_subject">Nexa Social feedback</string>
-    <string name="settings_feedback_template">Nexa Social feedback\n\nDescribe the problem or suggestion here:\n\n--- Diagnostics ---\nApp version: %1$s\nAndroid: %2$s\nDevice: %3$s %4$s</string>
     <string name="settings_feedback">Support and feedback</string>
     <string name="settings_feedback_summary">Write a note or send feedback directly through WhatsApp</string>
+    <string name="settings_feedback_subject">Nexa Social feedback</string>
+    <string name="settings_feedback_template">Nexa Social feedback\n\nDescribe the problem or suggestion here:\n\n--- Diagnostics ---\nApp version: %1$s\nAndroid: %2$s\nDevice: %3$s %4$s</string>
     <string name="settings_support_title">Nexa support and feedback</string>
     <string name="settings_support_intro">We value your feedback and ideas to improve Nexa. Choose a ready-made message or write your own, then open a direct WhatsApp chat with support.</string>
     <string name="settings_support_quick_title">Quick messages</string>
