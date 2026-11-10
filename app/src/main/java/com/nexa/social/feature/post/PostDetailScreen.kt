@@ -156,7 +156,8 @@ private fun UserSummary.visibleHandle(): String? {
 private data class CommentNode(
     val comment: PostComment,
     val depth: Int,
-    val replyToName: String?
+    val replyToName: String?,
+    val rootId: String
 )
 
 private fun List<PostComment>.toCommentThread(popularFirst: Boolean = false): List<CommentNode> {
@@ -169,20 +170,21 @@ private fun List<PostComment>.toCommentThread(popularFirst: Boolean = false): Li
         else items.sortedBy { it.createdAt }
     val visited = mutableSetOf<String>()
 
-    fun append(comment: PostComment, depth: Int) {
+    fun append(comment: PostComment, depth: Int, rootId: String = comment.id) {
         if (!visited.add(comment.id)) return
         result += CommentNode(
             comment = comment,
             depth = depth.coerceAtMost(3),
             replyToName = comment.parentId
                 ?.let { byId[it]?.author }
-                ?.preferredName()
+                ?.preferredName(),
+            rootId = rootId
         )
-        ordered(byParent[comment.id].orEmpty()).forEach { append(it, depth + 1) }
+        ordered(byParent[comment.id].orEmpty()).forEach { append(it, depth + 1, rootId) }
     }
 
     ordered(filter { it.parentId == null || byId[it.parentId] == null })
-        .forEach { append(it, 0) }
+        .forEach { append(it, 0, it.id) }
     sortedBy { it.createdAt }.forEach { if (it.id !in visited) append(it, 0) }
     return result
 }
@@ -299,13 +301,23 @@ fun PostDetailScreen(
     var popularComments by rememberSaveable(postId) { mutableStateOf(false) }
     val commentThread = remember(comments, popularComments) { comments.toCommentThread(popularComments) }
     var showAllComments by rememberSaveable(postId) { mutableStateOf(false) }
-    val visibleCommentThread = remember(commentThread, showAllComments) {
-        if (showAllComments) commentThread else {
+    var expandedCommentThreads by rememberSaveable(postId) { mutableStateOf(setOf<String>()) }
+    val visibleCommentThread = remember(commentThread, showAllComments, expandedCommentThreads) {
+        val limitedRoots = if (showAllComments) commentThread else {
             var rootsSeen = 0
             commentThread.takeWhile { node ->
                 if (node.depth == 0) rootsSeen++
                 rootsSeen <= 2
             }
+        }
+        val firstReplyByRoot = limitedRoots
+            .filter { it.depth > 0 }
+            .groupBy { it.rootId }
+            .mapValues { (_, replies) -> replies.minByOrNull { it.comment.createdAt }?.comment?.id }
+        limitedRoots.filter { node ->
+            node.depth == 0 ||
+                node.rootId in expandedCommentThreads ||
+                firstReplyByRoot[node.rootId] == node.comment.id
         }
     }
     var replyingToComment by remember { mutableStateOf<PostComment?>(null) }
@@ -459,6 +471,10 @@ fun PostDetailScreen(
                             comment = node.comment,
                             depth = node.depth,
                             replyToName = node.replyToName,
+                            hiddenRepliesCount = if (node.depth == 0 && node.rootId == node.comment.id && node.rootId !in expandedCommentThreads) {
+                                (commentThread.count { it.rootId == node.rootId && it.depth > 0 } - 1).coerceAtLeast(0)
+                            } else 0,
+                            onShowReplies = { expandedCommentThreads = expandedCommentThreads + node.rootId },
                             onOpenProfile = onOpenProfile,
                             onToggleLike = { emoji -> viewModel.toggleCommentLike(node.comment.id, emoji) },
                             onOpenReactions = {
@@ -1410,6 +1426,8 @@ private fun CommentRow(
     comment: PostComment,
     depth: Int,
     replyToName: String?,
+    hiddenRepliesCount: Int,
+    onShowReplies: () -> Unit,
     onOpenProfile: (String) -> Unit,
     onToggleLike: (String) -> Unit,
     onOpenReactions: () -> Unit,
