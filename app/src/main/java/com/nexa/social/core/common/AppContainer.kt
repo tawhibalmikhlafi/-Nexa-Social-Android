@@ -319,7 +319,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
             config = supabaseConfig,
             http = supabaseHttp,
             accessToken = { supabaseTokens.currentSession()?.accessToken },
-            currentUid = { supabaseTokens.currentSession()?.userId }
+            currentUid = { supabaseTokens.currentSession()?.userId },
+            mediaStorage = mediaStorage
         )
     } else {
         null
@@ -329,7 +330,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
             config = supabaseConfig,
             http = supabaseHttp,
             accessToken = { supabaseTokens.currentSession()?.accessToken },
-            currentUid = { supabaseTokens.currentSession()?.userId }
+            currentUid = { supabaseTokens.currentSession()?.userId },
+            mediaStorage = mediaStorage
         )
     } else {
         null
