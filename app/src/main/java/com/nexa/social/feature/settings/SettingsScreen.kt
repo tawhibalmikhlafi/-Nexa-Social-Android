@@ -2,6 +2,8 @@ package com.nexa.social.feature.settings
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +42,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -108,6 +111,8 @@ fun SettingsScreen(
     var showFeedType by remember { mutableStateOf(false) }
     var showSignOut by remember { mutableStateOf(false) }
     var showClearCache by remember { mutableStateOf(false) }
+    var showSupportDialog by remember { mutableStateOf(false) }
+    var feedbackMessage by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
         NexaTopBar(title = stringResource(R.string.settings_title), onBack = onBack)
@@ -341,19 +346,8 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_feedback),
                 subtitle = stringResource(R.string.settings_feedback_summary),
                 onClick = {
-                    val details = context.getString(
-                        R.string.settings_feedback_template,
-                        BuildConfig.VERSION_NAME,
-                        android.os.Build.VERSION.RELEASE.orEmpty(),
-                        android.os.Build.MANUFACTURER.orEmpty(),
-                        android.os.Build.MODEL.orEmpty()
-                    )
-                    val share = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.settings_feedback_subject))
-                        putExtra(Intent.EXTRA_TEXT, details)
-                    }
-                    context.startActivity(Intent.createChooser(share, context.getString(R.string.settings_feedback)))
+                    feedbackMessage = ""
+                    showSupportDialog = true
                 }
             )
             SettingsRow(
@@ -492,6 +486,78 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showSignOut = false }) { Text(stringResource(R.string.action_cancel)) }
+            }
+        )
+    }
+
+    if (showSupportDialog) {
+        AlertDialog(
+            onDismissRequest = { showSupportDialog = false },
+            title = { Text(stringResource(R.string.settings_support_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(NexaSpacing.sm)) {
+                    Text(
+                        text = stringResource(R.string.settings_support_intro),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_support_quick_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    TextButton(onClick = { feedbackMessage = context.getString(R.string.settings_support_preset_love) }) {
+                        Text(stringResource(R.string.settings_support_preset_love))
+                    }
+                    TextButton(onClick = { feedbackMessage = context.getString(R.string.settings_support_preset_suggestion) }) {
+                        Text(stringResource(R.string.settings_support_preset_suggestion))
+                    }
+                    TextButton(onClick = { feedbackMessage = context.getString(R.string.settings_support_preset_problem) }) {
+                        Text(stringResource(R.string.settings_support_preset_problem))
+                    }
+                    TextButton(onClick = { feedbackMessage = context.getString(R.string.settings_support_preset_feature) }) {
+                        Text(stringResource(R.string.settings_support_preset_feature))
+                    }
+                    OutlinedTextField(
+                        value = feedbackMessage,
+                        onValueChange = { feedbackMessage = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.settings_support_message_label)) },
+                        placeholder = { Text(stringResource(R.string.settings_support_message_hint)) },
+                        minLines = 3,
+                        maxLines = 6
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_support_whatsapp_number),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = feedbackMessage.isNotBlank(),
+                    onClick = {
+                        val message = feedbackMessage.trim()
+                        val url = "https://wa.me/967772738520?text=${Uri.encode(message)}"
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        }.onFailure {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.settings_support_open_error),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                        showSupportDialog = false
+                    }
+                ) {
+                    Text(stringResource(R.string.settings_support_send_whatsapp))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSupportDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
             }
         )
     }
