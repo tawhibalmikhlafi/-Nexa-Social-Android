@@ -68,12 +68,10 @@ fun CreatePostScreen(
     var text by rememberSaveable { mutableStateOf("") }
     var tagsText by rememberSaveable { mutableStateOf("") }
     var locationText by rememberSaveable { mutableStateOf("") }
-    var reviewersText by rememberSaveable { mutableStateOf("") }
     var imageUris by remember { mutableStateOf(emptyList<String>()) }
     var prefilled by remember { mutableStateOf(false) }
 
     // Interactive Sheets States
-    var showReviewersSheet by remember { mutableStateOf(false) }
     var showLocationSheet by remember { mutableStateOf(false) }
     var showAdvancedSheet by remember { mutableStateOf(false) }
 
@@ -83,9 +81,8 @@ fun CreatePostScreen(
     var hideLikes by remember { mutableStateOf(false) }
 
     var tempLocationInput by remember { mutableStateOf("") }
-    var selectedReviewers by remember { mutableStateOf(setOf<String>()) }
 
-    val suggestedUsers by viewModel.suggestedUsers.collectAsStateWithLifecycle()
+    val mentionUsers by viewModel.mentionSuggestions.collectAsStateWithLifecycle()
     var showMentionSuggestions by remember { mutableStateOf(false) }
 
     val mentionQuery = if (showMentionSuggestions) {
@@ -93,13 +90,15 @@ fun CreatePostScreen(
         if (lastAt != -1) text.substring(lastAt + 1).trim() else ""
     } else ""
 
-    val filteredUsers = if (mentionQuery.isNotBlank()) {
-        suggestedUsers.filter {
-            it.username.contains(mentionQuery, ignoreCase = true) ||
-            it.displayName.contains(mentionQuery, ignoreCase = true)
+    val filteredUsers = mentionUsers
+
+    LaunchedEffect(mentionQuery, showMentionSuggestions) {
+        if (showMentionSuggestions && mentionQuery.isNotBlank()) {
+            delay(250)
+            viewModel.searchMentionUsers(mentionQuery)
+        } else {
+            viewModel.clearMentionSuggestions()
         }
-    } else {
-        suggestedUsers
     }
 
     LaunchedEffect(draft) {
@@ -190,7 +189,6 @@ fun CreatePostScreen(
                         if (!allowComments) advancedTags.add("تعليقات_مغلقة")
                         val combinedTags = (parseTags(tagsText) + 
                             (if (locationText.isNotBlank()) listOf("موقع:$locationText") else emptyList<String>()) +
-                            (if (reviewersText.isNotBlank()) listOf("مع:$reviewersText") else emptyList<String>()) +
                             advancedTags).distinct()
                         viewModel.publish(text, imageUris, combinedTags)
                     },
@@ -462,25 +460,6 @@ fun CreatePostScreen(
 
                 HorizontalDivider(color = NexaBackground, thickness = 1.dp)
 
-                // المراجعون (تفعيل الاختيار)
-                ListItem(
-                    headlineContent = { Text("المراجعون", color = NexaText, fontSize = 14.sp) },
-                    supportingContent = {
-                        Text(
-                            if (reviewersText.isBlank()) "إضافة أشخاص إلى المنشور" else reviewersText,
-                            color = NexaMuted,
-                            fontSize = 12.sp
-                        )
-                    },
-                    leadingContent = { Icon(Icons.Default.GroupAdd, contentDescription = null, tint = NexaLavender) },
-                    trailingContent = { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = NexaMuted) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showReviewersSheet = true }
-                )
-
-                HorizontalDivider(color = NexaBackground, thickness = 1.dp)
-
                 // الموقع (تفعيل الاختيار)
                 ListItem(
                     headlineContent = { Text("الموقع", color = NexaText, fontSize = 14.sp) },
@@ -638,76 +617,10 @@ fun CreatePostScreen(
                         if (!allowComments) advancedTags.add("تعليقات_مغلقة")
                         val combinedTags = (parseTags(tagsText) + 
                             (if (locationText.isNotBlank()) listOf("موقع:$locationText") else emptyList<String>()) +
-                            (if (reviewersText.isNotBlank()) listOf("مع:$reviewersText") else emptyList<String>()) +
                             advancedTags).distinct()
                         viewModel.publish(text, imageUris, combinedTags)
                     },
                     modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // Bottom Sheet: Reviewers / Tagging People
-        if (showReviewersSheet) {
-            NexaBottomSheet(onDismiss = { showReviewersSheet = false }) {
-                SheetTitle("اختيار أشخاص للإشارة أو المراجعة")
-                Spacer(Modifier.height(8.dp))
-                if (suggestedUsers.isEmpty()) {
-                    Text("لا يوجد مستخدمون متاحون حالياً", color = NexaMuted)
-                } else {
-                    suggestedUsers.forEach { user ->
-                        val isSelected = selectedReviewers.contains(user.username)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selectedReviewers = if (isSelected) {
-                                        selectedReviewers - user.username
-                                    } else {
-                                        selectedReviewers + user.username
-                                    }
-                                    reviewersText = selectedReviewers.joinToString(", ") { "@$it" }
-                                }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(NexaPurple)
-                                ) {
-                                    Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.align(Alignment.Center))
-                                }
-                                Column {
-                                    Text(user.displayName, color = NexaText, fontSize = 14.sp)
-                                    Text("@${user.username}", color = NexaMuted, fontSize = 12.sp)
-                                }
-                            }
-                            Checkbox(
-                                checked = isSelected,
-                                onCheckedChange = { checked ->
-                                    selectedReviewers = if (checked) {
-                                        selectedReviewers + user.username
-                                    } else {
-                                        selectedReviewers - user.username
-                                    }
-                                    reviewersText = selectedReviewers.joinToString(", ") { "@$it" }
-                                },
-                                colors = CheckboxDefaults.colors(checkedColor = NexaPurple)
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                NexaPrimaryButton(
-                    text = "تم",
-                    onClick = { showReviewersSheet = false }
                 )
             }
         }
